@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>VDI Tacógrafos — Frente de Caixa Colaborativo</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://unpkg.com/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+    <style>
+        /* CSS COMPLETO: Mantenha aqui */
+        body { font-family: 'Poppins', sans-serif; margin:0; padding:0; background:#f4f6f9; }
+        header { background: linear-gradient(90deg,#4a90e2,#9013fe); color:white; padding:20px; text-align:center; font-size:24px; font-weight:600; box-shadow:0 4px 6px rgba(0,0,0,0.1); }
+        .container { padding:20px; max-width:1200px; margin:auto; }
+        .buttons, .filters, .search { display:flex; flex-wrap:wrap; gap:10px; margin-bottom:20px; }
+        button { background:#4a90e2; color:white; border:none; padding:10px 18px; border-radius:8px; cursor:pointer; font-weight:600; transition:0.2s; display:flex; align-items:center; gap:5px; }
+        button:hover { background:#357ABD; }
+        input, select { padding:10px 12px; border-radius:6px; border:1px solid #ccc; box-sizing: border-box;}
+        table { width:100%; border-collapse:collapse; margin-bottom:20px; background:white; border-radius:8px; overflow:hidden; box-shadow:0 2px 4px rgba(0,0,0,0.1); }
+        th, td { padding:12px 15px; text-align:left; }
+        th { background:#4a90e2; color:white; }
+        tr:nth-child(even) { background:#f9f9f9; }
+        tr:hover { background:#dce6f1; }
+        .summary { display:flex; gap:15px; flex-wrap:wrap; margin-bottom:20px; }
+        .card { flex:1 1 150px; padding:15px; border-radius:10px; color:white; font-weight:600; text-align:center; box-shadow:0 2px 6px rgba(0,0,0,0.1); cursor:pointer; transition:0.2s; }
+        .card:hover { opacity:0.9; transform:scale(1.02); }
+        .faturadas { background: linear-gradient(45deg,#2d9cdb,#1b7ecf); }
+        .emaberto { background: linear-gradient(45deg,#e94e77,#d43d5c); }
+        .pix { background: linear-gradient(45deg,#27ae60,#1e8449); }
+        .dinheiro { background: linear-gradient(45deg,#f1c40f,#d4ac0d); }
+        .debito { background: linear-gradient(45deg,#f39c12,#d68910); }
+        .credito { background: linear-gradient(45deg,#9b59b6,#8e44ad); }
+        .edit, .delete { border:none; padding:5px 10px; border-radius:6px; color:white; cursor:pointer; margin-right:5px; }
+        .edit { background:#27ae60; }
+        .delete { background:#e74c3c; }
+        #formModal, #loginModal, #userModal { 
+            display:none;
+            position:fixed; 
+            top:0; 
+            left:0; 
+            width:100%; 
+            height:100%; 
+            background: rgba(0,0,0,0.5); 
+            justify-content:center; 
+            align-items:center; 
+            z-index: 1000; 
+        }
+        #formContent { background:white; padding:20px; border-radius:10px; width:400px; max-width:90%; }
+        #formContent h2 { margin-top:0; color:#4a90e2; }
+        #formContent input, #formContent select { width:100%; margin-bottom:10px; }
+        #formContent button { width:100%; }
+        #loginModal { z-index: 2000; background: #f4f6f9; }
+        #loginContent { 
+            background: white; 
+            padding: 30px; 
+            border-radius: 10px; 
+            width: 300px; 
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2); 
+            text-align: center;
+        }
+        #loginContent h2 { color: #4a90e2; margin-bottom: 20px;}
+        #loginContent input { width: 100%; margin-bottom: 15px; }
+        #loginContent button { width: 100%; padding: 12px;}
+        #userModal { z-index: 1500; }
+        #userContent { 
+            background: white; 
+            padding: 20px; 
+            border-radius: 10px; 
+            width: 400px; 
+            max-width: 90%; 
+        }
+        #userList li {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+        }
+        #userList button {
+            background:#e74c3c; 
+            padding:3px 8px; 
+            margin-left:10px; 
+            font-size:12px; 
+            width:auto;
+        }
+        @media(max-width:600px){
+            .buttons, .filters, .search { flex-direction:column; }
+            table th, table td { font-size:12px; padding:8px; }
+        }
+    </style>
+</head>
+<body>
+
+<div id="loginModal">
+    <div id="loginContent">
+        <h2>Acesso ao Sistema</h2>
+        <form onsubmit="loginAttempt(); return false;">
+             <input type="text" id="loginUser" placeholder="Usuário" required>
+            <input type="password" id="loginPass" placeholder="Senha" required>
+            <button type="submit">Entrar</button>
+            <p id="loginError" style="color:#e74c3c; display:none; margin-top:10px; font-weight:600;">Usuário ou senha inválidos.</p>
+        </form>
+    </div>
+</div>
+
+<div id="userModal">
+    <div id="userContent">
+        <h2>Gerenciar Usuários</h2>
+        <h3 style="color:#4a90e2; margin-top:10px;">Cadastrar Novo Usuário</h3>
+        <input type="text" id="newUser" placeholder="Novo Usuário" required>
+        <input type="password" id="newPass" placeholder="Nova Senha" required>
+        <button onclick="registerUser()">Cadastrar</button>
+        <h3 style="color:#4a90e2; margin-top:20px;">Usuários Cadastrados</h3>
+        <ul id="userList" style="list-style-type:none; padding:0;">
+            </ul>
+        <button onclick="closeUserModal()" style="margin-top:20px;background:#e74c3c;">Fechar</button>
+    </div>
+</div>
+
+<div id="appContent" style="display:none;">
+    <header>VDI TACÓGRAFOS — Frente de Caixa Colaborativo (Barueri · Cotia · Embu)</header>
+    <div class="container">
+        <div class="buttons">
+            <button onclick="abrirForm()">+ Nova O.S</button>
+            <button onclick="exportExcel()">Exportar Excel</button>
+            <button onclick="importExcel()">Importar Excel</button>
+            <button onclick="imprimirPDF()">Imprimir / Salvar PDF</button>
+            <button onclick="limparDados()" style="background:#e74c3c;">Limpar TODOS os dados</button>
+            <button onclick="openUserModal()" style="background:#9b59b6;">Gerenciar Usuários</button>
+ </div>
+        <input type="file" id="inputExcel" accept=".xlsx,.csv" style="display:none" onchange="lerExcel(event)" multiple>
+
+        <div class="filters">
+            <select id="unidade" onchange="atualizarTabelaTodas()">
+                <option value="">Todas Unidades</option>
+                <option value="Barueri">Barueri</option>
+                <option value="Cotia">Cotia</option>
+                <option value="Embu">Embu</option>
+            </select>
+            <select id="tecnicoFiltro" onchange="atualizarTabelaTodas()">
+                <option value="">Todos Técnicos</option>
+                </select>
+            <input type="date" id="dataInicio">
+            <input type="date" id="dataFim">
+            <button onclick="filtrar()">Filtrar</button>
+            <button onclick="limparFiltros()">Limpar filtros</button>
+        </div>
+
+        <div class="search">
+            <input type="text" id="busca" placeholder="Buscar cliente, placa ou O.S">
+            <button onclick="buscar()">Buscar</button>
+        </div>
+
+        <h3>Todas as O.S</h3>
+        <table id="tabelaTodas">
+            <thead>
+            <tr>
+                <th>O.S</th><th>DATA</th><th>CLIENTE</th><th>PLACA</th><th>VALOR</th><th>PAGAMENTO</th><th>TECNICO</th><th>UNIDADE</th><th>Ações</th>
+            </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+
+        <h3>Resumo — Controle de Caixa Diário</h3>
+        <div class="summary">
+            <div class="card faturadas" id="totalFaturadas" onclick="imprimirPDF('Faturado')">FATURADAS<br>R$ 0,00</div>
+            <div class="card emaberto" id="totalAberto" onclick="imprimirPDF('Em Aberto')">EM ABERTO<br>R$ 0,00</div>
+            <div class="card pix" id="totalPix" onclick="imprimirPDF('PIX')">PIX<br>R$ 0,00</div>
+            <div class="card dinheiro" id="totalDinheiro" onclick="imprimirPDF('Dinheiro')">DINHEIRO<br>R$ 0,00</div>
+            <div class="card debito" id="totalDebito" onclick="imprimirPDF('Débito')">DÉBITO<br>R$ 0,00</div>
+            <div class="card credito" id="totalCredito" onclick="imprimirPDF('Crédito')">CRÉDITO<br>R$ 0,00</div>
+        </div>
+    </div>
+
+    <div id="formModal">
+        <div id="formContent">
+            <h2>Nova O.S</h2>
+            <input type="text" id="formOS" placeholder="Número da O.S" required>
+            <input type="date" id="formData" required>
+            <input type="text" id="formCliente" placeholder="Cliente" required>
+            <input type="text" id="formPlaca" placeholder="Placa" required>
+            <input type="number" id="formValor" placeholder="Valor (R$)" step="0.01" required>
+            <select id="formPagamento" required>
+                <option value="">Selecione pagamento</option>
+                <option value="PIX">PIX</option>
+                <option value="Dinheiro">Dinheiro</option>
+                <option value="Crédito">Crédito</option>
+                <option value="Débito">Débito</option>
+                <option value="Em Aberto">Em Aberto</option>
+                <option value="Faturado">Faturado</option>
+            </select>
+            <select id="formUnidade" required>
+                <option value="">Selecione a Unidade</option>
+                <option value="Barueri">Barueri</option>
+                <option value="Cotia">Cotia</option>
+                <option value="Embu">Embu</option>
+            </select>
+            <input type="text" id="formTecnico" placeholder="Técnico" required>
+            <button onclick="salvarForm()">Salvar O.S</button>
+            <button onclick="fecharForm()" style="margin-top:5px;background:#e74c3c;">Cancelar</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    
+    // =================================================================
+    // 🟢 CONFIGURAÇÃO E INICIALIZAÇÃO DO FIREBASE (PASSO 1)
+    // =================================================================
+    
+    // 🛑 ATENÇÃO: SUBSTITUA O BLOCO ABAIXO PELO SEU firebaseConfig REAL
+    const firebaseConfig = {
+      apiKey: "SUA_API_KEY_AQUI", // Exemplo: "AIzaSyC0Vp-Exemplo-SuaChaveAqui"
+      authDomain: "SEU_AUTH_DOMAIN_AQUI", // Exemplo: "seu-projeto-1234.firebaseapp.com"
+      projectId: "SEU_PROJECT_ID_AQUI", // Exemplo: "seu-projeto-1234"
+      storageBucket: "SEU_STORAGE_BUCKET_AQUI", 
+      messagingSenderId: "SEU_MESSAGING_SENDER_ID_AQUI",
+      appId: "SEU_APP_ID_AQUI"
+    };
+
+    // Inicializa o Firebase
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    // Referências das coleções
+    const osCollection = db.collection('ordens_servico');
+    const usersCollection = db.collection('usuarios');
+
+    // Array local para armazenar os dados sincronizados
+    let osData = [];
+    let appUsers = [];
+    
+    // =================================================================
+    // 🟢 FUNÇÕES DO FIREBASE (Substituindo localStorage)
+    // =================================================================
+    
+    // ONSNAPSHOT: Sincroniza dados em tempo real (Substitui a leitura de localStorage)
+    function startDataListener() {
+        // Ouve a coleção de O.S. e atualiza a variável local (osData) e a tabela
+        osCollection.orderBy('dataOS', 'desc').onSnapshot(snapshot => {
+            osData = snapshot.docs.map(doc => ({
+                id: doc.id, // O ID do documento é necessário para edição/exclusão
+                ...doc.data()
+            }));
+            getTecnicosUnicos();
+            atualizarTabelaTodas();
+        }, error => {
+            console.error("Erro ao sincronizar O.S.:", error);
+        });
+
+        // Ouve a coleção de Usuários (necessário para a função de login)
+        usersCollection.onSnapshot(snapshot => {
+            appUsers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        }, error => {
+            console.error("Erro ao sincronizar Usuários:", error);
+        });
+    }
+
+    // 🔑 Funções de Login (Adaptadas para Firestore)
+    async function setupInitialUsers() {
+        const defaultUser = { user: 'vdi', pass: '12345' };
+        const newUser = { user: 'meuacesso', pass: 'minhasenha123' };
+        
+        // Verifica se a coleção está vazia
+        try {
+            const snapshot = await usersCollection.get();
+            if (snapshot.empty) {
+                console.log("Configurando usuários iniciais no Firebase...");
+                await usersCollection.add(defaultUser);
+                await usersCollection.add(newUser);
+            }
+        } catch(e) {
+             console.error("Erro ao tentar configurar usuários iniciais: Verifique as chaves e as Regras do Firebase.", e);
+        }
+    }
+
+    async function loginAttempt() {
+        const user = document.getElementById('loginUser').value.trim();
+        const pass = document.getElementById('loginPass').value.trim();
+        const errorMsg = document.getElementById('loginError');
+
+        // Busca o usuário no Firestore (apenas se a lista local estiver carregada)
+        if (appUsers.length > 0) {
+            const userFound = appUsers.find(u => u.user === user && u.pass === pass);
+
+            if (userFound) {
+                sessionStorage.setItem('isLoggedIn', 'true'); 
+                sessionStorage.setItem('currentUser', user); // Armazena o usuário logado
+                showApp();
+            } else {
+                errorMsg.style.display = 'block';
+            }
+        } else {
+            // Se appUsers estiver vazio, o Firebase pode ter falhado ao carregar os dados
+            alert("Aguarde a inicialização do sistema ou verifique as chaves e Regras de Segurança do Firebase. (F5 para tentar novamente)");
+        }
+    }
+
+    // 🔒 Funções de Gerenciamento de Usuários (Adaptadas para Firestore)
+    async function registerUser() {
+        const user = document.getElementById('newUser').value.trim();
+        const pass = document.getElementById('newPass').value.trim();
+
+        if (!user || !pass) {
+            alert('Usuário e Senha são obrigatórios.');
+            return;
+        }
+
+        if (appUsers.some(u => u.user === user)) {
+            alert('Este usuário já existe.');
+            return;
+        }
+
+        try {
+            await usersCollection.add({ user, pass });
+            document.getElementById('newUser').value = '';
+            document.getElementById('newPass').value = '';
+        } catch (e) {
+            alert("Erro ao cadastrar usuário: " + e.message);
+        }
+    }
+
+    async function deleteUser(id, name) {
+        if (appUsers.length <= 2 && name !== 'vdi' && name !== 'meuacesso') { // Deixando os 2 padrões como "intocáveis"
+             alert("Por segurança, você deve manter pelo menos dois usuários no sistema.");
+             return;
+        }
+        if (name === sessionStorage.getItem('currentUser')) {
+             alert("Não é possível apagar o usuário que está logado no momento.");
+             return;
+        }
+        if (confirm(`Deseja apagar o usuário ${name}?`)) {
+             try {
+                await usersCollection.doc(id).delete();
+             } catch (e) {
+                alert("Erro ao apagar usuário: " + e.message);
+             }
+        }
+    }
+
+    function loadUserList() {
+        const list = document.getElementById('userList');
+        list.innerHTML = '';
+        
+        appUsers.forEach(userObj => {
+            const li = document.createElement('li');
+            const deleteButton = (userObj.user === sessionStorage.getItem('currentUser') || userObj.user === 'vdi' || userObj.user === 'meuacesso') 
+                ? '<button disabled style="background:#ccc; cursor:not-allowed;">Sistema</button>' 
+                : `<button onclick="deleteUser('${userObj.id}', '${userObj.user}')">Apagar</button>`;
+            
+            li.innerHTML = `<span>${userObj.user}</span>${deleteButton}`;
+            list.appendChild(li);
+        });
+    }
+
+    // 📦 Funções de O.S. (Adaptadas para Firestore)
+    async function salvarForm(id) {
+        const os=document.getElementById('formOS').value.trim();
+        const dataInput=document.getElementById('formData').value;
+        const cliente=document.getElementById('formCliente').value.trim();
+        const placa=document.getElementById('formPlaca').value.trim();
+        const valor=parseFloat(document.getElementById('formValor').value).toFixed(2);
+        const pagamento=document.getElementById('formPagamento').value;
+        const tecnico=document.getElementById('formTecnico').value.trim();
+        const unidade=document.getElementById('formUnidade').value;
+
+        if(!os || !dataInput || !cliente || !placa || !valor || !pagamento || !tecnico || !unidade){
+              alert("Preencha todos os campos!");
+              return;
+        }
+
+        const dataObj = {
+            os,
+            data: formatDate(dataInput), // Data formatada para exibição
+            dataOS: dataInput,           // Data em formato ISO para ordenação e filtro
+            cliente,
+            placa,
+            valor,
+            pagamento,
+            tecnico,
+            unidade
+        };
+
+        try {
+            if (id) {
+                // Se existe ID, atualiza o documento (edição)
+                await osCollection.doc(id).update(dataObj);
+            } else {
+                // Se não existe ID, cria um novo documento (nova O.S.)
+                await osCollection.add(dataObj);
+            }
+            fecharForm();
+
+            document.getElementById('formContent').querySelectorAll('input, select').forEach(f => {
+                if (f.type !== 'submit' && f.type !== 'button') { f.value = ''; }
+            });
+            document.getElementById('formModal').dataset.editId = ''; // Limpa o ID de edição
+            document.getElementById('formModal').querySelector('button[onclick*="salvarForm"]').textContent = 'Salvar O.S';
+            document.getElementById('formModal').querySelector('h2').textContent = 'Nova O.S';
+
+        } catch (e) {
+            alert(`Erro ao salvar O.S.: ${e.message}`);
+        }
+    }
+
+    async function apagarOS(id, osNum) {
+          if(confirm(`Deseja apagar a O.S. ${osNum}?`)){
+              try {
+                  await osCollection.doc(id).delete();
+              } catch (e) {
+                  alert(`Erro ao apagar O.S.: ${e.message}`);
+              }
+          }
+      }
+
+    async function limparDados() {
+        if (!confirm("Tem certeza que deseja limpar TODOS os dados? Esta ação é irreversível e afetará TODOS os usuários conectados.")) return;
+        
+        try {
+            const snapshot = await osCollection.get();
+            if (snapshot.empty) {
+                alert("Não há dados para limpar.");
+                return;
+            }
+            
+            const batch = db.batch();
+            snapshot.docs.forEach(doc => {
+                batch.delete(doc.ref);
+            });
+            
+            await batch.commit();
+            alert("Todos os dados de O.S. foram limpos com sucesso!");
+        } catch (e) {
+            alert(`Erro ao limpar dados: ${e.message}`);
+        }
+    }
+
+    // =================================================================
+    // FUNÇÕES RESTANTES (Geração de Excel/PDF, Filtros e Interface)
+    // =================================================================
+    
+    function formatDate(iso){
+        const parts=iso.split('-');
+        return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    }
+    
+    function getTecnicosUnicos() {
+        const tecnicos = [...new Set(osData.map(item => item.tecnico).filter(t => t && t.trim() !== ''))].sort();
+        const select = document.getElementById('tecnicoFiltro');
+        const valorAtual = select.value;
+                        
+        select.innerHTML = '<option value="">Todos Técnicos</option>';
+                        
+        tecnicos.forEach(tecnico => {
+            const option = document.createElement('option');
+            option.value = tecnico;
+            option.textContent = tecnico;
+            select.appendChild(option);
+        });
+        if (tecnicos.includes(valorAtual)) {
+               select.value = valorAtual;
+        } else if (valorAtual && !tecnicos.includes(valorAtual)) {
+              select.value = '';
+        }
+    }
+
+    function abrirForm(id) {
+        const formModal = document.getElementById('formModal');
+        const h2 = formModal.querySelector('h2');
+        
+        // Configura para Nova O.S.
+        h2.textContent = 'Nova O.S';
+        formModal.dataset.editId = '';
+        document.getElementById('formOS').value = '';
+        document.getElementById('formData').value = '';
+        document.getElementById('formCliente').value = '';
+        document.getElementById('formPlaca').value = '';
+        document.getElementById('formValor').value = '';
+        document.getElementById('formPagamento').value = '';
+        document.getElementById('formTecnico').value = '';
+
+        const unidadeSelecionada = document.getElementById('unidade').value;
+        if (unidadeSelecionada) {
+              document.getElementById('formUnidade').value = unidadeSelecionada;
+        } else {
+              document.getElementById('formUnidade').value = ''; 
+         }
+
+        // Configura para Edição, se um ID for passado
+        if (id) {
+            const item = osData.find(d => d.id === id);
+            if (item) {
+                h2.textContent = 'Editar O.S.';
+                formModal.dataset.editId = id;
+                document.getElementById('formOS').value = item.os;
+                document.getElementById('formData').value = item.dataOS; // Usa a data ISO
+                document.getElementById('formCliente').value = item.cliente;
+                document.getElementById('formPlaca').value = item.placa;
+                document.getElementById('formValor').value = parseFloat(item.valor);
+                document.getElementById('formPagamento').value = item.pagamento;
+                document.getElementById('formUnidade').value = item.unidade;
+                document.getElementById('formTecnico').value = item.tecnico;
+            }
+        }
+        
+        formModal.style.display = 'flex';
+        formModal.querySelector('button[onclick*="salvarForm"]').setAttribute('onclick', `salvarForm('${id || ''}')`);
+    }
+
+    function fecharForm(){
+        document.getElementById('formModal').style.display='none';
+    }
+
+    function editarOS(id){
+        abrirForm(id); // Chama abrirForm passando o ID para edição
+    }
+    
+    function atualizarTabelaTodas(){
+        const unidade = document.getElementById('unidade').value;
+        const dataInicio = document.getElementById('dataInicio').value;
+        const dataFim = document.getElementById('dataFim').value;
+        const termoBusca = document.getElementById('busca').value.toLowerCase();
+        const tecnicoFiltro = document.getElementById('tecnicoFiltro').value; 
+
+        const tbody = document.querySelector("#tabelaTodas tbody");
+        tbody.innerHTML = '';
+        let totalF=0, totalAberto=0, totalPix=0, totalDin=0, totalDeb=0, totalCred=0;
+
+        const dadosFiltrados = osData.filter(item => {
+            const itemDate = item.dataOS;
+            const itemValor = parseFloat(item.valor) || 0;
+            const itemPagamento = item.pagamento ? item.pagamento.toLowerCase().trim() : '';
+                                                
+            if(unidade && item.unidade !== unidade) return false;
+            if(tecnicoFiltro && item.tecnico !== tecnicoFiltro) return false;
+                                                
+            if(dataInicio && itemDate < dataInicio) return false;
+            if(dataFim && itemDate > dataFim) return false;
+                                                
+            if ((item.cliente || '').toUpperCase().includes('CANCELADA')) return false;
+
+            if (termoBusca && !(item.cliente.toLowerCase().includes(termoBusca) || item.placa.toLowerCase().includes(termoBusca) || item.os.toLowerCase().includes(termoBusca))) return false;
+                                                
+            if(itemPagamento === 'faturado') totalF += itemValor;
+            if(itemPagamento === 'em aberto') totalAberto += itemValor;
+            if(itemPagamento === 'pix') totalPix += itemValor;
+            if(itemPagamento === 'dinheiro') totalDin += itemValor;
+            if(itemPagamento === 'débito') totalDeb += itemValor;
+            if(itemPagamento === 'crédito') totalCred += itemValor;
+            return true;
+        });
+
+        dadosFiltrados.forEach((item)=>{
+            const tr = document.createElement('tr');
+            tr.innerHTML = `<td>${item.os}</td><td>${item.data}</td><td>${item.cliente}</td><td>${item.placa}</td><td>R$ ${parseFloat(item.valor).toFixed(2)}</td><td>${item.pagamento}</td><td>${item.tecnico}</td><td>${item.unidade}</td><td><button class="edit" onclick="editarOS('${item.id}')">Editar</button> <button class="delete" onclick="apagarOS('${item.id}', '${item.os}')">Apagar</button></td>`;
+            tbody.appendChild(tr);
+        });
+
+        document.getElementById('totalFaturadas').innerHTML=`FATURADAS<br>R$ ${totalF.toFixed(2)}`;
+        document.getElementById('totalAberto').innerHTML=`EM ABERTO<br>R$ ${totalAberto.toFixed(2)}`;
+        document.getElementById('totalPix').innerHTML=`PIX<br>R$ ${totalPix.toFixed(2)}`;
+        document.getElementById('totalDinheiro').innerHTML=`DINHEIRO<br>R$ ${totalDin.toFixed(2)}`;
+        document.getElementById('totalDebito').innerHTML=`DÉBITO<br>R$ ${totalDeb.toFixed(2)}`;
+        document.getElementById('totalCredito').innerHTML=`CRÉDITO<br>R$ ${totalCred.toFixed(2)}`;
+    }
+
+    function filtrar(){ atualizarTabelaTodas(); }
+    function buscar(){ atualizarTabelaTodas(); }
+                
+    function limparFiltros(){
+          document.getElementById('unidade').value='';
+          document.getElementById('tecnicoFiltro').value='';
+         document.getElementById('dataInicio').value='';
+          document.getElementById('dataFim').value='';
+          document.getElementById('busca').value='';
+          atualizarTabelaTodas();
+    }
+    
+    function showLogin() {
+        document.getElementById('loginModal').style.display = 'flex';
+        document.getElementById('appContent').style.display = 'none';
+        document.getElementById('userModal').style.display = 'none';
+        
+        document.getElementById('loginUser').value = '';
+        document.getElementById('loginPass').value = '';
+        document.getElementById('loginError').style.display = 'none';
+    }
+
+    function showApp() {
+        document.getElementById('loginModal').style.display = 'none';
+        document.getElementById('userModal').style.display = 'none';
+        document.getElementById('appContent').style.display = 'block';
+        
+        startDataListener(); 
+    }
+
+    function checkLogin() {
+        if (sessionStorage.getItem('isLoggedIn') === 'true') {
+            showApp();
+        } else {
+            showLogin();
+        }
+    }
+
+    function openUserModal() {
+        if (sessionStorage.getItem('isLoggedIn') !== 'true') return; 
+        loadUserList();
+        document.getElementById('userModal').style.display = 'flex';
+    }
+
+    function closeUserModal() {
+        document.getElementById('userModal').style.display = 'none';
+    }
+    
+    // Funções de PDF e Excel (MANTIDAS)
+    function imprimirPDF(filtroPagamento = null) {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF('p', 'pt', 'a4');
+        const finalY = doc.previousAutoTable.finalY || 10;
+        
+        let dadosPDF = osData;
+        let titulo = "Relatório Completo de Ordens de Serviço";
+
+        if (filtroPagamento) {
+            dadosPDF = osData.filter(item => item.pagamento === filtroPagamento);
+            titulo = `Relatório de O.S. (${filtroPagamento})`;
+        }
+
+        const headers = [['O.S', 'DATA', 'CLIENTE', 'PLACA', 'VALOR', 'PAGAMENTO', 'TÉCNICO', 'UNIDADE']];
+        const body = dadosPDF.map(item => [
+            item.os,
+            item.data,
+            item.cliente,
+            item.placa,
+            `R$ ${parseFloat(item.valor).toFixed(2)}`,
+            item.pagamento,
+            item.tecnico,
+            item.unidade
+        ]);
+
+        doc.text(titulo, 40, finalY + 30);
+        doc.autoTable({
+            startY: finalY + 40,
+            head: headers,
+            body: body,
+            theme: 'striped',
+            headStyles: { fillColor: [74, 144, 226] },
+            styles: { fontSize: 8, cellPadding: 5 }
+        });
+
+        doc.save(titulo.replace(/ /g, '_') + '.pdf');
+    }
+    
+    function exportExcel() {
+        const dadosExcel = osData.map(item => ({
+            OS: item.os,
+            DATA: item.data,
+            CLIENTE: item.cliente,
+            PLACA: item.placa,
+            VALOR: parseFloat(item.valor),
+            PAGAMENTO: item.pagamento,
+            TECNICO: item.tecnico,
+            UNIDADE: item.unidade
+        }));
+
+        const ws = XLSX.utils.json_to_sheet(dadosExcel);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Ordens de Serviço");
+        XLSX.writeFile(wb, "VDI_OS_Export_" + new Date().toLocaleDateString('pt-BR').replace(/\//g, '-') + ".xlsx");
+    }
+
+    function importExcel() {
+        document.getElementById('inputExcel').click();
+    }
+
+    function lerExcel(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = async function(e) {
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, { type: 'array' });
+            const sheetName = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[sheetName];
+            const json = XLSX.utils.sheet_to_json(worksheet);
+
+            if (!confirm(`Deseja importar ${json.length} registros? O.S. existentes com o mesmo número serão ignoradas.`)) return;
+            
+            // Lendo o OS atual para evitar duplicatas ao importar
+            const osExistentes = new Set(osData.map(item => item.os));
+            let importadas = 0;
+
+            for (const row of json) {
+                const osNum = String(row.OS).trim();
+
+                // Verifica se a OS já existe
+                if (osExistentes.has(osNum)) {
+                    // console.log(`O.S. ${osNum} já existe. Ignorando.`);
+                    continue;
+                }
+
+                // Normaliza os campos
+                const dataOS = row.DATA ? new Date(Math.round((row.DATA - 25569) * 86400 * 1000)).toISOString().split('T')[0] : '';
+                const dataObj = {
+                    os: osNum,
+                    data: formatDate(dataOS),
+                    dataOS: dataOS,
+                    cliente: String(row.CLIENTE || ''),
+                    placa: String(row.PLACA || ''),
+                    valor: (parseFloat(row.VALOR) || 0).toFixed(2),
+                    pagamento: String(row.PAGAMENTO || ''),
+                    tecnico: String(row.TECNICO || ''),
+                    unidade: String(row.UNIDADE || '')
+                };
+                
+                // Salva no Firestore
+                try {
+                    await osCollection.add(dataObj);
+                    importadas++;
+                } catch (e) {
+                    console.error("Erro ao importar registro:", e);
+                }
+            }
+
+            alert(`Importação concluída! ${importadas} novas O.S. importadas com sucesso.`);
+            document.getElementById('inputExcel').value = ''; // Limpa o input
+        };
+        reader.readAsArrayBuffer(file);
+    }
+    
+    // Ação inicial: configura os usuários padrão e verifica o login
+    window.onload = async () => {
+        // Garante que a estrutura inicial de usuários exista no Firebase
+        await setupInitialUsers(); 
+        checkLogin();
+    };
+
+</script>
+</body>
+</html>
