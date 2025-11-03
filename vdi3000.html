@@ -1,0 +1,780 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>VDI Tacógrafos — Frente de Caixa</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://unpkg.com/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+        <style>
+        body { font-family: 'Poppins', sans-serif; margin:0; padding:0; background:#f4f6f9; }
+        header { background: linear-gradient(90deg,#4a90e2,#9013fe); color:white; padding:20px; text-align:center; font-size:24px; font-weight:600; box-shadow:0 4px 6px rgba(0,0,0,0.1); }
+        .container { padding:20px; max-width:1200px; margin:auto; }
+        .buttons, .filters, .search { display:flex; flex-wrap:wrap; gap:10px; margin-bottom:20px; }
+        button { background:#4a90e2; color:white; border:none; padding:10px 18px; border-radius:8px; cursor:pointer; font-weight:600; transition:0.2s; display:flex; align-items:center; gap:5px; }
+        button:hover { background:#357ABD; }
+        input, select { padding:10px 12px; border-radius:6px; border:1px solid #ccc; box-sizing: border-box;} /* Ajuste input */
+        table { width:100%; border-collapse:collapse; margin-bottom:20px; background:white; border-radius:8px; overflow:hidden; box-shadow:0 2px 4px rgba(0,0,0,0.1); }
+        th, td { padding:12px 15px; text-align:left; }
+        th { background:#4a90e2; color:white; }
+        tr:nth-child(even) { background:#f9f9f9; }
+        tr:hover { background:#dce6f1; }
+        .summary { display:flex; gap:15px; flex-wrap:wrap; margin-bottom:20px; }
+        .card { flex:1 1 150px; padding:15px; border-radius:10px; color:white; font-weight:600; text-align:center; box-shadow:0 2px 6px rgba(0,0,0,0.1); cursor:pointer; transition:0.2s; }
+        .card:hover { opacity:0.9; transform:scale(1.02); }
+        .faturadas { background: linear-gradient(45deg,#2d9cdb,#1b7ecf); }
+        .emaberto { background: linear-gradient(45deg,#e94e77,#d43d5c); }
+        .pix { background: linear-gradient(45deg,#27ae60,#1e8449); }
+        .dinheiro { background: linear-gradient(45deg,#f1c40f,#d4ac0d); }
+        .debito { background: linear-gradient(45deg,#f39c12,#d68910); }
+        .credito { background: linear-gradient(45deg,#9b59b6,#8e44ad); }
+        .edit, .delete { border:none; padding:5px 10px; border-radius:6px; color:white; cursor:pointer; margin-right:5px; }
+        .edit { background:#27ae60; }
+        .delete { background:#e74c3c; }
+                /* 🔒 ESTILOS GERAIS DE MODAL */
+        #formModal, #loginModal, #userModal { 
+            display:none; /* CORREÇÃO AQUI: Garante que todos os modais comecem invisíveis */
+            position:fixed; 
+            top:0; 
+            left:0; 
+            width:100%; 
+            height:100%; 
+            background: rgba(0,0,0,0.5); 
+            justify-content:center; 
+            align-items:center; 
+            z-index: 1000; 
+        }
+        #formContent { background:white; padding:20px; border-radius:10px; width:400px; max-width:90%; }
+        #formContent h2 { margin-top:0; color:#4a90e2; }
+        #formContent input, #formContent select { width:100%; margin-bottom:10px; }
+        #formContent button { width:100%; }
+                /* 🔒 ESTILOS DO LOGIN */
+        #loginModal { z-index: 2000; background: #f4f6f9; }
+        #loginContent { 
+            background: white; 
+            padding: 30px; 
+            border-radius: 10px; 
+            width: 300px; 
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2); 
+            text-align: center;
+        }
+        #loginContent h2 { color: #4a90e2; margin-bottom: 20px;}
+        #loginContent input { width: 100%; margin-bottom: 15px; }
+        #loginContent button { width: 100%; padding: 12px;}
+                /* 🔒 ESTILOS DO GERENCIAMENTO DE USUÁRIOS */
+        #userModal { z-index: 1500; }
+        #userContent { 
+            background: white; 
+            padding: 20px; 
+            border-radius: 10px; 
+            width: 400px; 
+            max-width: 90%; 
+        }
+        #userList li {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+        }
+        #userList button {
+            background:#e74c3c; 
+            padding:3px 8px; 
+            margin-left:10px; 
+            font-size:12px; 
+            width:auto;
+        }
+                @media(max-width:600px){
+            .buttons, .filters, .search { flex-direction:column; }
+            table th, table td { font-size:12px; padding:8px; }
+        }
+    </style>
+</head>
+<body>
+
+<div id="loginModal">
+    <div id="loginContent">
+        <h2>Acesso ao Sistema</h2>
+        <form onsubmit="loginAttempt(); return false;">
+             <input type="text" id="loginUser" placeholder="Usuário" required>
+            <input type="password" id="loginPass" placeholder="Senha" required>
+            <button type="submit">Entrar</button>
+            <p id="loginError" style="color:#e74c3c; display:none; margin-top:10px; font-weight:600;">Usuário ou senha inválidos.</p>
+        </form>
+    </div>
+</div>
+
+<div id="userModal">
+    <div id="userContent">
+        <h2>Gerenciar Usuários</h2>
+        <h3 style="color:#4a90e2; margin-top:10px;">Cadastrar Novo Usuário</h3>
+        <input type="text" id="newUser" placeholder="Novo Usuário" required>
+        <input type="password" id="newPass" placeholder="Nova Senha" required>
+        <button onclick="registerUser()">Cadastrar</button>
+                <h3 style="color:#4a90e2; margin-top:20px;">Usuários Cadastrados</h3>
+        <ul id="userList" style="list-style-type:none; padding:0;">
+            </ul>
+                <button onclick="closeUserModal()" style="margin-top:20px;background:#e74c3c;">Fechar</button>
+    </div>
+</div>
+
+<div id="appContent" style="display:none;">
+    <header>VDI TACÓGRAFOS — Frente de Caixa (Barueri · Cotia · Embu)</header>
+    <div class="container">
+        <div class="buttons">
+            <button onclick="abrirForm()">+ Nova O.S</button>
+            <button onclick="exportExcel()">Exportar Excel</button>
+            <button onclick="importExcel()">Importar Excel</button>
+            <button onclick="imprimirPDF()">Imprimir / Salvar PDF</button>
+            <button onclick="limparDados()">Limpar dados</button>
+            <button onclick="openUserModal()" style="background:#9b59b6;">Gerenciar Usuários</button>
+ </div>
+        <input type="file" id="inputExcel" accept=".xlsx,.csv" style="display:none" onchange="lerExcel(event)" multiple>
+
+        <div class="filters">
+            <select id="unidade" onchange="atualizarTabelaTodas()">
+                <option value="">Todas Unidades</option>
+                <option value="Barueri">Barueri</option>
+                <option value="Cotia">Cotia</option>
+                <option value="Embu">Embu</option>
+            </select>
+                    <select id="tecnicoFiltro" onchange="atualizarTabelaTodas()">
+                <option value="">Todos Técnicos</option>
+                </select>
+            <input type="date" id="dataInicio">
+            <input type="date" id="dataFim">
+            <button onclick="filtrar()">Filtrar</button>
+            <button onclick="limparFiltros()">Limpar filtros</button>
+        </div>
+
+        <div class="search">
+            <input type="text" id="busca" placeholder="Buscar cliente, placa ou O.S">
+            <button onclick="buscar()">Buscar</button>
+        </div>
+
+        <h3>Todas as O.S</h3>
+        <table id="tabelaTodas">
+            <thead>
+            <tr>
+                <th>O.S</th><th>DATA</th><th>CLIENTE</th><th>PLACA</th><th>VALOR</th><th>PAGAMENTO</th><th>TECNICO</th><th>UNIDADE</th><th>Ações</th>
+            </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+
+        <h3>Resumo — Controle de Caixa Diário</h3>
+        <div class="summary">
+            <div class="card faturadas" id="totalFaturadas" onclick="imprimirPDF('Faturado')">FATURADAS<br>R$ 0,00</div>
+            <div class="card emaberto" id="totalAberto" onclick="imprimirPDF('Em Aberto')">EM ABERTO<br>R$ 0,00</div>
+            <div class="card pix" id="totalPix" onclick="imprimirPDF('PIX')">PIX<br>R$ 0,00</div>
+            <div class="card dinheiro" id="totalDinheiro" onclick="imprimirPDF('Dinheiro')">DINHEIRO<br>R$ 0,00</div>
+            <div class="card debito" id="totalDebito" onclick="imprimirPDF('Débito')">DÉBITO<br>R$ 0,00</div>
+            <div class="card credito" id="totalCredito" onclick="imprimirPDF('Crédito')">CRÉDITO<br>R$ 0,00</div>
+        </div>
+    </div>
+
+        <div id="formModal">
+        <div id="formContent">
+            <h2>Nova O.S</h2>
+            <input type="text" id="formOS" placeholder="Número da O.S" required>
+            <input type="date" id="formData" required>
+            <input type="text" id="formCliente" placeholder="Cliente" required>
+            <input type="text" id="formPlaca" placeholder="Placa" required>
+            <input type="number" id="formValor" placeholder="Valor (R$)" step="0.01" required>
+            <select id="formPagamento" required>
+                <option value="">Selecione pagamento</option>
+                <option value="PIX">PIX</option>
+                <option value="Dinheiro">Dinheiro</option>
+                <option value="Crédito">Crédito</option>
+                <option value="Débito">Débito</option>
+                <option value="Em Aberto">Em Aberto</option>
+                <option value="Faturado">Faturado</option>
+            </select>
+            <select id="formUnidade" required>
+                <option value="">Selecione a Unidade</option>
+                <option value="Barueri">Barueri</option>
+                <option value="Cotia">Cotia</option>
+                <option value="Embu">Embu</option>
+            </select>
+            <input type="text" id="formTecnico" placeholder="Técnico" required>
+            <button onclick="salvarForm()">Salvar O.S</button>
+            <button onclick="fecharForm()" style="margin-top:5px;background:#e74c3c;">Cancelar</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // 💾 INICIALIZA E CARREGA DADOS SALVOS
+    let osData = JSON.parse(localStorage.getItem('osData')) || [];
+    
+    // =================================================================
+    // 🔒 CONFIGURAÇÃO DE USUÁRIOS PADRÃO (EDITADO PARA INCLUIR NOVO ACESSO)
+    // =================================================================
+    const DEFAULT_USER = { user: 'vdi', pass: '12345' };
+    
+    // **>> SEU NOVO USUÁRIO GARANTIDO <<**
+    // **Troque 'meuacesso' e 'minhasenha123' pelas suas credenciais pessoais, se for o caso.**
+    const NEW_USER = { user: 'meuacesso', pass: 'minhasenha123' }; 
+
+    let appUsers = JSON.parse(localStorage.getItem('appUsers'));
+    
+    if (!appUsers || appUsers.length === 0) {
+        // Inicializa com o usuário padrão e o novo usuário
+        appUsers = [DEFAULT_USER, NEW_USER]; 
+        localStorage.setItem('appUsers', JSON.stringify(appUsers));
+    } else {
+        // Garante que o usuário 'vdi' e o 'meuacesso' existam, caso tenham sido apagados.
+        if (!appUsers.find(u => u.user === DEFAULT_USER.user)) {
+            appUsers.push(DEFAULT_USER);
+            saveUsers();
+        }
+        if (!appUsers.find(u => u.user === NEW_USER.user)) {
+             // Apenas adiciona se o nome de usuário for diferente e não existir
+             if (DEFAULT_USER.user !== NEW_USER.user) {
+                appUsers.push(NEW_USER);
+                saveUsers();
+             }
+        }
+    }
+
+    // Função para salvar a lista de usuários no localStorage
+    function saveUsers() {
+        localStorage.setItem('appUsers', JSON.stringify(appUsers));
+    }
+            
+    // =================================================================
+    // FUNÇÕES DA APLICAÇÃO (sem alterações significativas)
+    // =================================================================
+                
+    function salvarLocalStorage(){
+          localStorage.setItem('osData', JSON.stringify(osData));
+      }
+                
+    function formatDate(iso){
+          const parts=iso.split('-');
+          return `${parts[2]}/${parts[1]}/${parts[0]}`;
+      }
+    
+    // Obtém a lista de técnicos únicos para popular o filtro
+    function getTecnicosUnicos() {
+        const tecnicos = [...new Set(osData.map(item => item.tecnico).filter(t => t && t.trim() !== ''))].sort();
+        const select = document.getElementById('tecnicoFiltro');
+        const valorAtual = select.value;
+                        
+        select.innerHTML = '<option value="">Todos Técnicos</option>';
+                        
+        tecnicos.forEach(tecnico => {
+            const option = document.createElement('option');
+            option.value = tecnico;
+            option.textContent = tecnico;
+            select.appendChild(option);
+        });
+        if (tecnicos.includes(valorAtual)) {
+               select.value = valorAtual;
+        } else if (valorAtual && !tecnicos.includes(valorAtual)) {
+              select.value = '';
+        }
+    }
+
+    function abrirForm(){
+        const unidadeSelecionada = document.getElementById('unidade').value;
+        if (unidadeSelecionada) {
+              document.getElementById('formUnidade').value = unidadeSelecionada;
+        } else {
+              document.getElementById('formUnidade').value = ''; 
+         }
+        document.getElementById('formModal').style.display='flex';
+    }
+
+    function fecharForm(){
+          document.getElementById('formModal').style.display='none';
+      }
+
+    function salvarForm(){
+        const os=document.getElementById('formOS').value.trim();
+        const data=document.getElementById('formData').value;
+        const cliente=document.getElementById('formCliente').value.trim();
+        const placa=document.getElementById('formPlaca').value.trim();
+        const valor=parseFloat(document.getElementById('formValor').value).toFixed(2);
+        const pagamento=document.getElementById('formPagamento').value;
+        const tecnico=document.getElementById('formTecnico').value.trim();
+        const unidade=document.getElementById('formUnidade').value;
+
+        if(!os || !data || !cliente || !placa || !valor || !pagamento || !tecnico || !unidade){
+              alert("Preencha todos os campos!");
+              return;
+          }
+
+        osData.unshift({os,data:formatDate(data),cliente,placa,valor,pagamento,tecnico,unidade});
+                            
+        salvarLocalStorage();
+        getTecnicosUnicos();
+        atualizarTabelaTodas();
+                            
+        fecharForm();
+
+        // Limpa o formulário
+        document.getElementById('formContent').querySelectorAll('input, select').forEach(f => {
+            if (f.type !== 'submit' && f.type !== 'button') {
+                f.value = '';
+            }
+        });
+    }
+
+    function atualizarTabelaTodas(){
+        const unidade = document.getElementById('unidade').value;
+        const dataInicio = document.getElementById('dataInicio').value;
+        const dataFim = document.getElementById('dataFim').value;
+        const termoBusca = document.getElementById('busca').value.toLowerCase();
+        const tecnicoFiltro = document.getElementById('tecnicoFiltro').value; 
+
+        const tbody = document.querySelector("#tabelaTodas tbody");
+        tbody.innerHTML = '';
+        let totalF=0, totalAberto=0, totalPix=0, totalDin=0, totalDeb=0, totalCred=0;
+
+        // Filtra e Ordena os dados
+                
+        const dadosFiltrados = osData.filter(item => {
+            const itemDate = item.data.split('/').reverse().join('-');
+            const itemValor = parseFloat(item.valor) || 0;
+            const itemPagamento = item.pagamento ? item.pagamento.toLowerCase().trim() : '';
+                                                
+            // 1. Filtro por Unidade
+                        
+            if(unidade && item.unidade !== unidade) return false;
+                                                
+            // 2. Filtro por Técnico
+                        
+            if(tecnicoFiltro && item.tecnico !== tecnicoFiltro) return false;
+                                                
+            // 3. Filtro por Data
+                        
+            if(dataInicio && itemDate < dataInicio) return false;
+            if(dataFim && itemDate > dataFim) return false;
+                                                
+            // 4. Filtro de Canceladas
+                        
+            if ((item.cliente || '').toUpperCase().includes('CANCELADA')) return false;
+
+            // 5. Filtro de Busca (Cliente, Placa ou O.S)
+                        
+            if (termoBusca && !(item.cliente.toLowerCase().includes(termoBusca) || item.placa.toLowerCase().includes(termoBusca) || item.os.toLowerCase().includes(termoBusca))) return false;
+                                                
+            // 6. Cálculos do Resumo (só para itens que passaram nos filtros)
+                        
+            if(itemPagamento === 'faturado') totalF += itemValor;
+            if(itemPagamento === 'em aberto') totalAberto += itemValor;
+            if(itemPagamento === 'pix') totalPix += itemValor;
+            if(itemPagamento === 'dinheiro') totalDin += itemValor;
+            if(itemPagamento === 'débito') totalDeb += itemValor;
+            if(itemPagamento === 'crédito') totalCred += itemValor;
+            return true;
+        }).sort((a, b) => {
+            const dateA = new Date(a.data.split('/').reverse().join('-'));
+            const dateB = new Date(b.data.split('/').reverse().join('-'));
+            return dateB - dateA;
+        });
+
+        dadosFiltrados.forEach((item,i)=>{
+            const tr = document.createElement('tr');
+            const originalIndex = osData.findIndex(d => d.os === item.os && d.data === item.data && d.unidade === item.unidade); 
+                         
+            tr.innerHTML = `<td>${item.os}</td><td>${item.data}</td><td>${item.cliente}</td><td>${item.placa}</td><td>R$ ${parseFloat(item.valor).toFixed(2)}</td><td>${item.pagamento}</td><td>${item.tecnico}</td><td>${item.unidade}</td><td><button class="edit" onclick="editarOS(${originalIndex})">Editar</button> <button class="delete" onclick="apagarOS(${originalIndex})">Apagar</button></td>`;
+            tbody.appendChild(tr);
+        });
+
+        document.getElementById('totalFaturadas').innerHTML=`FATURADAS<br>R$ ${totalF.toFixed(2)}`;
+        document.getElementById('totalAberto').innerHTML=`EM ABERTO<br>R$ ${totalAberto.toFixed(2)}`;
+        document.getElementById('totalPix').innerHTML=`PIX<br>R$ ${totalPix.toFixed(2)}`;
+        document.getElementById('totalDinheiro').innerHTML=`DINHEIRO<br>R$ ${totalDin.toFixed(2)}`;
+        document.getElementById('totalDebito').innerHTML=`DÉBITO<br>R$ ${totalDeb.toFixed(2)}`;
+        document.getElementById('totalCredito').innerHTML=`CRÉDITO<br>R$ ${totalCred.toFixed(2)}`;
+    }
+
+    function filtrar(){ atualizarTabelaTodas(); }
+    function buscar(){ atualizarTabelaTodas(); }
+                
+    function limparFiltros(){
+          document.getElementById('unidade').value='';
+          document.getElementById('tecnicoFiltro').value='';
+         document.getElementById('dataInicio').value='';
+          document.getElementById('dataFim').value='';
+          document.getElementById('busca').value='';
+          atualizarTabelaTodas();
+      }
+
+    function editarOS(i){
+          const item=osData[i];
+          const novoCliente=prompt("Editar cliente",item.cliente);
+          if(novoCliente !== null){
+              item.cliente=novoCliente;
+              salvarLocalStorage();
+              atualizarTabelaTodas();
+          }
+      }
+                
+    function apagarOS(i){
+          if(confirm("Deseja apagar esta O.S?")){
+              osData.splice(i,1);
+              salvarLocalStorage();
+              getTecnicosUnicos();
+            atualizarTabelaTodas();
+          }
+      }
+                
+    function limparDados(){
+          if(confirm("Deseja limpar TODOS os dados? Esta ação é irreversível.")){
+              osData=[];
+              salvarLocalStorage();
+              getTecnicosUnicos();
+            atualizarTabelaTodas();
+          }
+      }
+
+    function exportExcel(){
+            const wb=XLSX.utils.book_new();
+            const ws=XLSX.utils.json_to_sheet(osData);
+            XLSX.utils.book_append_sheet(wb,ws,"O.S");
+            XLSX.writeFile(wb,"OS_FrenteCaixa.xlsx");
+    }
+                
+    function importExcel(){
+          document.getElementById('inputExcel').click();
+      }
+
+    function lerExcel(event) {
+        const files = event.target.files;
+        if (files.length === 0) {
+              document.getElementById('inputExcel').value = null;
+              return;
+          }
+                        
+        let dadosCombinados = [];
+        let arquivosProcessados = 0;
+                                
+        function processarArquivo(file) {
+            const reader = new FileReader();
+            const fileName = file.name.toUpperCase();
+            let unidade = '';
+            if (fileName.includes('BARUERI')) {
+                  unidade = 'Barueri'; 
+             } else if (fileName.includes('COTIA')) {
+                  unidade = 'Cotia'; 
+             } else if (fileName.includes('EMBU')) {
+                  unidade = 'Embu'; 
+             }
+
+            reader.onload = function(e) {
+                const data = e.target.result;
+                try {
+                    const workbook = XLSX.read(data, { type: 'binary', raw: true, cellDates: true, dateNF: 'yyyy-mm-dd' });
+                    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                    const sheetData = XLSX.utils.sheet_to_json(firstSheet, { header: 1, raw: true, defval: '' });
+                                                                                
+                    let dadosArquivo = [];
+                    let isCapturingData = false;
+                                                                                
+                    for (let i = 0; i < sheetData.length; i++) {
+                        const row = sheetData[i].map(c => String(c).trim().toUpperCase());
+                        const rowContainsHeader = row.some(cell => cell === 'O S' || cell === 'O.S') && row.some(cell => cell === 'DATA');
+                        
+                        if (rowContainsHeader) {
+                            isCapturingData = true;
+                            continue;
+                        }
+
+                        if (isCapturingData) {
+                            const isSummaryRow = row.some(cell => cell.includes('TOTAL') || cell.includes('RESUMO') || cell.includes('SAIDAS') || cell.includes('INICIO DE CX'));
+                            if (isSummaryRow || row[0] === '') {
+                                  isCapturingData = false;
+                                  continue;
+                            }
+                                                                                                                
+                            if (row.length >= 7 && row[0] !== '') {
+                                const osItem = {
+                                    os: sheetData[i][0] || '',
+                                    data: (sheetData[i][1] instanceof Date) ? formatDate(sheetData[i][1].toISOString().split('T')[0]) : (sheetData[i][1] || ''),
+                                    cliente: sheetData[i][2] || '',
+                                    placa: sheetData[i][3] || '',
+                                    valor: parseFloat(String(sheetData[i][4] || 0).replace(',', '.')).toFixed(2),
+                                    pagamento: sheetData[i][5] || '',
+                                    tecnico: sheetData[i][6] || '',
+                                    unidade: unidade
+                                  };
+                                dadosArquivo.push(osItem);
+                            }
+                        }
+                    }
+                    dadosCombinados = dadosCombinados.concat(dadosArquivo);
+                } catch (error) {
+                    console.error(`Erro ao processar o arquivo ${file.name}:`, error);
+                    alert(`Erro ao ler o arquivo ${file.name}. Verifique se o formato está correto.`);
+                } finally {
+                    arquivosProcessados++;
+                    if (arquivosProcessados === files.length) {
+                                                                        
+                        const novosRegistros = dadosCombinados.filter(item => 
+                            item.os && item.data && item.cliente.toUpperCase().trim() !== 'CANCELADA'
+                        );
+                                                
+                        const registrosExistentesMap = new Map(
+                            osData.map(item => [`${item.os}-${item.data}-${item.unidade}`, item])
+                          );
+                                                                        
+                        let registrosAdicionados = 0;
+                        novosRegistros.forEach(novoItem => {
+                            const key = `${novoItem.os}-${novoItem.data}-${novoItem.unidade}`;
+                            if (!registrosExistentesMap.has(key)) {
+                                osData.push(novoItem);
+                                registrosAdicionados++;
+                            }
+                        });
+
+                        salvarLocalStorage();
+                        getTecnicosUnicos();
+                        atualizarTabelaTodas();
+                        alert(`Sucesso! ${files.length} arquivos combinados e ${registrosAdicionados} novos registros importados.`);
+                        document.getElementById('inputExcel').value = null;
+                      }
+                }
+            };
+            reader.readAsBinaryString(file);
+        }
+        for (let i = 0; i < files.length; i++) {
+            processarArquivo(files[i]);
+        }
+    }
+        
+    // Funções de PDF (mantidas)
+    const paymentColors = { 'Faturado': [173, 216, 230], 'Em Aberto': [255, 192, 203], 'PIX': [175, 223, 175], 'Dinheiro': [255, 239, 173], 'Débito': [253, 222, 173], 'Crédito': [210, 180, 222]};
+    const totalColors = { 'Faturado': [45, 156, 219], 'Em Aberto': [233, 78, 119], 'PIX': [39, 174, 96], 'Dinheiro': [241, 196, 15], 'Débito': [243, 156, 18], 'Crédito': [155, 89, 182]};
+
+    function imprimirPDF(tipoFiltro = '') {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
+        const unidadeSelecionada = document.getElementById('unidade').value;
+        const tecnicoFiltro = document.getElementById('tecnicoFiltro').value;
+        const dataInicio = document.getElementById('dataInicio').value;
+        const dataFim = document.getElementById('dataFim').value;
+        const termoBusca = document.getElementById('busca').value.toLowerCase();
+
+        let tituloFiltro = tipoFiltro || 'Todos';
+        if(tecnicoFiltro) tituloFiltro += ` (Técnico: ${tecnicoFiltro})`;
+        if(termoBusca) tituloFiltro += ` (Busca: "${termoBusca}")`;
+
+        let dados = JSON.parse(localStorage.getItem('osData')) || [];
+
+        // --- Lógica de Filtro ---
+        if (unidadeSelecionada) { dados = dados.filter(d => d.unidade === unidadeSelecionada); }
+        if (tecnicoFiltro) { dados = dados.filter(d => d.tecnico === tecnicoFiltro); }
+        if (tipoFiltro) { dados = dados.filter(d => (d.pagamento || '').toLowerCase().trim() === tipoFiltro.toLowerCase().trim()); }
+        if (dataInicio) { dados = dados.filter(d => (d.data || '').split('/').reverse().join('-') >= dataInicio); }
+        if (dataFim) { dados = dados.filter(d => (d.data || '').split('/').reverse().join('-') <= dataFim); }
+        if (termoBusca) {
+            dados = dados.filter(d =>
+                (d.cliente || '').toLowerCase().includes(termoBusca) ||
+                (d.placa || '').toLowerCase().includes(termoBusca) ||
+                (d.os || '').toLowerCase().includes(termoBusca)
+            );
+        }
+        dados = dados.filter(d => !(d.cliente || '').toUpperCase().includes('CANCELADA'));
+        // --- Fim da Lógica de Filtro ---
+
+        const headers = ['O.S', 'DATA', 'CLIENTE', 'PLACA', 'VALOR', 'PAGAMENTO', 'TECNICO', 'UNIDADE'];
+        let total = 0;
+        const bodyData = dados.map(item => {
+            const valorNum = parseFloat(item.valor || 0);
+            total += valorNum;
+            return [
+                String(item.os || ''),
+                String(item.data || ''),
+                String(item.cliente || ''),
+                String(item.placa || ''),
+                'R$ ' + valorNum.toFixed(2),
+                String(item.pagamento || ''),
+                String(item.tecnico || ''),
+                String(item.unidade || '')
+            ];
+        });
+
+        const headerColor = [74, 144, 226];
+
+        doc.setFillColor(...headerColor);
+        doc.rect(0, 0, 210, 25, 'F');
+        doc.setTextColor(255, 255, 255);
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(18);
+        doc.text("Frente de Caixa — Relatório de O.S", 105, 15, { align: 'center' });
+        doc.setFontSize(11);
+        doc.text(`Unidade: ${unidadeSelecionada || 'Todas'}  |  Filtro: ${tituloFiltro}`, 105, 22, { align: 'center' });
+
+        doc.autoTable({
+            startY: 30,
+            head: [headers],
+            body: bodyData,
+            theme: 'plain',
+            headStyles: { fillColor: headerColor, textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 10 },
+            styles: { fontSize: 9, cellPadding: 2, lineColor: [200, 200, 200], lineWidth: 0.1, textColor: [0, 0, 0] },
+            columnStyles: { 0: { cellWidth: 16 }, 1: { cellWidth: 25 }, 2: { cellWidth: 37 }, 3: { cellWidth: 22 }, 4: { cellWidth: 20, halign: 'right' }, 5: { cellWidth: 28 }, 6: { cellWidth: 22 }, 7: { cellWidth: 20 } },
+            didParseCell: (data) => {
+                if (data.section === 'body') {
+                    const item = dados[data.row.index];
+                    const paymentType = item.pagamento;
+                    const color = paymentColors[paymentType];
+                    data.cell.styles.fontStyle = 'bold';
+                    if (color) {
+                        data.cell.styles.fillColor = color;
+                        data.cell.styles.textColor = [0, 0, 0];
+                    } else {
+                        data.cell.styles.textColor = [0, 0, 0];
+                    }
+                }
+            },
+            didDrawPage: (data) => { doc.setFontSize(10); }
+        });
+
+        const finalY = doc.lastAutoTable.finalY + 5;
+        const leftMargin = 10;
+        let totalBackgroundColor = totalColors[tipoFiltro] || headerColor;
+        
+        doc.setFillColor(...totalBackgroundColor);
+        doc.rect(leftMargin, finalY, 80, 8, 'F');
+        doc.setTextColor(255, 255, 255);
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(12);
+        doc.text(`TOTAL: R$ ${total.toFixed(2)}`, leftMargin + 4, finalY + 5.5, {});
+        
+        let nomeArquivo = tipoFiltro ? `OS_${tipoFiltro}` : 'OS_RelatorioCompleto';
+        if (unidadeSelecionada) nomeArquivo += `_${unidadeSelecionada}`;
+        if (tecnicoFiltro) nomeArquivo += `_${tecnicoFiltro}`;
+        
+        doc.save(`${nomeArquivo}.pdf`);
+    }
+
+    // =================================================================
+    // FUNÇÕES DE LOGIN E GERENCIAMENTO DE USUÁRIOS (COMPLETADAS)
+    // =================================================================
+
+    function showLogin() {
+        // Exibe apenas o modal de login
+        document.getElementById('loginModal').style.display = 'flex';
+        document.getElementById('appContent').style.display = 'none';
+        document.getElementById('userModal').style.display = 'none'; /* Garantia extra */
+        
+        document.getElementById('loginUser').value = '';
+        document.getElementById('loginPass').value = '';
+        document.getElementById('loginError').style.display = 'none';
+    }
+
+    function showApp() {
+        // Exibe o conteúdo principal e esconde os modais
+        document.getElementById('loginModal').style.display = 'none';
+        document.getElementById('userModal').style.display = 'none';
+        document.getElementById('appContent').style.display = 'block';
+        
+        getTecnicosUnicos();
+        atualizarTabelaTodas();
+    }
+
+    function loginAttempt() {
+        const user = document.getElementById('loginUser').value.trim();
+        const pass = document.getElementById('loginPass').value.trim();
+        const errorMsg = document.getElementById('loginError');
+
+        // Garante que a lista de usuários esteja atualizada antes de tentar o login
+        appUsers = JSON.parse(localStorage.getItem('appUsers')) || [DEFAULT_USER, NEW_USER];
+        
+        // Verifica se as credenciais correspondem a qualquer usuário na lista
+        const userFound = appUsers.find(u => u.user === user && u.pass === pass);
+
+        if (userFound) {
+            sessionStorage.setItem('isLoggedIn', 'true'); 
+            showApp();
+        } else {
+            errorMsg.style.display = 'block';
+        }
+    }
+
+    function checkLogin() {
+        if (sessionStorage.getItem('isLoggedIn') === 'true') {
+            showApp();
+        } else {
+            showLogin();
+        }
+    }
+
+    function openUserModal() {
+        // Exibe o modal de gerenciamento e carrega a lista de usuários
+        if (sessionStorage.getItem('isLoggedIn') !== 'true') return; 
+        loadUserList();
+        document.getElementById('userModal').style.display = 'flex';
+    }
+
+    function closeUserModal() {
+        document.getElementById('userModal').style.display = 'none';
+    }
+
+    function registerUser() {
+        const user = document.getElementById('newUser').value.trim();
+        const pass = document.getElementById('newPass').value.trim();
+
+        if (!user || !pass) {
+            alert('Usuário e Senha são obrigatórios.');
+            return;
+        }
+
+        if (appUsers.some(u => u.user === user)) {
+            alert('Este usuário já existe.');
+            return;
+        }
+
+        appUsers.push({ user, pass });
+        saveUsers();
+        loadUserList();
+        document.getElementById('newUser').value = '';
+        document.getElementById('newPass').value = '';
+    }
+
+    function deleteUser(index) {
+        if (appUsers.length === 1) {
+            alert("Não é possível apagar o único usuário existente.");
+            return;
+        }
+        if (confirm(`Deseja apagar o usuário ${appUsers[index].user}?`)) {
+            appUsers.splice(index, 1);
+            saveUsers();
+            loadUserList();
+        }
+    }
+
+    function loadUserList() {
+        // Atualiza a lista de usuários no modal
+        const list = document.getElementById('userList');
+        list.innerHTML = '';
+                
+        // Garante que o array de usuários esteja carregado
+        appUsers = JSON.parse(localStorage.getItem('appUsers')) || [DEFAULT_USER, NEW_USER];
+
+        appUsers.forEach((userObj, index) => {
+            const li = document.createElement('li');
+            // Impede de apagar o usuário que está logado no momento
+            const loggedInUser = document.getElementById('loginUser').value.trim();
+            const deleteButton = (userObj.user === loggedInUser) 
+                ? '<button disabled style="background:#ccc; cursor:not-allowed;">Logado</button>' 
+                : `<button onclick="deleteUser(${index})">Apagar</button>`;
+            
+            li.innerHTML = `
+                <span>${userObj.user}</span>
+                ${deleteButton}
+            `;
+            list.appendChild(li);
+        });
+    }
+
+    // Inicializa a verificação de login ao carregar a página
+    window.onload = checkLogin;
+</script>
+</body>
+</html>
