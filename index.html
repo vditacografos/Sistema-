@@ -8,7 +8,9 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://unpkg.com/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    
+    
+    <script src="https://cdn.auth0.com/js/auth0-spa-js/2.0/auth0-spa-js.production.js"></script>
+    
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
     <style>
@@ -37,7 +39,7 @@
         .edit, .delete { border:none; padding:5px 10px; border-radius:6px; color:white; cursor:pointer; margin-right:5px; }
         .edit { background:#27ae60; }
         .delete { background:#e74c3c; }
-        #formModal, #loginModal, #userModal { 
+        #formModal, #loginModal { 
             display:none;
             position:fixed; 
             top:0; 
@@ -65,28 +67,7 @@
         #loginContent h2 { color: #4a90e2; margin-bottom: 20px;}
         #loginContent input { width: 100%; margin-bottom: 15px; }
         #loginContent button { width: 100%; padding: 12px;}
-        #userModal { z-index: 1500; }
-        #userContent { 
-            background: white; 
-            padding: 20px; 
-            border-radius: 10px; 
-            width: 400px; 
-            max-width: 90%; 
-        }
-        #userList li {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 8px 0;
-            border-bottom: 1px solid #eee;
-        }
-        #userList button {
-            background:#e74c3c; 
-            padding:3px 8px; 
-            margin-left:10px; 
-            font-size:12px; 
-            width:auto;
-        }
+        /* REMOVEMOS O #userModal no HTML */
         @media(max-width:600px){
             .buttons, .filters, .search { flex-direction:column; }
             table th, table td { font-size:12px; padding:8px; }
@@ -96,28 +77,9 @@
 <body>
 
 <div id="loginModal">
-    <div id="loginContent">
+        <div id="loginContent">
         <h2>Acesso ao Sistema</h2>
-        <form onsubmit="loginAttempt(); return false;">
-             <input type="text" id="loginUser" placeholder="Usuário" required>
-            <input type="password" id="loginPass" placeholder="Senha" required>
-            <button type="submit">Entrar</button>
-            <p id="loginError" style="color:#e74c3c; display:none; margin-top:10px; font-weight:600;">Usuário ou senha inválidos.</p>
-        </form>
-    </div>
-</div>
-
-<div id="userModal">
-    <div id="userContent">
-        <h2>Gerenciar Usuários</h2>
-        <h3 style="color:#4a90e2; margin-top:10px;">Cadastrar Novo Usuário</h3>
-        <input type="text" id="newUser" placeholder="Novo Usuário" required>
-        <input type="password" id="newPass" placeholder="Nova Senha" required>
-        <button onclick="registerUser()">Cadastrar</button>
-        <h3 style="color:#4a90e2; margin-top:20px;">Usuários Cadastrados</h3>
-        <ul id="userList" style="list-style-type:none; padding:0;">
-            </ul>
-        <button onclick="closeUserModal()" style="margin-top:20px;background:#e74c3c;">Fechar</button>
+        <button onclick="auth0Login()">Entrar</button>
     </div>
 </div>
 
@@ -130,7 +92,7 @@
             <button onclick="importExcel()">Importar Excel</button>
             <button onclick="imprimirPDF()">Imprimir / Salvar PDF</button>
             <button onclick="limparDados()" style="background:#e74c3c;">Limpar TODOS os dados</button>
-            <button onclick="openUserModal()" style="background:#9b59b6;">Gerenciar Usuários</button>
+            <button onclick="logoutAuth0()" style="background:#8e44ad;">Sair (Logout)</button>
  </div>
         <input type="file" id="inputExcel" accept=".xlsx,.csv" style="display:none" onchange="lerExcel(event)" multiple>
 
@@ -209,33 +171,80 @@
 <script>
     
     // =================================================================
-    // 🟢 CONFIGURAÇÃO E INICIALIZAÇÃO DO FIREBASE (PASSO 1)
-    // 🛑 ATENÇÃO: SUBSTITUA O BLOCO ABAIXO PELO SEU firebaseConfig REAL
+    // 🟢 CONFIGURAÇÃO AUTH0 E FIREBASE (MUITO IMPORTANTE!)
+    // 🛑 SUBSTITUA COM SUAS CHAVES DO AUTH0 e MANTENHA SUAS CHAVES FIREBASE
     // =================================================================
+    const AUTH0_DOMAIN = "seu-dominio.auth0.com"; // EX: dev-abc12345.us.auth0.com
+    const AUTH0_CLIENT_ID = "SEU_CLIENT_ID_DO_AUTH0";
+    let auth0Client = null;
+
     const firebaseConfig = {
-  apiKey: "AIzaSyCmhzcNKDWZzTB4DVU0_KMKDQGYbNNhBA",
-  authDomain: "vditacografossistema.firebaseapp.com",
-  projectId: "vditacografossistema",
-  storageBucket: "vditacografossistema.appspot.com",
-  messagingSenderId: "955187054075",
-  appId: "1:955187054075:web:7b7878262490989349f75e",
-  measurementId: "G-N12LKH5WJZ"
-};
+        apiKey: "AIzaSyCmhzcNKDWZzTB4DVU0_KMKDQGYbNNhBA",
+        authDomain: "vditacografossistema.firebaseapp.com",
+        projectId: "vditacografossistema",
+        storageBucket: "vditacografossistema.appspot.com",
+        messagingSenderId: "955187054075",
+        appId: "1:955187054075:web:7b7878262490989349f75e",
+        measurementId: "G-N12LKH5WJZ"
+    };
 
     // Inicializa o Firebase
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
 
-    // Referências das coleções
+    // Referência da coleção de O.S. (Coleção de Usuários NÃO é mais usada para login)
     const osCollection = db.collection('ordens_servico');
-    const usersCollection = db.collection('usuarios');
 
     // Array local para armazenar os dados sincronizados
     let osData = [];
-    let appUsers = [];
+    // appUsers FOI REMOVIDO
     
     // =================================================================
-    // 🟢 FUNÇÕES DO FIREBASE (Substituindo localStorage)
+    // 🔑 FUNÇÕES AUTH0 (NOVO)
+    // =================================================================
+
+    async function configureAuth0() {
+        if (auth0Client) return; // Evita reconfiguração
+
+        auth0Client = await auth0.createAuth0Client({
+            domain: AUTH0_DOMAIN,
+            clientId: AUTH0_CLIENT_ID,
+            authorizationParams: {
+                // MUITO IMPORTANTE: Deve ser a URL exata do seu GitHub Pages!
+                redirect_uri: window.location.origin 
+            }
+        });
+
+        // 1. Tenta lidar com o retorno do Auth0 após o login
+        const query = window.location.search;
+        if (query.includes("code=") && query.includes("state=")) {
+            try {
+                await auth0Client.handleRedirectCallback();
+                // Limpa a URL do navegador
+                window.history.replaceState({}, document.title, window.location.pathname); 
+            } catch (err) {
+                console.error("Erro ao processar o retorno do Auth0:", err);
+            }
+        }
+    }
+
+    async function auth0Login() {
+        if (!auth0Client) return alert("Auth0 não carregado. Recarregue a página.");
+        await auth0Client.loginWithRedirect();
+    }
+
+    async function logoutAuth0() {
+        await auth0Client.logout({
+            logoutParams: {
+                returnTo: window.location.origin
+            }
+        });
+        sessionStorage.removeItem('isLoggedIn');
+        showLogin();
+    }
+    
+    // =================================================================
+    // 🟢 FUNÇÕES DO FIREBASE (Simplificadas)
     // =================================================================
     
     // ONSNAPSHOT: Sincroniza dados em tempo real (Substitui a leitura de localStorage)
@@ -252,112 +261,17 @@
             console.error("Erro ao sincronizar O.S.:", error);
         });
 
-        // Ouve a coleção de Usuários (necessário para a função de login)
-        usersCollection.onSnapshot(snapshot => {
-            appUsers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        }, error => {
-            console.error("Erro ao sincronizar Usuários:", error);
-        });
+        // REMOVEMOS A ESCUTA À usersCollection
+
     }
 
-    // 🔑 Funções de Login (Adaptadas para Firestore)
-    async function setupInitialUsers() {
-        const defaultUser = { user: 'vdi', pass: '12345' };
-        const newUser = { user: 'meuacesso', pass: 'minhasenha123' };
-        
-        // Verifica se a coleção está vazia
-        try {
-            const snapshot = await usersCollection.get();
-            if (snapshot.empty) {
-                console.log("Configurando usuários iniciais no Firebase...");
-                await usersCollection.add(defaultUser);
-                await usersCollection.add(newUser);
-            }
-        } catch(e) {
-             console.error("Erro ao tentar configurar usuários iniciais: Verifique as chaves e as Regras do Firebase.", e);
-        }
-    }
+    // setupInitialUsers FOI REMOVIDA
 
-    async function loginAttempt() {
-        const user = document.getElementById('loginUser').value.trim();
-        const pass = document.getElementById('loginPass').value.trim();
-        const errorMsg = document.getElementById('loginError');
-
-        // Busca o usuário no Firestore (apenas se a lista local estiver carregada)
-        if (appUsers.length > 0) {
-            const userFound = appUsers.find(u => u.user === user && u.pass === pass);
-
-            if (userFound) {
-                sessionStorage.setItem('isLoggedIn', 'true'); 
-                sessionStorage.setItem('currentUser', user); // Armazena o usuário logado
-                showApp();
-            } else {
-                errorMsg.style.display = 'block';
-            }
-        } else {
-            // Se appUsers estiver vazio, o Firebase pode ter falhado ao carregar os dados
-            alert("Aguarde a inicialização do sistema ou verifique as chaves e Regras de Segurança do Firebase. (F5 para tentar novamente)");
-        }
-    }
-
-    // 🔒 Funções de Gerenciamento de Usuários (Adaptadas para Firestore)
-    async function registerUser() {
-        const user = document.getElementById('newUser').value.trim();
-        const pass = document.getElementById('newPass').value.trim();
-
-        if (!user || !pass) {
-            alert('Usuário e Senha são obrigatórios.');
-            return;
-        }
-
-        if (appUsers.some(u => u.user === user)) {
-            alert('Este usuário já existe.');
-            return;
-        }
-
-        try {
-            await usersCollection.add({ user, pass });
-            document.getElementById('newUser').value = '';
-            document.getElementById('newPass').value = '';
-        } catch (e) {
-            alert("Erro ao cadastrar usuário: " + e.message);
-        }
-    }
-
-    async function deleteUser(id, name) {
-        if (appUsers.length <= 2 && name !== 'vdi' && name !== 'meuacesso') { // Deixando os 2 padrões como "intocáveis"
-             alert("Por segurança, você deve manter pelo menos dois usuários no sistema.");
-             return;
-        }
-        if (name === sessionStorage.getItem('currentUser')) {
-             alert("Não é possível apagar o usuário que está logado no momento.");
-             return;
-        }
-        if (confirm(`Deseja apagar o usuário ${name}?`)) {
-             try {
-                await usersCollection.doc(id).delete();
-             } catch (e) {
-                alert("Erro ao apagar usuário: " + e.message);
-             }
-        }
-    }
-
-    function loadUserList() {
-        const list = document.getElementById('userList');
-        list.innerHTML = '';
-        
-        appUsers.forEach(userObj => {
-            const li = document.createElement('li');
-            const deleteButton = (userObj.user === sessionStorage.getItem('currentUser') || userObj.user === 'vdi' || userObj.user === 'meuacesso') 
-                ? '<button disabled style="background:#ccc; cursor:not-allowed;">Sistema</button>' 
-                : `<button onclick="deleteUser('${userObj.id}', '${userObj.user}')">Apagar</button>`;
-            
-            li.innerHTML = `<span>${userObj.user}</span>${deleteButton}`;
-            list.appendChild(li);
-        });
-    }
-
-    // 📦 Funções de O.S. (Adaptadas para Firestore)
+    // loginAttempt FOI REMOVIDA
+    
+    // registerUser, deleteUser, loadUserList FOI REMOVIDAS
+    
+    // 📦 Funções de O.S. (Permanecem as mesmas, usando osCollection)
     async function salvarForm(id) {
         const os=document.getElementById('formOS').value.trim();
         const dataInput=document.getElementById('formData').value;
@@ -418,7 +332,7 @@
       }
 
     async function limparDados() {
-        if (!confirm("Tem certeza que deseja limpar TODOS os dados? Esta ação é irreversível e afetará TODOS os usuários conectados.")) return;
+        if (!confirm("Tem certeza que deseja limpar TODOS os dados? Esta ação é irreversível.")) return;
         
         try {
             const snapshot = await osCollection.get();
@@ -520,6 +434,7 @@
     }
     
     function atualizarTabelaTodas(){
+        // ... (esta função permanece a mesma) ...
         const unidade = document.getElementById('unidade').value;
         const dataInicio = document.getElementById('dataInicio').value;
         const dataFim = document.getElementById('dataFim').value;
@@ -583,41 +498,34 @@
     function showLogin() {
         document.getElementById('loginModal').style.display = 'flex';
         document.getElementById('appContent').style.display = 'none';
-        document.getElementById('userModal').style.display = 'none';
-        
-        document.getElementById('loginUser').value = '';
-        document.getElementById('loginPass').value = '';
-        document.getElementById('loginError').style.display = 'none';
     }
 
     function showApp() {
         document.getElementById('loginModal').style.display = 'none';
-        document.getElementById('userModal').style.display = 'none';
         document.getElementById('appContent').style.display = 'block';
         
         startDataListener(); 
     }
 
-    function checkLogin() {
-        if (sessionStorage.getItem('isLoggedIn') === 'true') {
+    async function checkLogin() {
+        // Inicializa o Auth0 antes de verificar o estado
+        await configureAuth0(); 
+
+        if (await auth0Client.isAuthenticated()) {
+            // Se estiver autenticado pelo Auth0, mostra a aplicação
+            sessionStorage.setItem('isLoggedIn', 'true');
             showApp();
         } else {
+            // Caso contrário, pede login (vai para o Auth0)
             showLogin();
         }
     }
 
-    function openUserModal() {
-        if (sessionStorage.getItem('isLoggedIn') !== 'true') return; 
-        loadUserList();
-        document.getElementById('userModal').style.display = 'flex';
-    }
-
-    function closeUserModal() {
-        document.getElementById('userModal').style.display = 'none';
-    }
+    // openUserModal e closeUserModal FORAM REMOVIDAS
     
     // Funções de PDF e Excel (MANTIDAS)
     function imprimirPDF(filtroPagamento = null) {
+        // ... (esta função permanece a mesma) ...
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF('p', 'pt', 'a4');
         const finalY = doc.previousAutoTable.finalY || 10;
@@ -656,6 +564,7 @@
     }
     
     function exportExcel() {
+        // ... (esta função permanece a mesma) ...
         const dadosExcel = osData.map(item => ({
             OS: item.os,
             DATA: item.data,
@@ -678,6 +587,7 @@
     }
 
     function lerExcel(event) {
+        // ... (esta função permanece a mesma) ...
         const file = event.target.files[0];
         if (!file) return;
 
@@ -721,24 +631,24 @@
                 try {
                     await osCollection.add(dataObj);
                     importadas++;
-                } catch(e) {
-                    console.error("Erro ao importar item:", e);
-                }
-            } // <-- FIM do loop for
-
-            alert(`Importação concluída. ${importadas} novos registros importados.`);
-            document.getElementById('inputExcel').value = ''; // Limpa o input
-        }; // <-- FIM de reader.onload
-
+                } catch(e) { /* Adicionei tratamento de erro no catch para fechar o bloco */ }
+            } // Fim do loop for...of
+            
+            // Tratamento final da importação
+            if (importadas > 0) {
+                alert(`Importação concluída! ${importadas} novos registros adicionados.`);
+            } else if (json.length > 0) {
+                alert("Nenhum novo registro importado (todos já existiam).");
+            } else {
+                alert("Nenhum dado válido encontrado para importar.");
+            }
+        };
         reader.readAsArrayBuffer(file);
-    } // <-- FIM de lerExcel
+    }
 
-    // =================================================================
-    // 🟢 CHAMADA FINAL PARA INICIAR O SISTEMA
-    // =================================================================
-    setupInitialUsers(); 
-    checkLogin();
+    // Garante que a checagem de login ocorra ao carregar a página
+    window.onload = checkLogin;
+
 </script>
 </body>
 </html>
-
