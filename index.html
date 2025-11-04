@@ -160,8 +160,10 @@
     // 🔑 FUNÇÕES DE AUTENTICAÇÃO SEGURA (AUTH0)
     // =================================================================
 
-    // Suas chaves de Auth0 (confirmadas nas imagens)
-    const AUTH0_DOMAIN = "dev-6t2d1rus80dnfgqt.us.auth0.com";
+    // ✅ CORREÇÃO: Domínio do Tenant Auth0 (corrigido para dev-ehkrfrs8byrafioj.us.auth0.com)
+    const AUTH0_DOMAIN = "dev-ehkrfrs8byrafioj.us.auth0.com";
+    
+    // Seu Client ID AUTH0 
     const AUTH0_CLIENT_ID = "uwf1h6qYtZf00qrelkzP3sDF3tryJKfO";
     let auth0Client = null;
 
@@ -169,7 +171,7 @@
     async function logoutAuth0() {
         await auth0Client.logout({
             logoutParams: {
-                // Ajuste esta URL se o nome do seu repositório for diferente de "Sistema-"
+                // URL de Logout configurada no Auth0 
                 returnTo: window.location.origin + "/Sistema-/" 
             }
         });
@@ -180,7 +182,7 @@
         await auth0Client.loginWithRedirect({
             appState: { targetUrl: window.location.pathname },
             authorizationParams: {
-                // Ajuste esta URL se o nome do seu repositório for diferente de "Sistema-"
+                // URL de Callback configurada no Auth0 
                 redirect_uri: window.location.origin + "/Sistema-/" 
             }
         });
@@ -237,8 +239,6 @@
         getTecnicosUnicos();
         atualizarTabelaTodas();
     }
-    
-    // REMOVIDOS: showLogin, loginAttempt, checkLogin, logoutLocal e todas as funções de gerenciamento de usuário local.
     
     // =================================================================
     // FUNÇÕES DA APLICAÇÃO (MANTIDAS)
