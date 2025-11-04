@@ -209,22 +209,11 @@
     let appUsers = JSON.parse(localStorage.getItem('appUsers'));
     
     if (!appUsers || appUsers.length === 0) {
-        // Inicializa com o usuário padrão e o novo usuário
+        // Inicializa com o usuário padrão e o novo usuário APENAS SE A LISTA ESTIVER VAZIA
         appUsers = [DEFAULT_USER, NEW_USER]; 
         localStorage.setItem('appUsers', JSON.stringify(appUsers));
-    } else {
-        // Garante que o usuário 'vdi' e o 'meuacesso' existam, caso tenham sido apagados.
-        if (!appUsers.find(u => u.user === DEFAULT_USER.user)) {
-            appUsers.push(DEFAULT_USER);
-            saveUsers();
-        }
-        if (!appUsers.find(u => u.user === NEW_USER.user)) { 
-             if (DEFAULT_USER.user !== NEW_USER.user) {
-                appUsers.push(NEW_USER);
-                saveUsers();
-             }
-        }
-    }
+    } 
+    // !!! CORREÇÃO APLICADA: O bloco 'else' que forçava a reinclusão de 'vdi' e 'meuacesso' foi removido.
     
     function saveUsers() {
         localStorage.setItem('appUsers', JSON.stringify(appUsers));
@@ -610,7 +599,7 @@
         doc.save(`${nomeArquivo}.pdf`);
     }
     // =================================================================
-    // FUNÇÕES DE LOGIN E GERENCIAMENTO DE USUÁRIOS (FINALIZADAS)
+    // FUNÇÕES DE LOGIN E GERENCIAMENTO DE USUÁRIOS
     // =================================================================
     function showLogin() {
         // Exibe apenas o modal de login
@@ -649,7 +638,7 @@
         }
     }
     
-    // NOVA FUNÇÃO DE LOGOUT LOCAL
+    // FUNÇÃO DE LOGOUT LOCAL
     function logoutLocal() {
         sessionStorage.removeItem('isLoggedIn');
         showLogin();
