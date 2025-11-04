@@ -17,6 +17,7 @@
         /* CSS COMPLETO: Mantenha aqui */
         body { font-family: 'Poppins', sans-serif; margin:0; padding:0; background:#f4f6f9; }
         header { background: linear-gradient(90deg,#4a90e2,#9013fe); color:white; padding:20px; text-align:center; font-size:24px; font-weight:600; box-shadow:0 4px 6px rgba(0,0,0,0.1); }
+        #userInfo { color: white; font-size: 14px; font-weight: 400; margin-top: 5px; } /* Estilo novo */
         .container { padding:20px; max-width:1200px; margin:auto; }
         .buttons, .filters, .search { display:flex; flex-wrap:wrap; gap:10px; margin-bottom:20px; }
         button { background:#4a90e2; color:white; border:none; padding:10px 18px; border-radius:8px; cursor:pointer; font-weight:600; transition:0.2s; display:flex; align-items:center; gap:5px; }
@@ -67,7 +68,6 @@
         #loginContent h2 { color: #4a90e2; margin-bottom: 20px;}
         #loginContent input { width: 100%; margin-bottom: 15px; }
         #loginContent button { width: 100%; padding: 12px;}
-        /* REMOVEMOS O #userModal no HTML */
         @media(max-width:600px){
             .buttons, .filters, .search { flex-direction:column; }
             table th, table td { font-size:12px; padding:8px; }
@@ -84,7 +84,10 @@
 </div>
 
 <div id="appContent" style="display:none;">
-    <header>VDI TACÓGRAFOS — Frente de Caixa Colaborativo (Barueri · Cotia · Embu)</header>
+    <header>
+        VDI TACÓGRAFOS — Frente de Caixa Colaborativo (Barueri · Cotia · Embu)
+        <div id="userInfo"></div> 
+    </header>
     <div class="container">
         <div class="buttons">
             <button onclick="abrirForm()">+ Nova O.S</button>
@@ -92,7 +95,7 @@
             <button onclick="importExcel()">Importar Excel</button>
             <button onclick="imprimirPDF()">Imprimir / Salvar PDF</button>
             <button onclick="limparDados()" style="background:#e74c3c;">Limpar TODOS os dados</button>
-            <button onclick="logoutAuth0()" style="background:#8e44ad;">Sair (Logout)</button>
+            <button onclick="logoutAuth0()" style="background:#8e44ad;">Sair (Logout)</button>
  </div>
         <input type="file" id="inputExcel" accept=".xlsx,.csv" style="display:none" onchange="lerExcel(event)" multiple>
 
@@ -171,11 +174,10 @@
 <script>
     
     // =================================================================
-    // 🟢 CONFIGURAÇÃO AUTH0 E FIREBASE (MUITO IMPORTANTE!)
-    // 🛑 SUBSTITUA COM SUAS CHAVES DO AUTH0 e MANTENHA SUAS CHAVES FIREBASE
+    // 🟢 CONFIGURAÇÃO AUTH0 E FIREBASE (CHAVES INSERIDAS)
     // =================================================================
-    const AUTH0_DOMAIN = "seu-dominio.auth0.com"; // EX: dev-abc12345.us.auth0.com
-    const AUTH0_CLIENT_ID = "SEU_CLIENT_ID_DO_AUTH0";
+    const AUTH0_DOMAIN = "dev-6t2dlrus80dnfgqt.us.auth0.com";    // 🔑 SEU DOMAIN AUTH0
+    const AUTH0_CLIENT_ID = "uWf1h6qYtZf0OqreLkzP3sDF3tryJkfO"; // 🔑 SEU CLIENT ID AUTH0
     let auth0Client = null;
 
     const firebaseConfig = {
@@ -191,36 +193,31 @@
     // Inicializa o Firebase
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
-
-    // Referência da coleção de O.S. (Coleção de Usuários NÃO é mais usada para login)
     const osCollection = db.collection('ordens_servico');
-
-    // Array local para armazenar os dados sincronizados
     let osData = [];
-    // appUsers FOI REMOVIDO
-    
+    let userProfile = null; // Para guardar o perfil do usuário logado
+
     // =================================================================
     // 🔑 FUNÇÕES AUTH0 (NOVO)
     // =================================================================
 
     async function configureAuth0() {
-        if (auth0Client) return; // Evita reconfiguração
+        if (auth0Client) return;
 
         auth0Client = await auth0.createAuth0Client({
             domain: AUTH0_DOMAIN,
             clientId: AUTH0_CLIENT_ID,
             authorizationParams: {
-                // MUITO IMPORTANTE: Deve ser a URL exata do seu GitHub Pages!
-                redirect_uri: window.location.origin 
+                // URL DE REDIRECIONAMENTO CONFIGURADA CORRETAMENTE
+                redirect_uri: "https://vditacografos.github.io/Sistema-/" 
             }
         });
 
-        // 1. Tenta lidar com o retorno do Auth0 após o login
+        // Tenta lidar com o retorno do Auth0 após o login
         const query = window.location.search;
         if (query.includes("code=") && query.includes("state=")) {
             try {
                 await auth0Client.handleRedirectCallback();
-                // Limpa a URL do navegador
                 window.history.replaceState({}, document.title, window.location.pathname); 
             } catch (err) {
                 console.error("Erro ao processar o retorno do Auth0:", err);
@@ -236,7 +233,7 @@
     async function logoutAuth0() {
         await auth0Client.logout({
             logoutParams: {
-                returnTo: window.location.origin
+                returnTo: "https://vditacografos.github.io/Sistema-/" // Redireciona para a página principal após o logout
             }
         });
         sessionStorage.removeItem('isLoggedIn');
@@ -244,15 +241,14 @@
     }
     
     // =================================================================
-    // 🟢 FUNÇÕES DO FIREBASE (Simplificadas)
+    // 🟢 FUNÇÕES DO FIREBASE 
     // =================================================================
     
-    // ONSNAPSHOT: Sincroniza dados em tempo real (Substitui a leitura de localStorage)
+    // ONSNAPSHOT: Sincroniza dados em tempo real
     function startDataListener() {
-        // Ouve a coleção de O.S. e atualiza a variável local (osData) e a tabela
         osCollection.orderBy('dataOS', 'desc').onSnapshot(snapshot => {
             osData = snapshot.docs.map(doc => ({
-                id: doc.id, // O ID do documento é necessário para edição/exclusão
+                id: doc.id, 
                 ...doc.data()
             }));
             getTecnicosUnicos();
@@ -260,18 +256,9 @@
         }, error => {
             console.error("Erro ao sincronizar O.S.:", error);
         });
-
-        // REMOVEMOS A ESCUTA À usersCollection
-
     }
 
-    // setupInitialUsers FOI REMOVIDA
-
-    // loginAttempt FOI REMOVIDA
-    
-    // registerUser, deleteUser, loadUserList FOI REMOVIDAS
-    
-    // 📦 Funções de O.S. (Permanecem as mesmas, usando osCollection)
+    // 📦 Funções de O.S. (Permanecem as mesmas)
     async function salvarForm(id) {
         const os=document.getElementById('formOS').value.trim();
         const dataInput=document.getElementById('formData').value;
@@ -289,8 +276,8 @@
 
         const dataObj = {
             os,
-            data: formatDate(dataInput), // Data formatada para exibição
-            dataOS: dataInput,           // Data em formato ISO para ordenação e filtro
+            data: formatDate(dataInput), 
+            dataOS: dataInput,          
             cliente,
             placa,
             valor,
@@ -301,18 +288,16 @@
 
         try {
             if (id) {
-                // Se existe ID, atualiza o documento (edição)
                 await osCollection.doc(id).update(dataObj);
             } else {
-                // Se não existe ID, cria um novo documento (nova O.S.)
                 await osCollection.add(dataObj);
             }
             fecharForm();
-
+            // Limpa o formulário após salvar
             document.getElementById('formContent').querySelectorAll('input, select').forEach(f => {
                 if (f.type !== 'submit' && f.type !== 'button') { f.value = ''; }
             });
-            document.getElementById('formModal').dataset.editId = ''; // Limpa o ID de edição
+            document.getElementById('formModal').dataset.editId = '';
             document.getElementById('formModal').querySelector('button[onclick*="salvarForm"]').textContent = 'Salvar O.S';
             document.getElementById('formModal').querySelector('h2').textContent = 'Nova O.S';
 
@@ -354,7 +339,7 @@
     }
 
     // =================================================================
-    // FUNÇÕES RESTANTES (Geração de Excel/PDF, Filtros e Interface)
+    // FUNÇÕES RESTANTES (Interface e Filtros)
     // =================================================================
     
     function formatDate(iso){
@@ -411,7 +396,7 @@
                 h2.textContent = 'Editar O.S.';
                 formModal.dataset.editId = id;
                 document.getElementById('formOS').value = item.os;
-                document.getElementById('formData').value = item.dataOS; // Usa a data ISO
+                document.getElementById('formData').value = item.dataOS;
                 document.getElementById('formCliente').value = item.cliente;
                 document.getElementById('formPlaca').value = item.placa;
                 document.getElementById('formValor').value = parseFloat(item.valor);
@@ -430,11 +415,10 @@
     }
 
     function editarOS(id){
-        abrirForm(id); // Chama abrirForm passando o ID para edição
+        abrirForm(id); 
     }
     
     function atualizarTabelaTodas(){
-        // ... (esta função permanece a mesma) ...
         const unidade = document.getElementById('unidade').value;
         const dataInicio = document.getElementById('dataInicio').value;
         const dataFim = document.getElementById('dataFim').value;
@@ -500,7 +484,21 @@
         document.getElementById('appContent').style.display = 'none';
     }
 
-    function showApp() {
+    async function showApp() {
+        if (!userProfile) {
+            // Se o perfil não foi carregado, tenta pegar
+            userProfile = await auth0Client.getUser();
+        }
+
+        const infoDiv = document.getElementById('userInfo');
+        if (userProfile && userProfile.name) {
+            infoDiv.textContent = `Logado como: ${userProfile.name} | Email: ${userProfile.email}`;
+        } else if (userProfile && userProfile.email) {
+            infoDiv.textContent = `Logado como: ${userProfile.email}`;
+        } else {
+            infoDiv.textContent = `Logado com Auth0.`;
+        }
+
         document.getElementById('loginModal').style.display = 'none';
         document.getElementById('appContent').style.display = 'block';
         
@@ -508,24 +506,19 @@
     }
 
     async function checkLogin() {
-        // Inicializa o Auth0 antes de verificar o estado
         await configureAuth0(); 
 
         if (await auth0Client.isAuthenticated()) {
-            // Se estiver autenticado pelo Auth0, mostra a aplicação
             sessionStorage.setItem('isLoggedIn', 'true');
+            userProfile = await auth0Client.getUser(); // Carrega o perfil do usuário
             showApp();
         } else {
-            // Caso contrário, pede login (vai para o Auth0)
             showLogin();
         }
     }
-
-    // openUserModal e closeUserModal FORAM REMOVIDAS
     
     // Funções de PDF e Excel (MANTIDAS)
     function imprimirPDF(filtroPagamento = null) {
-        // ... (esta função permanece a mesma) ...
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF('p', 'pt', 'a4');
         const finalY = doc.previousAutoTable.finalY || 10;
@@ -564,7 +557,6 @@
     }
     
     function exportExcel() {
-        // ... (esta função permanece a mesma) ...
         const dadosExcel = osData.map(item => ({
             OS: item.os,
             DATA: item.data,
@@ -587,7 +579,6 @@
     }
 
     function lerExcel(event) {
-        // ... (esta função permanece a mesma) ...
         const file = event.target.files[0];
         if (!file) return;
 
@@ -601,19 +592,16 @@
 
             if (!confirm(`Deseja importar ${json.length} registros? O.S. existentes com o mesmo número serão ignoradas.`)) return;
             
-            // Lendo o OS atual para evitar duplicatas ao importar
             const osExistentes = new Set(osData.map(item => item.os));
             let importadas = 0;
 
             for (const row of json) {
                 const osNum = String(row.OS).trim();
 
-                // Verifica se a OS já existe
                 if (osExistentes.has(osNum)) {
                     continue;
                 }
 
-                // Normaliza os campos
                 const dataOS = row.DATA ? new Date(Math.round((row.DATA - 25569) * 86400 * 1000)).toISOString().split('T')[0] : '';
                 const dataObj = {
                     os: osNum,
@@ -627,14 +615,12 @@
                     unidade: String(row.UNIDADE || '')
                 };
                 
-                // Salva no Firestore
                 try {
                     await osCollection.add(dataObj);
                     importadas++;
-                } catch(e) { /* Adicionei tratamento de erro no catch para fechar o bloco */ }
-            } // Fim do loop for...of
+                } catch(e) { /* Tratamento de erro */ }
+            }
             
-            // Tratamento final da importação
             if (importadas > 0) {
                 alert(`Importação concluída! ${importadas} novos registros adicionados.`);
             } else if (json.length > 0) {
