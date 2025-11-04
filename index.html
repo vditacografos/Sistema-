@@ -9,8 +9,6 @@
     <script src="https://unpkg.com/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     
-    <script src="https://cdn.auth0.com/js/auth0-spa-js/2.1/auth0-spa-js.production.js"></script>
-    
     <style>
         body { font-family: 'Poppins', sans-serif; margin:0; padding:0; background:#f4f6f9; }
         header { background: linear-gradient(90deg,#4a90e2,#9013fe); color:white; padding:20px; text-align:center; font-size:24px; font-weight:600; box-shadow:0 4px 6px rgba(0,0,0,0.1); }
@@ -43,9 +41,10 @@
         .modal-content h2 { color:#4a90e2; margin-top:0; }
         .modal-content input, .modal-content select, .modal-content button { margin-bottom:15px; width:100%; box-sizing:border-box; }
 
-        /* Estilo específico para o Login Modal (Se Auth0 falhar) */
+        /* Estilo específico para o Login Modal (AGORA ATIVO POR PADRÃO) */
         #loginModal .modal-content { text-align: center; }
         #loginModal button { padding: 12px; }
+        #loginModal p { color:red; font-weight:600; }
         
         @media(max-width:600px){
             .buttons, .filters, .search { flex-direction:column; }
@@ -55,10 +54,13 @@
 </head>
 <body>
 
-<div id="loadingModal" class="modal" style="display:flex;">
+<div id="loginModal" class="modal" style="display:flex;">
     <div class="modal-content">
-        <h2>Verificando Login...</h2>
-        <p>Aguarde enquanto verificamos sua sessão com o Auth0.</p>
+        <h2>Login - VDI Tacógrafos</h2>
+        <input type="text" id="username" placeholder="Usuário" required>
+        <input type="password" id="password" placeholder="Senha" required>
+        <button onclick="loginAttempt()">Entrar</button>
+        <p id="loginError" style="display:none;">Usuário ou senha inválidos.</p>
     </div>
 </div>
 
@@ -72,7 +74,7 @@
             <button onclick="imprimirPDF()">Imprimir / Salvar PDF</button>
             <button onclick="limparDados()">Limpar dados</button>
             <button onclick="abrirUserModal()" style="background:#523B59;">Gerenciar Usuários</button>
-            <button onclick="logoutAuth0()" style="background:#e74c3c;">Sair do Sistema</button> 
+            <button onclick="logoutLocal()" style="background:#e74c3c;">Sair do Sistema</button> 
         </div>
         <input type="file" id="inputExcel" accept=".xlsx,.csv" style="display:none" onchange="lerExcel(event)" multiple>
         <div class="filters">
@@ -145,8 +147,12 @@
     <div id="userModal" class="modal">
         <div class="modal-content">
             <h2>Gerenciar Usuários</h2>
-            <p style="color:red; font-weight:600;">⚠️ Usuários gerenciados pelo Auth0.</p>
-            <p>Se você precisa adicionar ou remover usuários, faça-o no Dashboard Auth0, na seção "User Management".</p>
+            <input type="text" id="novoUsuario" placeholder="Novo Usuário">
+            <input type="password" id="novaSenha" placeholder="Nova Senha">
+            <button onclick="cadastrarUsuario()">Cadastrar</button>
+            <h3>Usuários Cadastrados</h3>
+            <ul id="listaUsuarios">
+                </ul>
             <button onclick="fecharUserModal()" style="margin-top:15px;background:#e74c3c;">Fechar</button>
         </div>
     </div>
@@ -154,87 +160,115 @@
 
 <script>
     // =================================================================
-    // 🔒 CONFIGURAÇÃO AUTH0
+    // 🔒 FUNÇÕES DE LOGIN LOCAL (AGORA ATIVAS)
     // =================================================================
 
-    // Domínio do seu Tenant no Auth0
-    const AUTH0_DOMAIN = "dev-ehkrfrs8byrafioj.us.auth0.com"; 
-    // Seu Client ID
-    const AUTH0_CLIENT_ID = "uwf1h6qYtZf00qrelkzP3sDF3tryJKfO";
-    // O objeto Auth0 que será inicializado
-    let auth0Client = null;
-
-    // URL de retorno da sua aplicação no GitHub Pages
-    const REDIRECT_URI = window.location.origin + window.location.pathname;
-
-
-    // Inicializa o cliente Auth0
-    const configureAuth0 = async () => {
-        auth0Client = await createAuth0Client({
-            domain: AUTH0_DOMAIN,
-            client_id: AUTH0_CLIENT_ID,
-            // A URL para onde o Auth0 redirecionará após o login
-            redirect_uri: REDIRECT_URI,
-            // Permite usar o token para fazer chamadas de API (se necessário no futuro)
-            audience: 'https://' + AUTH0_DOMAIN + '/api/v2/',
-            useRefreshTokens: true,
-            cacheLocation: 'localstorage',
-        });
+    let users = JSON.parse(localStorage.getItem('users')) || {
+        'edivan': '1234',
+        'michele': '1234',
+        'vdi': '1234',
+        'meuacesso': '1234'
     };
     
-    // Função principal para verificar o login
-    const checkLogin = async () => {
-        await configureAuth0();
-        
-        // 1. Esconde o modal de carregamento
-        document.getElementById('loadingModal').style.display = 'none';
+    function salvarUsers() {
+        localStorage.setItem('users', JSON.stringify(users));
+        renderUserList();
+    }
+    
+    function loginAttempt() {
+        const username = document.getElementById('username').value.toLowerCase().trim();
+        const password = document.getElementById('password').value;
+        const error = document.getElementById('loginError');
 
-        // 2. Verifica se houve um redirecionamento do Auth0 (após o login)
-        const query = window.location.search;
-        if (query.includes("code=") && query.includes("state=")) {
-            try {
-                // Tenta processar o redirecionamento (troca código por tokens)
-                await auth0Client.handleRedirectCallback();
-                // Limpa os parâmetros da URL para ficar limpo
-                window.history.replaceState({}, document.title, REDIRECT_URI);
-            } catch (err) {
-                console.error("Erro ao processar redirecionamento do Auth0:", err);
-                alert("Erro ao fazer login: " + err.message);
-                // Força o login novamente em caso de erro
-                return loginAuth0();
-            }
+        if (users[username] === password) {
+            sessionStorage.setItem('isLoggedIn', 'true');
+            sessionStorage.setItem('currentUser', username);
+            document.getElementById('loginModal').style.display = 'none';
+            document.getElementById('appContent').style.display = 'block';
+            error.style.display = 'none';
+            getTecnicosUnicos();
+            atualizarTabelaTodas();
+        } else {
+            error.style.display = 'block';
         }
-        
-        // 3. Verifica se o usuário está autenticado
-        const isAuthenticated = await auth0Client.isAuthenticated();
+    }
+    
+    function logoutLocal() {
+        sessionStorage.removeItem('isLoggedIn');
+        sessionStorage.removeItem('currentUser');
+        window.location.reload(); // Recarrega a página para voltar ao login modal
+    }
 
-        if (isAuthenticated) {
-            // Logado: Exibe o conteúdo da aplicação
+    function checkLogin() {
+        if (sessionStorage.getItem('isLoggedIn') === 'true') {
+            document.getElementById('loginModal').style.display = 'none';
             document.getElementById('appContent').style.display = 'block';
             getTecnicosUnicos();
             atualizarTabelaTodas();
         } else {
-            // Não Logado: Inicia o fluxo de login
-            loginAuth0();
+            document.getElementById('loginModal').style.display = 'flex';
         }
-    };
-    
-    // Inicia o processo de login (redireciona para o Auth0)
-    const loginAuth0 = async () => {
-        await auth0Client.loginWithRedirect({
-            redirect_uri: REDIRECT_URI
-        });
-    };
+    }
 
-    // Função de Logout (redireciona para o Auth0 para encerrar a sessão)
-    const logoutAuth0 = async () => {
-        await auth0Client.logout({
-            logoutParams: {
-                // A URL para onde o Auth0 redireciona após o logout
-                returnTo: REDIRECT_URI 
+    function abrirUserModal() {
+        document.getElementById('userModal').style.display = 'flex';
+        renderUserList();
+    }
+    
+    function fecharUserModal() {
+        document.getElementById('userModal').style.display = 'none';
+    }
+
+    function renderUserList() {
+        const list = document.getElementById('listaUsuarios');
+        list.innerHTML = '';
+        const currentUser = sessionStorage.getItem('currentUser');
+        
+        for (const [user, pass] of Object.entries(users)) {
+            const li = document.createElement('li');
+            li.style.display = 'flex';
+            li.style.justifyContent = 'space-between';
+            li.style.alignItems = 'center';
+            li.style.padding = '8px 0';
+            li.style.borderBottom = '1px solid #eee';
+
+            let status = user;
+            if (user === currentUser) {
+                status += ' <span style="color:#27ae60; font-weight:bold;">(Logado)</span>';
             }
-        });
-    };
+
+            li.innerHTML = `
+                <span>${status}</span>
+                <button onclick="apagarUsuario('${user}')" style="background:#e74c3c; margin-left:10px; width:auto; padding:5px 10px;">Apagar</button>
+            `;
+            list.appendChild(li);
+        }
+    }
+    
+    function cadastrarUsuario() {
+        const novoUser = document.getElementById('novoUsuario').value.toLowerCase().trim();
+        const novaSenha = document.getElementById('novaSenha').value;
+
+        if (novoUser && novaSenha) {
+            users[novoUser] = novaSenha;
+            salvarUsers();
+            document.getElementById('novoUsuario').value = '';
+            document.getElementById('novaSenha').value = '';
+        } else {
+            alert('Preencha usuário e senha.');
+        }
+    }
+
+    function apagarUsuario(user) {
+        if (confirm(`Tem certeza que deseja apagar o usuário ${user}?`)) {
+            delete users[user];
+            salvarUsers();
+            // Se o usuário logado for apagado, força logout
+            if (sessionStorage.getItem('currentUser') === user) {
+                logoutLocal();
+            }
+        }
+    }
 
     // =================================================================
     // ⚙️ FUNÇÕES DA APLICAÇÃO (MANTIDAS)
@@ -303,11 +337,13 @@
         
         fecharForm();
         // Limpa o formulário
-        document.getElementById('formContent').querySelectorAll('input, select').forEach(f => {
-            if (f.type !== 'submit' && f.type !== 'button') {
-                f.value = '';
-            }
-        });
+        document.getElementById('formOS').value = '';
+        document.getElementById('formData').value = '';
+        document.getElementById('formCliente').value = '';
+        document.getElementById('formPlaca').value = '';
+        document.getElementById('formValor').value = '';
+        document.getElementById('formPagamento').value = '';
+        document.getElementById('formTecnico').value = '';
     }
     function atualizarTabelaTodas(){
         const unidade = document.getElementById('unidade').value;
@@ -370,7 +406,7 @@
         document.getElementById('totalPix').innerHTML=`PIX<br>R$ ${totalPix.toFixed(2)}`;
         document.getElementById('totalDinheiro').innerHTML=`DINHEIRO<br>R$ ${totalDin.toFixed(2)}`;
         document.getElementById('totalDebito').innerHTML=`DÉBITO<br>R$ ${totalDeb.toFixed(2)}`;
-        document.getElementById('totalCredito').innerHTML=`CRÉDITO<br>R$ ${totalCred.toFixed(2)}`;
+        document.getElementById('totalCredito').innerHTML=`CRÉDITO<br>R$ ${totalCredito.toFixed(2)}`;
     }
     function filtrar(){ atualizarTabelaTodas(); }
     function buscar(){ atualizarTabelaTodas(); }
@@ -405,9 +441,19 @@
     function limparDados(){
           if(confirm("Deseja limpar TODOS os dados? Esta ação é irreversível.")){
               osData=[];
+              // Força o reset dos usuários salvos (se houver)
+              localStorage.removeItem('users'); 
+              users = {
+                'edivan': '1234',
+                'michele': '1234',
+                'vdi': '1234',
+                'meuacesso': '1234'
+              };
+              salvarUsers();
               salvarLocalStorage();
               getTecnicosUnicos();
             atualizarTabelaTodas();
+            alert("Dados e Usuários resetados para o padrão ('edivan', '1234').");
           }
     }
     function exportExcel(){
@@ -617,7 +663,7 @@
         doc.save(`${nomeArquivo}.pdf`);
     }
 
-    // 🚀 Inicia a verificação de login do Auth0
+    // 🚀 Inicia a verificação de login LOCAL
     window.onload = checkLogin;
 </script>
 </body>
