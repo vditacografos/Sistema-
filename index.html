@@ -8,6 +8,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://unpkg.com/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdn.auth0.com/js/auth0-spa-js/2.1/auth0-spa-js.production.js"></script>
     <style>
         body { font-family: 'Poppins', sans-serif; margin:0; padding:0; background:#f4f6f9; }
         header { background: linear-gradient(90deg,#4a90e2,#9013fe); color:white; padding:20px; text-align:center; font-size:24px; font-weight:600; box-shadow:0 4px 6px rgba(0,0,0,0.1); }
@@ -15,7 +16,7 @@
         .buttons, .filters, .search { display:flex; flex-wrap:wrap; gap:10px; margin-bottom:20px; }
         button { background:#4a90e2; color:white; border:none; padding:10px 18px; border-radius:8px; cursor:pointer; font-weight:600; transition:0.2s; display:flex; align-items:center; gap:5px; }
         button:hover { background:#357ABD; }
-        input, select { padding:10px 12px; border-radius:6px; border:1px solid #ccc; box-sizing: border-box;} /* Ajuste input */
+        input, select { padding:10px 12px; border-radius:6px; border:1px solid #ccc; box-sizing: border-box;}
         table { width:100%; border-collapse:collapse; margin-bottom:20px; background:white; border-radius:8px; overflow:hidden; box-shadow:0 2px 4px rgba(0,0,0,0.1); }
         th, td { padding:12px 15px; text-align:left; }
         th { background:#4a90e2; color:white; }
@@ -33,59 +34,30 @@
         .edit, .delete { border:none; padding:5px 10px; border-radius:6px; color:white; cursor:pointer; margin-right:5px; }
         .edit { background:#27ae60; }
         .delete { background:#e74c3c; }
-        /* 🔒 ESTILOS GERAIS DE MODAL */
-        #formModal, #loginModal, #userModal { 
-            display:none;
+        
+        /* 🔑 NOVO ESTILO PARA A TELA DE LOGIN AUTH0 */
+        #loginContentAuth0 { 
+            display:none; 
             position:fixed; 
             top:0; 
             left:0; 
             width:100%; 
             height:100%; 
-            background: rgba(0,0,0,0.5); 
+            background: #f4f6f9; 
             justify-content:center; 
             align-items:center; 
-            z-index: 1000; 
+            flex-direction: column; 
+            z-index: 2000;
         }
-        #formContent { background:white; padding:20px; border-radius:10px; width:400px; max-width:90%; }
-        #formContent h2 { margin-top:0; color:#4a90e2; }
-        #formContent input, #formContent select { width:100%; margin-bottom:10px; }
-        #formContent button { width:100%; }
-        /* 🔒 ESTILOS DO LOGIN */
-        #loginModal { z-index: 2000; background: #f4f6f9; }
-        #loginContent { 
-            background: white; 
+        #loginContentAuth0 > div {
+             background: white; 
             padding: 30px; 
             border-radius: 10px; 
             width: 300px; 
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2); 
-            text-align: center;
+            text-align: center; 
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
         }
-        #loginContent h2 { color: #4a90e2; margin-bottom: 20px;}
-        #loginContent input { width: 100%; margin-bottom: 15px; }
-        #loginContent button { width: 100%; padding: 12px;}
-        /* 🔒 ESTILOS DO GERENCIAMENTO DE USUÁRIOS */
-        #userModal { z-index: 1500; }
-        #userContent { 
-            background: white; 
-            padding: 20px; 
-            border-radius: 10px; 
-            width: 400px; 
-            max-width: 90%; 
-        }
-        #userList li {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 8px 0;
-            border-bottom: 1px solid #eee;
-        }
-        #userList button {
-            background:#e74c3c; 
-            padding:3px 8px; 
-            margin-left:10px; 
-            font-size:12px; 
-            width:auto;
-        }
+
         @media(max-width:600px){
             .buttons, .filters, .search { flex-direction:column; }
             table th, table td { font-size:12px; padding:8px; }
@@ -93,30 +65,14 @@
     </style>
 </head>
 <body>
-<div id="loginModal">
-    <div id="loginContent">
-        <h2>Acesso ao Sistema</h2>
-        <form onsubmit="loginAttempt(); return false;">
-             <input type="text" id="loginUser" placeholder="Usuário" required>
-            <input type="password" id="loginPass" placeholder="Senha" required>
-            <button type="submit">Entrar</button>
-            <p id="loginError" style="color:#e74c3c; display:none; margin-top:10px; font-weight:600;">Usuário ou senha inválidos.</p>
-        </form>
+
+<div id="loginContentAuth0">
+    <div>
+        <h2 style="color: #4a90e2; margin-bottom: 20px;">Acesso VDI Tacógrafos</h2>
+        <button onclick="loginWithAuth0()" style="width: 100%; padding: 12px;">Entrar com Auth0</button>
     </div>
 </div>
-<div id="userModal">
-    <div id="userContent">
-        <h2>Gerenciar Usuários</h2>
-        <h3 style="color:#4a90e2; margin-top:10px;">Cadastrar Novo Usuário</h3>
-        <input type="text" id="newUser" placeholder="Novo Usuário" required>
-        <input type="password" id="newPass" placeholder="Nova Senha" required>
-        <button onclick="registerUser()">Cadastrar</button>
-        <h3 style="color:#4a90e2; margin-top:20px;">Usuários Cadastrados</h3>
-        <ul id="userList" style="list-style-type:none; padding:0;">
-            </ul>
-        <button onclick="closeUserModal()" style="margin-top:20px;background:#e74c3c;">Fechar</button>
-    </div>
-</div>
+
 <div id="appContent" style="display:none;">
     <header>VDI TACÓGRAFOS — Frente de Caixa (Barueri · Cotia · Embu)</header>
     <div class="container">
@@ -126,8 +82,7 @@
             <button onclick="importExcel()">Importar Excel</button>
             <button onclick="imprimirPDF()">Imprimir / Salvar PDF</button>
             <button onclick="limparDados()">Limpar dados</button>
-            <button onclick="openUserModal()" style="background:#9b59b6;">Gerenciar Usuários</button>
-            <button onclick="logoutLocal()" style="background:#e74c3c;">Sair do Sistema</button> 
+            <button onclick="logoutAuth0()" style="background:#e74c3c;">Sair do Sistema</button> 
         </div>
         <input type="file" id="inputExcel" accept=".xlsx,.csv" style="display:none" onchange="lerExcel(event)" multiple>
         <div class="filters">
@@ -202,25 +157,91 @@
     let osData = JSON.parse(localStorage.getItem('osData')) || [];
     
     // =================================================================
-    // 🔒 CONFIGURAÇÃO DE USUÁRIOS PADRÃO (SEU LOGIN LOCAL)
+    // 🔑 FUNÇÕES DE AUTENTICAÇÃO SEGURA (AUTH0)
     // =================================================================
-    const DEFAULT_USER = { user: 'vdi', pass: '12345' };
-    const NEW_USER = { user: 'meuacesso', pass: 'minhasenha123' }; 
-    let appUsers = JSON.parse(localStorage.getItem('appUsers'));
-    
-    if (!appUsers || appUsers.length === 0) {
-        // Inicializa com o usuário padrão e o novo usuário APENAS SE A LISTA ESTIVER VAZIA
-        appUsers = [DEFAULT_USER, NEW_USER]; 
-        localStorage.setItem('appUsers', JSON.stringify(appUsers));
-    } 
-    // !!! CORREÇÃO APLICADA: O bloco 'else' que forçava a reinclusão de 'vdi' e 'meuacesso' foi removido.
-    
-    function saveUsers() {
-        localStorage.setItem('appUsers', JSON.stringify(appUsers));
+
+    // Suas chaves de Auth0 (confirmadas nas imagens)
+    const AUTH0_DOMAIN = "dev-6t2d1rus80dnfgqt.us.auth0.com";
+    const AUTH0_CLIENT_ID = "uwf1h6qYtZf00qrelkzP3sDF3tryJKfO";
+    let auth0Client = null;
+
+    // Função de Logout Auth0
+    async function logoutAuth0() {
+        await auth0Client.logout({
+            logoutParams: {
+                // Ajuste esta URL se o nome do seu repositório for diferente de "Sistema-"
+                returnTo: window.location.origin + "/Sistema-/" 
+            }
+        });
+    }
+
+    // Função de Login/Redirecionamento Auth0
+    async function loginWithAuth0() {
+        await auth0Client.loginWithRedirect({
+            appState: { targetUrl: window.location.pathname },
+            authorizationParams: {
+                // Ajuste esta URL se o nome do seu repositório for diferente de "Sistema-"
+                redirect_uri: window.location.origin + "/Sistema-/" 
+            }
+        });
+    }
+
+    // Função para iniciar e verificar o estado do Auth0
+    async function configureClient() {
+        auth0Client = await auth0.createAuth0Client({
+            domain: AUTH0_DOMAIN,
+            clientId: AUTH0_CLIENT_ID,
+            authorizationParams: {
+                redirect_uri: window.location.origin + "/Sistema-/"
+            }
+        });
+
+        const isAuthenticated = await auth0Client.isAuthenticated();
+
+        if (isAuthenticated) {
+            showApp();
+        } else {
+            // Verifica se é um retorno após o login
+            const query = window.location.search;
+            const hash = window.location.hash;
+
+            if ((query.includes("code=") && query.includes("state=")) || hash.includes("access_token") || hash.includes("error")) {
+                try {
+                    // Tenta finalizar o login
+                    await auth0Client.handleRedirectCallback();
+                    // Limpa a URL
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                    showApp();
+                } catch (err) {
+                    console.error("Erro ao fazer login:", err);
+                    // Em caso de erro, exibe a tela de login simples
+                    showLoginAuth0(); 
+                }
+            } else {
+                // Se não está logado e não está voltando do login, exibe a tela de login
+                showLoginAuth0();
+            }
+        }
+    }
+
+    // Funções de Exibição (simples)
+    function showLoginAuth0() {
+        document.getElementById('appContent').style.display = 'none';
+        document.getElementById('formModal').style.display = 'none';
+        document.getElementById('loginContentAuth0').style.display = 'flex';
+    }
+
+    function showApp() {
+        document.getElementById('loginContentAuth0').style.display = 'none';
+        document.getElementById('appContent').style.display = 'block';
+        getTecnicosUnicos();
+        atualizarTabelaTodas();
     }
     
+    // REMOVIDOS: showLogin, loginAttempt, checkLogin, logoutLocal e todas as funções de gerenciamento de usuário local.
+    
     // =================================================================
-    // FUNÇÕES DA APLICAÇÃO
+    // FUNÇÕES DA APLICAÇÃO (MANTIDAS)
     // =================================================================
     
     function salvarLocalStorage(){
@@ -598,126 +619,9 @@
         
         doc.save(`${nomeArquivo}.pdf`);
     }
-    // =================================================================
-    // FUNÇÕES DE LOGIN E GERENCIAMENTO DE USUÁRIOS
-    // =================================================================
-    function showLogin() {
-        // Exibe apenas o modal de login
-        document.getElementById('loginModal').style.display = 'flex';
-        document.getElementById('appContent').style.display = 'none';
-        document.getElementById('userModal').style.display = 'none';
-        
-        document.getElementById('loginUser').value = '';
-        document.getElementById('loginPass').value = '';
-        document.getElementById('loginError').style.display = 'none';
-    }
-    function showApp() {
-        // Exibe o conteúdo principal e esconde os modais
-        document.getElementById('loginModal').style.display = 'none';
-        document.getElementById('userModal').style.display = 'none';
-        document.getElementById('appContent').style.display = 'block';
-        
-        getTecnicosUnicos();
-        atualizarTabelaTodas();
-    }
-    function loginAttempt() {
-        const user = document.getElementById('loginUser').value.trim();
-        const pass = document.getElementById('loginPass').value.trim();
-        const errorMsg = document.getElementById('loginError');
-        
-        // Garante que a lista de usuários esteja atualizada antes de tentar o login
-        appUsers = JSON.parse(localStorage.getItem('appUsers')) || [DEFAULT_USER, NEW_USER];
-        
-        // Verifica se as credenciais correspondem a qualquer usuário na lista
-        const userFound = appUsers.find(u => u.user === user && u.pass === pass);
-        if (userFound) {
-            sessionStorage.setItem('isLoggedIn', 'true'); 
-            showApp();
-        } else {
-            errorMsg.style.display = 'block';
-        }
-    }
-    
-    // FUNÇÃO DE LOGOUT LOCAL
-    function logoutLocal() {
-        sessionStorage.removeItem('isLoggedIn');
-        showLogin();
-    }
-    
-    function checkLogin() {
-        if (sessionStorage.getItem('isLoggedIn') === 'true') {
-            showApp();
-        } else {
-            showLogin();
-        }
-    }
-    function openUserModal() {
-        // Exibe o modal de gerenciamento e carrega a lista de usuários
-        if (sessionStorage.getItem('isLoggedIn') !== 'true') return; 
-        loadUserList();
-        document.getElementById('userModal').style.display = 'flex';
-    }
-    function closeUserModal() {
-        document.getElementById('userModal').style.display = 'none';
-    }
-    function registerUser() {
-        const user = document.getElementById('newUser').value.trim();
-        const pass = document.getElementById('newPass').value.trim();
-        if (!user || !pass) {
-            alert('Usuário e Senha são obrigatórios.');
-            return;
-        }
-        if (appUsers.some(u => u.user === user)) {
-            alert('Este usuário já existe.');
-            return;
-        }
-        appUsers.push({ user, pass });
-        saveUsers();
-        loadUserList();
-        document.getElementById('newUser').value = '';
-        document.getElementById('newPass').value = '';
-    }
-    function deleteUser(index) {
-        if (appUsers.length === 1) {
-            alert("Não é possível apagar o único usuário existente.");
-            return;
-        }
-        if (confirm(`Deseja apagar o usuário ${appUsers[index].user}?`)) {
-            appUsers.splice(index, 1);
-            saveUsers();
-            loadUserList();
-            // Verifica se o usuário logado foi excluído e o força a sair
-            if (sessionStorage.getItem('isLoggedIn') === 'true' && document.getElementById('loginUser').value.trim() === appUsers[index].user) {
-                logoutLocal();
-            }
-        }
-    }
-    function loadUserList() {
-        // Atualiza a lista de usuários no modal
-        const list = document.getElementById('userList');
-        list.innerHTML = '';
-        
-        // Garante que o array de usuários esteja carregado
-        appUsers = JSON.parse(localStorage.getItem('appUsers')) || [DEFAULT_USER, NEW_USER];
-        const loggedInUser = document.getElementById('loginUser').value.trim();
-        
-        appUsers.forEach((userObj, index) => {
-            const li = document.createElement('li');
-            // Impede de apagar o usuário que está logado no momento
-            const deleteButton = (userObj.user === loggedInUser) 
-                ? '<button disabled style="background:#ccc; cursor:not-allowed;">Logado</button>' 
-                : `<button onclick="deleteUser(${index})">Apagar</button>`;
-            
-            li.innerHTML = `
-                <span>${userObj.user}</span>
-                ${deleteButton}
-            `;
-            list.appendChild(li);
-        });
-    }
-    
+
     // Inicializa a verificação de login ao carregar a página
-    window.onload = checkLogin;
+    window.onload = configureClient;
 </script>
 </body>
 </html>
