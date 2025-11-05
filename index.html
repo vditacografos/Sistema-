@@ -8,9 +8,9 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://unpkg.com/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-
-    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore.js"></script>
+    
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 
     <style>
         /* Estilos CSS (MANTIDOS) */
@@ -47,8 +47,7 @@
             display: flex; justify-content: center; align-items: center; z-index: 2000; font-size: 24px; font-weight: 600;
             color: #4a90e2;
         }
-        
-        @media(max-width:600px){
+                @media(max-width:600px){
             .buttons, .filters, .search { flex-direction:column; }
             table th, table td { font-size:12px; padding:8px; }
         }
@@ -69,8 +68,8 @@
             <button onclick="importExcel()">Importar Excel</button>
             <button onclick="imprimirPDF()">Imprimir / Salvar PDF</button>
             <button onclick="limparDados()">Limpar dados</button>
-            <button onclick="alert('Funcionalidade de Login Local Removida. Aguarde a implementação do Login via Firebase.')" style="background:#e74c3c;">Sair do Sistema</button> 
-        </div>
+            <button onclick="alert('Funcionalidade de Login Local Removida. Aguarde a implementação do Login via Firebase.')" style="background:#e74c3c;">Sair do Sistema</button>
+         </div>
         <input type="file" id="inputExcel" accept=".xlsx,.csv" style="display:none" onchange="lerExcel(event)" multiple>
         <div class="filters">
             <select id="unidade" onchange="atualizarTabelaTodas()">
@@ -110,6 +109,7 @@
             <div class="card credito" id="totalCredito" onclick="imprimirPDF('Crédito')">CRÉDITO<br>R$ 0,00</div>
         </div>
     </div>
+    
     <div id="formModal" class="modal">
         <div class="modal-content">
             <h2>Nova O.S</h2>
@@ -138,14 +138,14 @@
             <button onclick="fecharForm()" style="margin-top:5px;background:#e74c3c;">Cancelar</button>
         </div>
     </div>
-    
-    </div>
+        
+</div>
 
 <script>
     // =================================================================
     // ☁️ CONFIGURAÇÃO FIREBASE E CONEXÃO FIRESTORE
     // =================================================================
-
+    
     const firebaseConfig = {
       apiKey: "AIzaSyC5up-MQFQNeHftI8KTMoXi5pY2D2jpgM",
       authDomain: "vditacografosfrentecaixa.firebaseapp.com",
@@ -173,12 +173,13 @@
      * e redesenha a tela automaticamente.
      */
     function setupFirestoreListener() {
+        // Adicionando um error handler ao onSnapshot para ver o que está travando a conexão
         osCollection.onSnapshot(snapshot => {
             const changes = snapshot.docChanges();
-            
+
             changes.forEach(change => {
                 const docData = { ...change.doc.data(), id: change.doc.id };
-                
+
                 if (change.type === "added" || change.type === "modified") {
                     // Adiciona ou atualiza o item
                     const existingIndex = osData.findIndex(item => item.id === docData.id);
@@ -213,8 +214,9 @@
             getTecnicosUnicos();
             atualizarTabelaTodas();
         }, error => {
-            console.error("Erro ao conectar ao Firestore:", error);
-            document.getElementById('loadingOverlay').innerHTML = 'ERRO: Falha ao conectar ao banco de dados na nuvem.';
+            // Este bloco é chamado se houver uma falha de permissão ou conexão
+            console.error("Erro CRÍTICO ao conectar ao Firestore:", error);
+            document.getElementById('loadingOverlay').innerHTML = 'ERRO: Falha ao conectar ao banco de dados na nuvem. Verifique Permissões ou Regras. (' + error.code + ')';
         });
     }
 
@@ -287,9 +289,10 @@
             pagamento,
             tecnico,
             unidade,
-            timestamp: firebase.firestore.FieldValue.serverTimestamp() // Para ordenar pelo tempo de criação na nuvem
+            // Para garantir que os dados novos apareçam no topo
+            timestamp: firebase.firestore.FieldValue.serverTimestamp() 
         };
-        
+
         try {
             // Adiciona um novo documento ao Firestore
             await osCollection.add(novaOS);
@@ -321,7 +324,7 @@
         const tbody = document.querySelector("#tabelaTodas tbody");
         tbody.innerHTML = '';
         let totalF=0, totalAberto=0, totalPix=0, totalDin=0, totalDeb=0, totalCred=0;
-        
+
         const dadosFiltrados = osData.filter(item => {
             const itemDate = item.data.split('/').reverse().join('-');
             const itemValor = parseFloat(item.valor) || 0;
@@ -353,14 +356,14 @@
             
             return true;
         });
-        
+
         dadosFiltrados.forEach((item,i)=>{
             const tr = document.createElement('tr');
             // Usamos item.id que é o ID único do Firestore
             tr.innerHTML = `<td>${item.os}</td><td>${item.data}</td><td>${item.cliente}</td><td>${item.placa}</td><td>R$ ${parseFloat(item.valor).toFixed(2)}</td><td>${item.pagamento}</td><td>${item.tecnico}</td><td>${item.unidade}</td><td><button class="edit" onclick="editarOS('${item.id}')">Editar</button> <button class="delete" onclick="apagarOS('${item.id}')">Apagar</button></td>`;
             tbody.appendChild(tr);
         });
-        
+
         document.getElementById('totalFaturadas').innerHTML=`FATURADAS<br>R$ ${totalF.toFixed(2)}`;
         document.getElementById('totalAberto').innerHTML=`EM ABERTO<br>R$ ${totalAberto.toFixed(2)}`;
         document.getElementById('totalPix').innerHTML=`PIX<br>R$ ${totalPix.toFixed(2)}`;
@@ -389,6 +392,7 @@
         if(novoCliente !== null){
             try {
                 // Atualiza o documento no Firestore
+                // Note: O item na lista local (osData) será atualizado automaticamente pelo onSnapshot!
                 await osCollection.doc(id).update({ cliente: novoCliente });
                 alert("Cliente atualizado na nuvem!");
             } catch (e) {
@@ -402,6 +406,7 @@
           if(confirm("Deseja apagar esta O.S?")){
               try {
                 // Deleta o documento no Firestore
+                // Note: O item será removido da lista local (osData) automaticamente pelo onSnapshot!
                 await osCollection.doc(id).delete();
                 alert("O.S. apagada da nuvem!");
             } catch (e) {
@@ -520,7 +525,6 @@
                             item.os && item.data && item.cliente.toUpperCase().trim() !== 'CANCELADA'
                         );
                         
-                        // Não precisamos mais checar o localStorage, vamos direto para a nuvem
                         // Usamos um 'batch' para salvar tudo de uma vez
                         const batch = db.batch();
                         let registrosAdicionados = 0;
@@ -550,18 +554,20 @@
         }
     }
 
-
     // Funções de PDF (mantidas, usam osData que agora vem da nuvem)
     const paymentColors = { 'Faturado': [173, 216, 230], 'Em Aberto': [255, 192, 203], 'PIX': [175, 223, 175], 'Dinheiro': [255, 239, 173], 'Débito': [253, 222, 173], 'Crédito': [210, 180, 222]};
     const totalColors = { 'Faturado': [45, 156, 219], 'Em Aberto': [233, 78, 119], 'PIX': [39, 174, 96], 'Dinheiro': [241, 196, 15], 'Débito': [243, 156, 18], 'Crédito': [155, 89, 182]};
+    
     function imprimirPDF(tipoFiltro = '') {
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
+        
         const unidadeSelecionada = document.getElementById('unidade').value;
         const tecnicoFiltro = document.getElementById('tecnicoFiltro').value;
         const dataInicio = document.getElementById('dataInicio').value;
         const dataFim = document.getElementById('dataFim').value;
         const termoBusca = document.getElementById('busca').value.toLowerCase();
+        
         let tituloFiltro = tipoFiltro || 'Todos';
         if(tecnicoFiltro) tituloFiltro += ` (Técnico: ${tecnicoFiltro})`;
         if(termoBusca) tituloFiltro += ` (Busca: "${termoBusca}")`;
@@ -586,6 +592,7 @@
         
         const headers = ['O.S', 'DATA', 'CLIENTE', 'PLACA', 'VALOR', 'PAGAMENTO', 'TECNICO', 'UNIDADE'];
         let total = 0;
+        
         const bodyData = dados.map(item => {
             const valorNum = parseFloat(item.valor || 0);
             total += valorNum;
@@ -600,6 +607,7 @@
                 String(item.unidade || '')
             ];
         });
+
         const headerColor = [74, 144, 226];
         doc.setFillColor(...headerColor);
         doc.rect(0, 0, 210, 25, 'F');
@@ -609,6 +617,7 @@
         doc.text("Frente de Caixa — Relatório de O.S", 105, 15, { align: 'center' });
         doc.setFontSize(11);
         doc.text(`Unidade: ${unidadeSelecionada || 'Todas'}  |  Filtro: ${tituloFiltro}`, 105, 22, { align: 'center' });
+
         doc.autoTable({
             startY: 30,
             head: [headers],
@@ -633,6 +642,7 @@
             },
             didDrawPage: (data) => { doc.setFontSize(10); }
         });
+
         const finalY = doc.lastAutoTable.finalY + 5;
         const leftMargin = 10;
         let totalBackgroundColor = totalColors[tipoFiltro] || headerColor;
@@ -643,7 +653,7 @@
         doc.setFont("helvetica", "bold");
         doc.setFontSize(12);
         doc.text(`TOTAL: R$ ${total.toFixed(2)}`, leftMargin + 4, finalY + 5.5, {});
-        
+
         let nomeArquivo = tipoFiltro ? `OS_${tipoFiltro}` : 'OS_RelatorioCompleto';
         if (unidadeSelecionada) nomeArquivo += `_${unidadeSelecionada}`;
         if (tecnicoFiltro) nomeArquivo += `_${tecnicoFiltro}`;
@@ -651,8 +661,12 @@
         doc.save(`${nomeArquivo}.pdf`);
     }
 
-    // 🚀 Inicia a escuta da nuvem ao carregar a página
-    window.onload = setupFirestoreListener;
+    // =================================================================
+    // 🚀 INÍCIO
+    // =================================================================
+
+    // Inicia a escuta do Firebase assim que o script carregar
+    setupFirestoreListener(); 
 </script>
 </body>
 </html>
