@@ -11,6 +11,8 @@
     
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    
+    <script src="https://cdn.auth0.com/js/auth0-spa-js/1.22/auth0-spa-js.production.js"></script>
 
     <style>
         /* Estilos CSS (MANTIDOS) */
@@ -56,7 +58,7 @@
 <body>
 
 <div id="loadingOverlay">
-    Conectando à Nuvem...
+    Verificando Login...
 </div>
 
 <div id="appContent" style="display:none;">
@@ -68,7 +70,7 @@
             <button onclick="importExcel()">Importar Excel</button>
             <button onclick="imprimirPDF()">Imprimir / Salvar PDF</button>
             <button onclick="limparDados()">Limpar dados</button>
-            <button onclick="alert('Funcionalidade de Login Local Removida. Aguarde a implementação do Login via Firebase.')" style="background:#e74c3c;">Sair do Sistema</button>
+            <button onclick="logout()" style="background:#e74c3c;">Sair do Sistema</button>
          </div>
         <input type="file" id="inputExcel" accept=".xlsx,.csv" style="display:none" onchange="lerExcel(event)" multiple>
         <div class="filters">
@@ -143,6 +145,25 @@
 
 <script>
     // =================================================================
+    // 🔐 CONFIGURAÇÃO AUTH0 (LOGIN)
+    // ⚠️ VOCÊ PRECISA SUBSTITUIR ESTES VALORES ⚠️
+    // =================================================================
+    
+    const auth0Config = {
+        // Ex: dev-abcdefg123.us.auth0.com
+        domain: "SEU_DOMAIN_AUTH0_AQUI", 
+        // Seu Client ID
+        clientId: "SEU_CLIENT_ID_AQUI", 
+        // Deve ser a URL do seu GitHub Pages (e deve estar configurada no Auth0 como "Callback URL")
+        redirectUri: window.location.origin + window.location.pathname
+    };
+
+    let auth0Client = null;
+    let isAuthenticated = false;
+    let user = null;
+
+
+    // =================================================================
     // ☁️ CONFIGURAÇÃO FIREBASE E CONEXÃO FIRESTORE
     // =================================================================
     
@@ -164,13 +185,75 @@
     let osData = []; // Esta variável agora é preenchida pela nuvem
 
     // =================================================================
+    // 🔐 FUNÇÕES DE AUTENTICAÇÃO AUTH0
+    // =================================================================
+
+    /**
+     * Inicializa o cliente Auth0.
+     */
+    async function configureAuth0() {
+      try {
+        auth0Client = await createAuth0Client({
+            domain: auth0Config.domain,
+            client_id: auth0Config.clientId,
+            redirect_uri: auth0Config.redirectUri,
+        });
+
+        // Lida com o retorno do redirect após o login
+        if (window.location.search.includes('code=')) {
+            document.getElementById('loadingOverlay').innerHTML = 'Finalizando Login...';
+            await auth0Client.handleRedirectCallback();
+            // Limpa a URL sem recarregar
+            window.history.replaceState({}, document.title, window.location.pathname);
+        }
+
+        await updateAuthState();
+      } catch (e) {
+          console.error("Erro ao configurar Auth0. Verifique as credenciais:", e);
+          document.getElementById('loadingOverlay').innerHTML = 'ERRO DE CONFIGURAÇÃO AUTH0. Verifique o console (F12) e as credenciais.';
+      }
+    }
+
+    /**
+     * Atualiza o estado de autenticação e inicia o app se logado.
+     */
+    async function updateAuthState() {
+        isAuthenticated = await auth0Client.isAuthenticated();
+        user = isAuthenticated ? await auth0Client.getUser() : null;
+
+        if (isAuthenticated) {
+            // Se estiver autenticado, inicie o aplicativo e a conexão com o Firebase
+            document.getElementById('loadingOverlay').innerHTML = 'Conectando à Nuvem...';
+            setupFirestoreListener(); // Chama a função que conecta ao Firebase
+        } else {
+            // Se não estiver autenticado, redireciona para o login
+            document.getElementById('loadingOverlay').innerHTML = 'Redirecionando para Login...';
+            login();
+        }
+    }
+
+    /**
+     * Inicia o processo de login (redireciona para a página do Auth0).
+     */
+    function login() {
+        auth0Client.loginWithRedirect();
+    }
+
+    /**
+     * Encerra a sessão.
+     */
+    function logout() {
+      auth0Client.logout({
+        returnTo: window.location.origin + window.location.pathname // Volta para a página inicial
+      });
+    }
+
+    // =================================================================
     // ⚙️ FUNÇÕES FIREBASE (SUBSTITUINDO localStorage)
     // =================================================================
 
     /**
      * Inicia a escuta em tempo real da coleção 'ordens_servico' no Firestore.
-     * Sempre que um dado muda (adicionado, editado ou removido), ele atualiza o osData
-     * e redesenha a tela automaticamente.
      */
     function setupFirestoreListener() {
         // Adicionando um error handler ao onSnapshot para ver o que está travando a conexão
@@ -221,7 +304,7 @@
     }
 
     // =================================================================
-    // ⚙️ FUNÇÕES DA APLICAÇÃO (ADAPTADAS PARA NUVEM)
+    // ⚙️ FUNÇÕES DA APLICAÇÃO (MANTIDAS)
     // =================================================================
 
     function formatDate(iso){
@@ -665,8 +748,8 @@
     // 🚀 INÍCIO
     // =================================================================
 
-    // Inicia a escuta do Firebase assim que o script carregar
-    setupFirestoreListener(); 
+    // Agora, a inicialização começa com a configuração do Auth0
+    configureAuth0(); 
 </script>
 </body>
 </html>
