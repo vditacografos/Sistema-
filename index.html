@@ -12,8 +12,6 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
     
-    <script src="https://cdn.auth0.com/js/auth0-spa-js/1.22/auth0-spa-js.production.js"></script>
-
     <style>
         /* Estilos CSS (MANTIDOS) */
         body { font-family: 'Poppins', sans-serif; margin:0; padding:0; background:#f4f6f9; }
@@ -58,7 +56,7 @@
 <body>
 
 <div id="loadingOverlay">
-    Verificando Login...
+    Conectando à Nuvem...
 </div>
 
 <div id="appContent" style="display:none;">
@@ -70,8 +68,7 @@
             <button onclick="importExcel()">Importar Excel</button>
             <button onclick="imprimirPDF()">Imprimir / Salvar PDF</button>
             <button onclick="limparDados()">Limpar dados</button>
-            <button onclick="logout()" style="background:#e74c3c;">Sair do Sistema</button>
-         </div>
+            </div>
         <input type="file" id="inputExcel" accept=".xlsx,.csv" style="display:none" onchange="lerExcel(event)" multiple>
         <div class="filters">
             <select id="unidade" onchange="atualizarTabelaTodas()">
@@ -145,24 +142,6 @@
 
 <script>
     // =================================================================
-    // 🔐 CONFIGURAÇÃO AUTH0 (LOGIN) - SUAS CREDENCIAIS CORRETAS
-    // =================================================================
-    
-    const auth0Config = {
-        // Seu Domain, que é dev-ehkfrfrs8byrafj0j.us.auth0.com
-        domain: "dev-ehkfrfrs8byrafj0j.us.auth0.com", 
-        // Seu Client ID da Default App
-        clientId: "d9D8BspCIZVqWIPIYta2tr9GWUhHGa2", 
-        // A URL de retorno para o seu GitHub Pages
-        redirectUri: window.location.origin + window.location.pathname
-    };
-
-    let auth0Client = null;
-    let isAuthenticated = false;
-    let user = null;
-
-
-    // =================================================================
     // ☁️ CONFIGURAÇÃO FIREBASE E CONEXÃO FIRESTORE - SUAS CREDENCIAIS
     // =================================================================
     
@@ -184,143 +163,61 @@
 
     let osData = []; // Esta variável agora é preenchida pela nuvem
 
-    // =================================================================
-    // 🔐 FUNÇÕES DE AUTENTICAÇÃO AUTH0
-    // =================================================================
-
-    /**
-     * Inicializa o cliente Auth0.
-     */
-    async function configureAuth0() {
-      try {
-        auth0Client = await createAuth0Client({
-            domain: auth0Config.domain,
-            client_id: auth0Config.clientId,
-            redirect_uri: auth0Config.redirectUri,
-        });
-
-        // Lida com o retorno do redirect após o login
-        if (window.location.search.includes('code=')) {
-            document.getElementById('loadingOverlay').innerHTML = 'Finalizando Login...';
-            await auth0Client.handleRedirectCallback();
-            // Limpa a URL sem recarregar
-            window.history.replaceState({}, document.title, window.location.pathname);
-        }
-
-        await updateAuthState();
-      } catch (e) {
-          console.error("Erro ao configurar Auth0. Verifique as credenciais:", e);
-          // Se o Auth0 falhar, tentamos ir direto para o Firebase.
-          // Isso é um CONTORNO para o problema do "Unknown Host"
-          if (e.error === 'Unknown host') {
-             console.warn("Auth0 falhou com Unknown Host. Contornando e iniciando Firebase diretamente.");
-             // Chamamos a função do Firebase que carrega os dados
-             setupFirestoreListener(true); 
-          } else {
-             document.getElementById('loadingOverlay').innerHTML = 'ERRO DE CONFIGURAÇÃO AUTH0. Verifique o console (F12) e se as URLs de Callback no Auth0 estão corretas.';
-          }
-      }
-    }
-
-    /**
-     * Atualiza o estado de autenticação e inicia o app se logado.
-     */
-    async function updateAuthState() {
-        isAuthenticated = await auth0Client.isAuthenticated();
-        user = isAuthenticated ? await auth0Client.getUser() : null;
-
-        if (isAuthenticated) {
-            // Se estiver autenticado, inicie o aplicativo e a conexão com o Firebase
-            document.getElementById('loadingOverlay').innerHTML = 'Conectando à Nuvem...';
-            setupFirestoreListener(); // Chama a função que conecta ao Firebase
-        } else {
-            // Se não estiver autenticado, redireciona para o login
-            document.getElementById('loadingOverlay').innerHTML = 'Redirecionando para Login...';
-            login();
-        }
-    }
-
-    /**
-     * Inicia o processo de login (redireciona para a página do Auth0).
-     */
-    function login() {
-        auth0Client.loginWithRedirect();
-    }
-
-    /**
-     * Encerra a sessão.
-     */
-    function logout() {
-      auth0Client.logout({
-        returnTo: window.location.origin + window.location.pathname // Volta para a página inicial
-      });
-    }
 
     // =================================================================
-    // ⚙️ FUNÇÕES FIREBASE
+    // ⚙️ FUNÇÕES FIREBASE (INÍCIO DIRETO)
     // =================================================================
 
     /**
      * Inicia a escuta em tempo real da coleção 'ordens_servico' no Firestore.
-     * @param {boolean} forceStart Se true, ignora o estado do Auth0 e inicia.
      */
-    function setupFirestoreListener(forceStart = false) {
-        // Se forceStart for true (contornando o Auth0) ou se a autenticação tiver sucesso
-        if (forceStart || isAuthenticated) {
+    function setupFirestoreListener() {
+        
+        osCollection.onSnapshot(snapshot => {
+            const changes = snapshot.docChanges();
             
-            // Oculta o botão de sair se não estiver autenticado (só funciona com forceStart)
-            if (forceStart) {
-                document.querySelector('button[onclick="logout()"]').style.display = 'none';
-            }
+            changes.forEach(change => {
+                const docData = { ...change.doc.data(), id: change.doc.id };
 
-            osCollection.onSnapshot(snapshot => {
-                const changes = snapshot.docChanges();
-                
-                changes.forEach(change => {
-                    const docData = { ...change.doc.data(), id: change.doc.id };
-
-                    if (change.type === "added" || change.type === "modified") {
-                        const existingIndex = osData.findIndex(item => item.id === docData.id);
-                        if (existingIndex > -1) {
-                            osData[existingIndex] = docData;
-                        } else {
-                            osData.push(docData);
-                        }
+                if (change.type === "added" || change.type === "modified") {
+                    const existingIndex = osData.findIndex(item => item.id === docData.id);
+                    if (existingIndex > -1) {
+                        osData[existingIndex] = docData;
+                    } else {
+                        osData.push(docData);
                     }
-                    if (change.type === "removed") {
-                        osData = osData.filter(item => item.id !== docData.id);
-                    }
-                });
-
-                osData.sort((a, b) => {
-                    const parseDate = (dateStr) => {
-                        const parts = dateStr.split('/');
-                        return new Date(parts[2], parts[1] - 1, parts[0]); 
-                    };
-                    const dateA = parseDate(a.data || '01/01/2000');
-                    const dateB = parseDate(b.data || '01/01/2000');
-                    return dateB - dateA; 
-                });
-
-                // Oculta o loading e mostra o app
-                document.getElementById('loadingOverlay').style.display = 'none';
-                document.getElementById('appContent').style.display = 'block';
-
-                getTecnicosUnicos();
-                atualizarTabelaTodas();
-            }, error => {
-                console.error("Erro CRÍTICO ao conectar ao Firestore:", error);
-                document.getElementById('loadingOverlay').innerHTML = 'ERRO: Falha ao conectar ao banco de dados na nuvem. Verifique Permissões ou Regras. (' + error.code + ')';
+                }
+                if (change.type === "removed") {
+                    osData = osData.filter(item => item.id !== docData.id);
+                }
             });
-        }
+
+            osData.sort((a, b) => {
+                const parseDate = (dateStr) => {
+                    const parts = dateStr.split('/');
+                    return new Date(parts[2], parts[1] - 1, parts[0]); 
+                };
+                const dateA = parseDate(a.data || '01/01/2000');
+                const dateB = parseDate(b.data || '01/01/2000');
+                return dateB - dateA; 
+            });
+
+            // Oculta o loading e mostra o app
+            document.getElementById('loadingOverlay').style.display = 'none';
+            document.getElementById('appContent').style.display = 'block';
+
+            getTecnicosUnicos();
+            atualizarTabelaTodas();
+        }, error => {
+            console.error("Erro CRÍTICO ao conectar ao Firestore:", error);
+            // Mensagem clara de erro de regras
+            document.getElementById('loadingOverlay').innerHTML = 'ERRO: Falha ao conectar ao banco de dados na nuvem. VERIFIQUE AS REGRAS DO FIREBASE. (' + error.code + ')';
+        });
     }
 
     // =================================================================
     // ⚙️ FUNÇÕES DA APLICAÇÃO (MANTIDAS)
     // =================================================================
-    // ... TODAS AS FUNÇÕES ANTERIORES DO SISTEMA (formatDate, abrirForm, etc.) ...
-    // Para simplificar, as funções de manipulação de tabela, formulário e PDF estão aqui
-    // mas você pode usar o código completo que enviei anteriormente, que já as contém.
     
     function formatDate(iso){
         const parts=iso.split('-');
@@ -466,7 +363,7 @@
         document.getElementById('totalPix').innerHTML=`PIX<br>R$ ${totalPix.toFixed(2)}`;
         document.getElementById('totalDinheiro').innerHTML=`DINHEIRO<br>R$ ${totalDin.toFixed(2)}`;
         document.getElementById('totalDebito').innerHTML=`DÉBITO<br>R$ ${totalDeb.toFixed(2)}`;
-        document.getElementById('totalCredito').innerHTML=`CRÉDITO<br>R$ ${totalCred.toFixed(2)}`;
+        document.getElementById('totalCredito').innerHTML=`CRÉDITO<br>R$ ${totalCredito.toFixed(2)}`;
     }
 
     function filtrar(){ atualizarTabelaTodas(); }
@@ -489,7 +386,6 @@
         if(novoCliente !== null){
             try {
                 // Atualiza o documento no Firestore
-                // Note: O item na lista local (osData) será atualizado automaticamente pelo onSnapshot!
                 await osCollection.doc(id).update({ cliente: novoCliente });
                 alert("Cliente atualizado na nuvem!");
             } catch (e) {
@@ -503,7 +399,6 @@
           if(confirm("Deseja apagar esta O.S?")){
               try {
                 // Deleta o documento no Firestore
-                // Note: O item será removido da lista local (osData) automaticamente pelo onSnapshot!
                 await osCollection.doc(id).delete();
                 alert("O.S. apagada da nuvem!");
             } catch (e) {
@@ -535,9 +430,7 @@
 
     function exportExcel(){
             const wb=XLSX.utils.book_new();
-            // A exportação usa a variável local osData que é sincronizada
             const ws=XLSX.utils.json_to_sheet(osData.map(item => {
-                // Remove o ID interno do Firebase antes de exportar
                 const { id, ...rest } = item;
                 return rest;
             }));
@@ -549,7 +442,6 @@
           document.getElementById('inputExcel').click();
     }
 
-    // A função lerExcel (Importar) precisa ser ajustada para SALVAR no Firestore
     function lerExcel(event) {
         const files = event.target.files;
         if (files.length === 0) {
@@ -622,12 +514,10 @@
                             item.os && item.data && item.cliente.toUpperCase().trim() !== 'CANCELADA'
                         );
                         
-                        // Usamos um 'batch' para salvar tudo de uma vez
                         const batch = db.batch();
                         let registrosAdicionados = 0;
                         
                         novosRegistros.forEach(novoItem => {
-                            // Cria uma referência de documento e define os dados
                             const newDocRef = osCollection.doc();
                             batch.set(newDocRef, novoItem);
                             registrosAdicionados++;
@@ -669,9 +559,8 @@
         if(tecnicoFiltro) tituloFiltro += ` (Técnico: ${tecnicoFiltro})`;
         if(termoBusca) tituloFiltro += ` (Busca: "${termoBusca}")`;
         
-        let dados = osData.slice(); // Clona os dados da nuvem para filtrar
+        let dados = osData.slice(); 
         
-        // --- Lógica de Filtro ---
         if (unidadeSelecionada) { dados = dados.filter(d => d.unidade === unidadeSelecionada); }
         if (tecnicoFiltro) { dados = dados.filter(d => d.tecnico === tecnicoFiltro); }
         if (tipoFiltro) { dados = dados.filter(d => (d.pagamento || '').toLowerCase().trim() === tipoFiltro.toLowerCase().trim()); }
@@ -685,7 +574,6 @@
             );
         }
         dados = dados.filter(d => !(d.cliente || '').toUpperCase().includes('CANCELADA'));
-        // --- Fim da Lógica de Filtro ---
         
         const headers = ['O.S', 'DATA', 'CLIENTE', 'PLACA', 'VALOR', 'PAGAMENTO', 'TECNICO', 'UNIDADE'];
         let total = 0;
@@ -758,12 +646,8 @@
         doc.save(`${nomeArquivo}.pdf`);
     }
 
-    // =================================================================
-    // 🚀 INÍCIO
-    // =================================================================
-
-    // A inicialização começa com a configuração do Auth0
-    configureAuth0(); 
+    // =VELA DA LUZ E VAI! (Início)
+    setupFirestoreListener(); 
 </script>
 </body>
 </html>
