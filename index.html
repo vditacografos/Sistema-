@@ -170,20 +170,22 @@
 </div>
 
 <script>
-    // =================================================================
-    // ☁️ CONFIGURAÇÃO FIREBASE E CONEXÃO FIRESTORE - SUAS CREDENCIAIS
-    // =================================================================
-    
-    const firebaseConfig = {
-      // Credenciais confirmadas na imagem image_c6916e.png
-      apiKey: "AIzaSyC5up-MQFQNeHftI8KTMoXi5pY2D2jpgM",
-      authDomain: "vditacografosfrentecaixa.firebaseapp.com",
-      projectId: "vditacografosfrentecaixa",
-      storageBucket: "vditacografosfrentecaixa.appspot.com",
-      messagingSenderId: "1008625665373",
-      appId: "1:1008625665373:web:5100c166ce3f02feb854b4",
-      measurementId: "G-9PT00XJZBBV"
-    };
+   // =========================================================================
+//           CONFIGURAÇÃO FIREBASE E CONEXÃO FIRESTORE - CREDENCIAIS CORRIGIDAS
+// =========================================================================
+// ATENÇÃO: A nova API Key é crítica para corrigir o erro 400 (Chave Bloqueada)
+const firebaseConfig = {
+  // NOVA API KEY SEM RESTRIÇÕES DE DOMÍNIO (CORREÇÃO DO ERRO 400)
+  apiKey: "AIzaSyC5up-MQFQNeH1ftI8KTMoXI5pY2D2jpgM", 
+  authDomain: "vditacografosfrentecaixa.firebaseapp.com",
+  databaseURL: "https://vditacografosfrentecaixa-default-rtdb.firebaseio.com",
+  projectId: "vditacografosfrentecaixa",
+  storageBucket: "vditacografosfrentecaixa.firebasestorage.app",
+  messagingSenderId: "1008625665373",
+  // NOVO APP ID
+  appId: "1:1008625665373:web:1f1870898ecb04b4b854b4",
+  measurementId: "G-9SYYV1VLNY"
+};
 
     // Inicializa o Firebase
     const app = firebase.initializeApp(firebaseConfig);
@@ -726,3 +728,4 @@
 </script>
 </body>
 </html>
+
