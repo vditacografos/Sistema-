@@ -11,7 +11,8 @@
     
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
-    
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+
     <style>
         /* Estilos CSS (MANTIDOS) */
         body { font-family: 'Poppins', sans-serif; margin:0; padding:0; background:#f4f6f9; }
@@ -42,12 +43,29 @@
         .modal-content { background:white; padding:30px; border-radius:10px; width:90%; max-width:400px; box-shadow:0 5px 15px rgba(0,0,0,0.3); }
         .modal-content h2 { color:#4a90e2; margin-top:0; }
         .modal-content input, .modal-content select, .modal-content button { margin-bottom:15px; width:100%; box-sizing:border-box; }
+        
         #loadingOverlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255, 255, 255, 0.8);
             display: flex; justify-content: center; align-items: center; z-index: 2000; font-size: 24px; font-weight: 600;
             color: #4a90e2;
         }
-                @media(max-width:600px){
+
+        /* Estilo da tela de login */
+        #loginScreen {
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            height: 100vh; background: linear-gradient(135deg,#e0e7ff 0%,#f0f2f5 100%);
+        }
+        #loginBox {
+            background: white; padding: 40px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            width: 300px; text-align: center;
+        }
+        #loginBox h2 { color: #4a90e2; margin-bottom: 25px; }
+        #loginBox input { margin-bottom: 15px; padding: 12px; border: 1px solid #ccc; border-radius: 8px; width: 100%; box-sizing: border-box; }
+        #loginBox button { background: #4a90e2; color: white; padding: 12px; border: none; border-radius: 8px; width: 100%; cursor: pointer; font-weight: 600; transition: background 0.2s; }
+        #loginBox button:hover { background: #357ABD; }
+        #loginError { color: #e74c3c; margin-top: 10px; font-size: 14px; }
+                
+        @media(max-width:600px){
             .buttons, .filters, .search { flex-direction:column; }
             table th, table td { font-size:12px; padding:8px; }
         }
@@ -55,7 +73,17 @@
 </head>
 <body>
 
-<div id="loadingOverlay">
+<div id="loginScreen">
+    <div id="loginBox">
+        <h2>Acesso Restrito VDI</h2>
+        <input type="email" id="loginEmail" placeholder="E-mail" required>
+        <input type="password" id="loginPassword" placeholder="Senha" required>
+        <button onclick="login()">Entrar no Sistema</button>
+        <div id="loginError" style="display:none;"></div>
+    </div>
+</div>
+
+<div id="loadingOverlay" style="display:none;">
     Conectando à Nuvem...
 </div>
 
@@ -68,7 +96,8 @@
             <button onclick="importExcel()">Importar Excel</button>
             <button onclick="imprimirPDF()">Imprimir / Salvar PDF</button>
             <button onclick="limparDados()">Limpar dados</button>
-            </div>
+            <button onclick="logout()" style="background:#e74c3c;">Sair do Sistema</button>
+         </div>
         <input type="file" id="inputExcel" accept=".xlsx,.csv" style="display:none" onchange="lerExcel(event)" multiple>
         <div class="filters">
             <select id="unidade" onchange="atualizarTabelaTodas()">
@@ -159,13 +188,73 @@
     // Inicializa o Firebase
     const app = firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore(app);
-    const osCollection = db.collection('ordens_servico'); // Nome da sua "tabela" na nuvem
+    const auth = firebase.auth(app); // Novo: Referência para autenticação
+    const osCollection = db.collection('ordens_servico');
 
-    let osData = []; // Esta variável agora é preenchida pela nuvem
+    let osData = [];
+
+    // =================================================================
+    // 🔐 FUNÇÕES DE AUTENTICAÇÃO FIREBASE
+    // =================================================================
+    
+    /**
+     * Tenta fazer o login com e-mail e senha.
+     */
+    async function login() {
+        const email = document.getElementById('loginEmail').value;
+        const password = document.getElementById('loginPassword').value;
+        const errorDiv = document.getElementById('loginError');
+
+        if (!email || !password) {
+            errorDiv.textContent = "Preencha e-mail e senha.";
+            errorDiv.style.display = 'block';
+            return;
+        }
+
+        try {
+            await auth.signInWithEmailAndPassword(email, password);
+            // O monitoramento do estado (onAuthStateChanged) fará o resto
+        } catch (error) {
+            console.error("Erro de Login:", error);
+            let errorMessage = "Erro desconhecido.";
+            if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
+                errorMessage = "E-mail ou senha inválidos.";
+            } else if (error.code === 'auth/invalid-email') {
+                errorMessage = "Formato de e-mail inválido.";
+            }
+            errorDiv.textContent = errorMessage;
+            errorDiv.style.display = 'block';
+        }
+    }
+
+    /**
+     * Encerra a sessão do usuário.
+     */
+    function logout() {
+        auth.signOut();
+    }
+
+    /**
+     * Monitora o estado de autenticação (logado/deslogado).
+     */
+    auth.onAuthStateChanged(user => {
+        if (user) {
+            // Usuário logado: esconde login, mostra loading, inicia dados.
+            document.getElementById('loginScreen').style.display = 'none';
+            document.getElementById('loadingOverlay').style.display = 'flex';
+            document.getElementById('loadingOverlay').innerHTML = 'Conectando à Nuvem...';
+            setupFirestoreListener();
+        } else {
+            // Usuário deslogado: mostra login, esconde tudo.
+            document.getElementById('appContent').style.display = 'none';
+            document.getElementById('loadingOverlay').style.display = 'none';
+            document.getElementById('loginScreen').style.display = 'flex';
+        }
+    });
 
 
     // =================================================================
-    // ⚙️ FUNÇÕES FIREBASE (INÍCIO DIRETO)
+    // ⚙️ FUNÇÕES FIREBASE E SISTEMA (Adaptadas)
     // =================================================================
 
     /**
@@ -214,11 +303,28 @@
             document.getElementById('loadingOverlay').innerHTML = 'ERRO: Falha ao conectar ao banco de dados na nuvem. VERIFIQUE AS REGRAS DO FIREBASE. (' + error.code + ')';
         });
     }
-
-    // =================================================================
-    // ⚙️ FUNÇÕES DA APLICAÇÃO (MANTIDAS)
-    // =================================================================
     
+    // TODAS AS DEMAIS FUNÇÕES DO SISTEMA (formatDate, abrirForm, salvarForm, etc.) PERMANECEM IGUAIS
+
+    function formatDate(iso){ /* ... */ }
+    function getTecnicosUnicos() { /* ... */ }
+    function abrirForm(){ /* ... */ }
+    function fecharForm(){ /* ... */ }
+    async function salvarForm(){ /* ... */ }
+    function atualizarTabelaTodas(){ /* ... */ }
+    function filtrar(){ atualizarTabelaTodas(); }
+    function buscar(){ atualizarTabelaTodas(); }
+    function limparFiltros(){ /* ... */ }
+    async function editarOS(id){ /* ... */ }
+    async function apagarOS(id){ /* ... */ }
+    async function limparDados(){ /* ... */ }
+    function exportExcel(){ /* ... */ }
+    function importExcel(){ document.getElementById('inputExcel').click(); }
+    function lerExcel(event) { /* ... */ }
+    function imprimirPDF(tipoFiltro = '') { /* ... */ }
+    
+    // Para simplificar, as funções completas estão logo abaixo:
+
     function formatDate(iso){
         const parts=iso.split('-');
         return `${parts[2]}/${parts[1]}/${parts[0]}`;
@@ -284,12 +390,10 @@
             pagamento,
             tecnico,
             unidade,
-            // Para garantir que os dados novos apareçam no topo
             timestamp: firebase.firestore.FieldValue.serverTimestamp() 
         };
 
         try {
-            // Adiciona um novo documento ao Firestore
             await osCollection.add(novaOS);
             alert("O.S. salva na nuvem com sucesso!");
         } catch (e) {
@@ -298,7 +402,6 @@
         }
         
         fecharForm();
-        // Limpa o formulário
         document.getElementById('formOS').value = '';
         document.getElementById('formData').value = '';
         document.getElementById('formCliente').value = '';
@@ -324,23 +427,13 @@
             const itemValor = parseFloat(item.valor) || 0;
             const itemPagamento = item.pagamento ? item.pagamento.toLowerCase().trim() : '';
             
-            // 1. Filtro por Unidade
             if(unidade && item.unidade !== unidade) return false;
-            
-            // 2. Filtro por Técnico
             if(tecnicoFiltro && item.tecnico !== tecnicoFiltro) return false;
-            
-            // 3. Filtro por Data
             if(dataInicio && itemDate < dataInicio) return false;
             if(dataFim && itemDate > dataFim) return false;
-            
-            // 4. Filtro de Canceladas
             if ((item.cliente || '').toUpperCase().includes('CANCELADA')) return false;
-            
-            // 5. Filtro de Busca (Cliente, Placa ou O.S)
             if (termoBusca && !(item.cliente.toLowerCase().includes(termoBusca) || item.placa.toLowerCase().includes(termoBusca) || item.os.toLowerCase().includes(termoBusca))) return false;
             
-            // 6. Cálculos do Resumo
             if(itemPagamento === 'faturado') totalF += itemValor;
             if(itemPagamento === 'em aberto') totalAberto += itemValor;
             if(itemPagamento === 'pix') totalPix += itemValor;
@@ -353,7 +446,6 @@
 
         dadosFiltrados.forEach((item,i)=>{
             const tr = document.createElement('tr');
-            // Usamos item.id que é o ID único do Firestore
             tr.innerHTML = `<td>${item.os}</td><td>${item.data}</td><td>${item.cliente}</td><td>${item.placa}</td><td>R$ ${parseFloat(item.valor).toFixed(2)}</td><td>${item.pagamento}</td><td>${item.tecnico}</td><td>${item.unidade}</td><td><button class="edit" onclick="editarOS('${item.id}')">Editar</button> <button class="delete" onclick="apagarOS('${item.id}')">Apagar</button></td>`;
             tbody.appendChild(tr);
         });
@@ -363,19 +455,7 @@
         document.getElementById('totalPix').innerHTML=`PIX<br>R$ ${totalPix.toFixed(2)}`;
         document.getElementById('totalDinheiro').innerHTML=`DINHEIRO<br>R$ ${totalDin.toFixed(2)}`;
         document.getElementById('totalDebito').innerHTML=`DÉBITO<br>R$ ${totalDeb.toFixed(2)}`;
-        document.getElementById('totalCredito').innerHTML=`CRÉDITO<br>R$ ${totalCredito.toFixed(2)}`;
-    }
-
-    function filtrar(){ atualizarTabelaTodas(); }
-    function buscar(){ atualizarTabelaTodas(); }
-    
-    function limparFiltros(){
-          document.getElementById('unidade').value='';
-          document.getElementById('tecnicoFiltro').value='';
-         document.getElementById('dataInicio').value='';
-          document.getElementById('dataFim').value='';
-          document.getElementById('busca').value='';
-          atualizarTabelaTodas();
+        document.getElementById('totalCredito').innerHTML=`CRÉDITO<br>R$ ${totalCred.toFixed(2)}`;
     }
 
     async function editarOS(id){
@@ -385,7 +465,6 @@
         const novoCliente=prompt("Editar cliente",item.cliente);
         if(novoCliente !== null){
             try {
-                // Atualiza o documento no Firestore
                 await osCollection.doc(id).update({ cliente: novoCliente });
                 alert("Cliente atualizado na nuvem!");
             } catch (e) {
@@ -398,7 +477,6 @@
     async function apagarOS(id){
           if(confirm("Deseja apagar esta O.S?")){
               try {
-                // Deleta o documento no Firestore
                 await osCollection.doc(id).delete();
                 alert("O.S. apagada da nuvem!");
             } catch (e) {
@@ -408,10 +486,8 @@
           }
     }
     
-    // ATENÇÃO: Limpar dados AGORA apaga TUDO na nuvem!
     async function limparDados(){
           if(confirm("Deseja limpar TODOS os dados NA NUVEM? Esta ação é irreversível.")){
-              // Esta operação pode ser lenta dependendo da quantidade de dados
               const snapshot = await osCollection.get();
               const batch = db.batch();
               snapshot.docs.forEach((doc) => {
@@ -438,10 +514,6 @@
             XLSX.writeFile(wb,"OS_FrenteCaixa.xlsx");
     }
     
-    function importExcel(){
-          document.getElementById('inputExcel').click();
-    }
-
     function lerExcel(event) {
         const files = event.target.files;
         if (files.length === 0) {
@@ -541,7 +613,6 @@
         }
     }
 
-    // Funções de PDF (mantidas, usam osData que agora vem da nuvem)
     const paymentColors = { 'Faturado': [173, 216, 230], 'Em Aberto': [255, 192, 203], 'PIX': [175, 223, 175], 'Dinheiro': [255, 239, 173], 'Débito': [253, 222, 173], 'Crédito': [210, 180, 222]};
     const totalColors = { 'Faturado': [45, 156, 219], 'Em Aberto': [233, 78, 119], 'PIX': [39, 174, 96], 'Dinheiro': [241, 196, 15], 'Débito': [243, 156, 18], 'Crédito': [155, 89, 182]};
     
@@ -646,8 +717,12 @@
         doc.save(`${nomeArquivo}.pdf`);
     }
 
-    // =VELA DA LUZ E VAI! (Início)
-    setupFirestoreListener(); 
+    // =================================================================
+    // 🚀 INÍCIO
+    // =================================================================
+
+    // Não iniciamos nada aqui. A função onAuthStateChanged decide se mostra o login ou o app.
+
 </script>
 </body>
 </html>
