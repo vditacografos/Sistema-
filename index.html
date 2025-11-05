@@ -145,16 +145,15 @@
 
 <script>
     // =================================================================
-    // 🔐 CONFIGURAÇÃO AUTH0 (LOGIN)
-    // ⚠️ VOCÊ PRECISA SUBSTITUIR ESTES VALORES ⚠️
+    // 🔐 CONFIGURAÇÃO AUTH0 (LOGIN) - SUAS CREDENCIAIS CORRETAS
     // =================================================================
     
     const auth0Config = {
-        // Ex: dev-abcdefg123.us.auth0.com
-        domain: "SEU_DOMAIN_AUTH0_AQUI", 
-        // Seu Client ID
-        clientId: "SEU_CLIENT_ID_AQUI", 
-        // Deve ser a URL do seu GitHub Pages (e deve estar configurada no Auth0 como "Callback URL")
+        // Seu Domain, que é dev-ehkfrfrs8byrafj0j.us.auth0.com
+        domain: "dev-ehkfrfrs8byrafj0j.us.auth0.com", 
+        // Seu Client ID da Default App
+        clientId: "d9D8BspCIZVqWIPIYta2tr9GWUhHGa2", 
+        // A URL de retorno para o seu GitHub Pages
         redirectUri: window.location.origin + window.location.pathname
     };
 
@@ -168,6 +167,7 @@
     // =================================================================
     
     const firebaseConfig = {
+      // Credenciais confirmadas na imagem image_c6916e.png
       apiKey: "AIzaSyC5up-MQFQNeHftI8KTMoXi5pY2D2jpgM",
       authDomain: "vditacografosfrentecaixa.firebaseapp.com",
       projectId: "vditacografosfrentecaixa",
@@ -210,7 +210,7 @@
         await updateAuthState();
       } catch (e) {
           console.error("Erro ao configurar Auth0. Verifique as credenciais:", e);
-          document.getElementById('loadingOverlay').innerHTML = 'ERRO DE CONFIGURAÇÃO AUTH0. Verifique o console (F12) e as credenciais.';
+          document.getElementById('loadingOverlay').innerHTML = 'ERRO DE CONFIGURAÇÃO AUTH0. Verifique o console (F12) e se as URLs de Callback no Auth0 estão corretas.';
       }
     }
 
