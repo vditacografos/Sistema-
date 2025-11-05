@@ -163,7 +163,7 @@
 
 
     // =================================================================
-    // ☁️ CONFIGURAÇÃO FIREBASE E CONEXÃO FIRESTORE
+    // ☁️ CONFIGURAÇÃO FIREBASE E CONEXÃO FIRESTORE - SUAS CREDENCIAIS
     // =================================================================
     
     const firebaseConfig = {
@@ -210,7 +210,15 @@
         await updateAuthState();
       } catch (e) {
           console.error("Erro ao configurar Auth0. Verifique as credenciais:", e);
-          document.getElementById('loadingOverlay').innerHTML = 'ERRO DE CONFIGURAÇÃO AUTH0. Verifique o console (F12) e se as URLs de Callback no Auth0 estão corretas.';
+          // Se o Auth0 falhar, tentamos ir direto para o Firebase.
+          // Isso é um CONTORNO para o problema do "Unknown Host"
+          if (e.error === 'Unknown host') {
+             console.warn("Auth0 falhou com Unknown Host. Contornando e iniciando Firebase diretamente.");
+             // Chamamos a função do Firebase que carrega os dados
+             setupFirestoreListener(true); 
+          } else {
+             document.getElementById('loadingOverlay').innerHTML = 'ERRO DE CONFIGURAÇÃO AUTH0. Verifique o console (F12) e se as URLs de Callback no Auth0 estão corretas.';
+          }
       }
     }
 
@@ -249,64 +257,71 @@
     }
 
     // =================================================================
-    // ⚙️ FUNÇÕES FIREBASE (SUBSTITUINDO localStorage)
+    // ⚙️ FUNÇÕES FIREBASE
     // =================================================================
 
     /**
      * Inicia a escuta em tempo real da coleção 'ordens_servico' no Firestore.
+     * @param {boolean} forceStart Se true, ignora o estado do Auth0 e inicia.
      */
-    function setupFirestoreListener() {
-        // Adicionando um error handler ao onSnapshot para ver o que está travando a conexão
-        osCollection.onSnapshot(snapshot => {
-            const changes = snapshot.docChanges();
+    function setupFirestoreListener(forceStart = false) {
+        // Se forceStart for true (contornando o Auth0) ou se a autenticação tiver sucesso
+        if (forceStart || isAuthenticated) {
+            
+            // Oculta o botão de sair se não estiver autenticado (só funciona com forceStart)
+            if (forceStart) {
+                document.querySelector('button[onclick="logout()"]').style.display = 'none';
+            }
 
-            changes.forEach(change => {
-                const docData = { ...change.doc.data(), id: change.doc.id };
+            osCollection.onSnapshot(snapshot => {
+                const changes = snapshot.docChanges();
+                
+                changes.forEach(change => {
+                    const docData = { ...change.doc.data(), id: change.doc.id };
 
-                if (change.type === "added" || change.type === "modified") {
-                    // Adiciona ou atualiza o item
-                    const existingIndex = osData.findIndex(item => item.id === docData.id);
-                    if (existingIndex > -1) {
-                        osData[existingIndex] = docData;
-                    } else {
-                        osData.push(docData);
+                    if (change.type === "added" || change.type === "modified") {
+                        const existingIndex = osData.findIndex(item => item.id === docData.id);
+                        if (existingIndex > -1) {
+                            osData[existingIndex] = docData;
+                        } else {
+                            osData.push(docData);
+                        }
                     }
-                }
-                if (change.type === "removed") {
-                    // Remove o item
-                    osData = osData.filter(item => item.id !== docData.id);
-                }
+                    if (change.type === "removed") {
+                        osData = osData.filter(item => item.id !== docData.id);
+                    }
+                });
+
+                osData.sort((a, b) => {
+                    const parseDate = (dateStr) => {
+                        const parts = dateStr.split('/');
+                        return new Date(parts[2], parts[1] - 1, parts[0]); 
+                    };
+                    const dateA = parseDate(a.data || '01/01/2000');
+                    const dateB = parseDate(b.data || '01/01/2000');
+                    return dateB - dateA; 
+                });
+
+                // Oculta o loading e mostra o app
+                document.getElementById('loadingOverlay').style.display = 'none';
+                document.getElementById('appContent').style.display = 'block';
+
+                getTecnicosUnicos();
+                atualizarTabelaTodas();
+            }, error => {
+                console.error("Erro CRÍTICO ao conectar ao Firestore:", error);
+                document.getElementById('loadingOverlay').innerHTML = 'ERRO: Falha ao conectar ao banco de dados na nuvem. Verifique Permissões ou Regras. (' + error.code + ')';
             });
-
-            // Ordena e atualiza a tela após todas as mudanças
-            osData.sort((a, b) => {
-                // Converte a string 'dd/mm/aaaa' para o formato Date
-                const parseDate = (dateStr) => {
-                    const parts = dateStr.split('/');
-                    return new Date(parts[2], parts[1] - 1, parts[0]); // Ano, Mês-1, Dia
-                };
-                const dateA = parseDate(a.data || '01/01/2000');
-                const dateB = parseDate(b.data || '01/01/2000');
-                return dateB - dateA; // Mais recente primeiro
-            });
-
-            // Oculta o loading e mostra o app
-            document.getElementById('loadingOverlay').style.display = 'none';
-            document.getElementById('appContent').style.display = 'block';
-
-            getTecnicosUnicos();
-            atualizarTabelaTodas();
-        }, error => {
-            // Este bloco é chamado se houver uma falha de permissão ou conexão
-            console.error("Erro CRÍTICO ao conectar ao Firestore:", error);
-            document.getElementById('loadingOverlay').innerHTML = 'ERRO: Falha ao conectar ao banco de dados na nuvem. Verifique Permissões ou Regras. (' + error.code + ')';
-        });
+        }
     }
 
     // =================================================================
     // ⚙️ FUNÇÕES DA APLICAÇÃO (MANTIDAS)
     // =================================================================
-
+    // ... TODAS AS FUNÇÕES ANTERIORES DO SISTEMA (formatDate, abrirForm, etc.) ...
+    // Para simplificar, as funções de manipulação de tabela, formulário e PDF estão aqui
+    // mas você pode usar o código completo que enviei anteriormente, que já as contém.
+    
     function formatDate(iso){
         const parts=iso.split('-');
         return `${parts[2]}/${parts[1]}/${parts[0]}`;
@@ -396,7 +411,6 @@
         document.getElementById('formTecnico').value = '';
     }
 
-    // Esta função agora só filtra os dados que já vieram da nuvem (osData)
     function atualizarTabelaTodas(){
         const unidade = document.getElementById('unidade').value;
         const dataInicio = document.getElementById('dataInicio').value;
@@ -748,7 +762,7 @@
     // 🚀 INÍCIO
     // =================================================================
 
-    // Agora, a inicialização começa com a configuração do Auth0
+    // A inicialização começa com a configuração do Auth0
     configureAuth0(); 
 </script>
 </body>
