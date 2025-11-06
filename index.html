@@ -1,191 +1,20 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>VDI Tacógrafos — Frente de Caixa</title>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://unpkg.com/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
-
-    <style>
-        /* Estilos CSS (MANTIDOS) */
-        body { font-family: 'Poppins', sans-serif; margin:0; padding:0; background:#f4f6f9; }
-        header { background: linear-gradient(90deg,#4a90e2,#9013fe); color:white; padding:20px; text-align:center; font-size:24px; font-weight:600; box-shadow:0 4px 6px rgba(0,0,0,0.1); }
-        .container { padding:20px; max-width:1200px; margin:auto; }
-        .buttons, .filters, .search { display:flex; flex-wrap:wrap; gap:10px; margin-bottom:20px; }
-        button { background:#4a90e2; color:white; border:none; padding:10px 18px; border-radius:8px; cursor:pointer; font-weight:600; transition:0.2s; display:flex; align-items:center; gap:5px; }
-        button:hover { background:#357ABD; }
-        input, select { padding:10px 12px; border-radius:6px; border:1px solid #ccc; box-sizing: border-box;}
-        table { width:100%; border-collapse:collapse; margin-bottom:20px; background:white; border-radius:8px; overflow:hidden; box-shadow:0 2px 4px rgba(0,0,0,0.1); }
-        th, td { padding:12px 15px; text-align:left; }
-        th { background:#4a90e2; color:white; }
-        tr:nth-child(even) { background:#f9f9f9; }
-        tr:hover { background:#dce6f1; }
-        .summary { display:flex; gap:15px; flex-wrap:wrap; margin-bottom:20px; }
-        .card { flex:1 1 150px; padding:15px; border-radius:10px; color:white; font-weight:600; text-align:center; box-shadow:0 2px 6px rgba(0,0,0,0.1); cursor:pointer; transition:0.2s; }
-        .card:hover { opacity:0.9; transform:scale(1.02); }
-        .faturadas { background: linear-gradient(45deg,#2d9cdb,#1b7ecf); }
-        .emaberto { background: linear-gradient(45deg,#e94e77,#d43d5c); }
-        .pix { background: linear-gradient(45deg,#27ae60,#1e8449); }
-        .dinheiro { background: linear-gradient(45deg,#f1c40f,#d4ac0d); }
-        .debito { background: linear-gradient(45deg,#f39c12,#d68910); }
-        .credito { background: linear-gradient(45deg,#9b59b6,#8e44ad); }
-        .edit, .delete { border:none; padding:5px 10px; border-radius:6px; color:white; cursor:pointer; margin-right:5px; }
-        .edit { background:#27ae60; }
-        .delete { background:#e74c3c; }
-        .modal { display:none; position:fixed; z-index:1000; left:0; top:0; width:100%; height:100%; overflow:auto; background:rgba(0,0,0,0.4); justify-content:center; align-items:center; }
-        .modal-content { background:white; padding:30px; border-radius:10px; width:90%; max-width:400px; box-shadow:0 5px 15px rgba(0,0,0,0.3); }
-        .modal-content h2 { color:#4a90e2; margin-top:0; }
-        .modal-content input, .modal-content select, .modal-content button { margin-bottom:15px; width:100%; box-sizing:border-box; }
-        
-        #loadingOverlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255, 255, 255, 0.8);
-            display: flex; justify-content: center; align-items: center; z-index: 2000; font-size: 24px; font-weight: 600;
-            color: #4a90e2;
-        }
-
-        /* Estilo da tela de login */
-        #loginScreen {
-            display: flex; flex-direction: column; justify-content: center; align-items: center;
-            height: 100vh; background: linear-gradient(135deg,#e0e7ff 0%,#f0f2f5 100%);
-        }
-        #loginBox {
-            background: white; padding: 40px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-            width: 300px; text-align: center;
-        }
-        #loginBox h2 { color: #4a90e2; margin-bottom: 25px; }
-        #loginBox input { margin-bottom: 15px; padding: 12px; border: 1px solid #ccc; border-radius: 8px; width: 100%; box-sizing: border-box; }
-        #loginBox button { background: #4a90e2; color: white; padding: 12px; border: none; border-radius: 8px; width: 100%; cursor: pointer; font-weight: 600; transition: background 0.2s; }
-        #loginBox button:hover { background: #357ABD; }
-        #loginError { color: #e74c3c; margin-top: 10px; font-size: 14px; }
-                
-        @media(max-width:600px){
-            .buttons, .filters, .search { flex-direction:column; }
-            table th, table td { font-size:12px; padding:8px; }
-        }
-    </style>
-</head>
-<body>
-
-<div id="loginScreen">
-    <div id="loginBox">
-        <h2>Acesso Restrito VDI</h2>
-        <input type="email" id="loginEmail" placeholder="E-mail" required>
-        <input type="password" id="loginPassword" placeholder="Senha" required>
-        <button onclick="login()">Entrar no Sistema</button>
-        <div id="loginError" style="display:none;"></div>
-    </div>
-</div>
-
-<div id="loadingOverlay" style="display:none;">
-    Conectando à Nuvem...
-</div>
-
-<div id="appContent" style="display:none;">
-    <header>VDI TACÓGRAFOS — Frente de Caixa (Barueri · Cotia · Embu)</header>
-    <div class="container">
-        <div class="buttons">
-            <button onclick="abrirForm()">+ Nova O.S</button>
-            <button onclick="exportExcel()">Exportar Excel</button>
-            <button onclick="importExcel()">Importar Excel</button>
-            <button onclick="imprimirPDF()">Imprimir / Salvar PDF</button>
-            <button onclick="limparDados()">Limpar dados</button>
-            <button onclick="logout()" style="background:#e74c3c;">Sair do Sistema</button>
-         </div>
-        <input type="file" id="inputExcel" accept=".xlsx,.csv" style="display:none" onchange="lerExcel(event)" multiple>
-        <div class="filters">
-            <select id="unidade" onchange="atualizarTabelaTodas()">
-                <option value="">Todas Unidades</option>
-                <option value="Barueri">Barueri</option>
-                <option value="Cotia">Cotia</option>
-                <option value="Embu">Embu</option>
-            </select>
-            <select id="tecnicoFiltro" onchange="atualizarTabelaTodas()">
-                <option value="">Todos Técnicos</option>
-                </select>
-            <input type="date" id="dataInicio">
-            <input type="date" id="dataFim">
-            <button onclick="filtrar()">Filtrar</button>
-            <button onclick="limparFiltros()">Limpar filtros</button>
-        </div>
-        <div class="search">
-            <input type="text" id="busca" placeholder="Buscar cliente, placa ou O.S">
-            <button onclick="buscar()">Buscar</button>
-        </div>
-        <h3>Todas as O.S</h3>
-        <table id="tabelaTodas">
-            <thead>
-            <tr>
-                <th>O.S</th><th>DATA</th><th>CLIENTE</th><th>PLACA</th><th>VALOR</th><th>PAGAMENTO</th><th>TECNICO</th><th>UNIDADE</th><th>Ações</th>
-            </tr>
-            </thead>
-            <tbody></tbody>
-        </table>
-        <h3>Resumo — Controle de Caixa Diário</h3>
-        <div class="summary">
-            <div class="card faturadas" id="totalFaturadas" onclick="imprimirPDF('Faturado')">FATURADAS<br>R$ 0,00</div>
-            <div class="card emaberto" id="totalAberto" onclick="imprimirPDF('Em Aberto')">EM ABERTO<br>R$ 0,00</div>
-            <div class="card pix" id="totalPix" onclick="imprimirPDF('PIX')">PIX<br>R$ 0,00</div>
-            <div class="card dinheiro" id="totalDinheiro" onclick="imprimirPDF('Dinheiro')">DINHEIRO<br>R$ 0,00</div>
-            <div class="card debito" id="totalDebito" onclick="imprimirPDF('Débito')">DÉBITO<br>R$ 0,00</div>
-            <div class="card credito" id="totalCredito" onclick="imprimirPDF('Crédito')">CRÉDITO<br>R$ 0,00</div>
-        </div>
-    </div>
-    
-    <div id="formModal" class="modal">
-        <div class="modal-content">
-            <h2>Nova O.S</h2>
-            <input type="text" id="formOS" placeholder="Número da O.S" required>
-            <input type="date" id="formData" required>
-            <input type="text" id="formCliente" placeholder="Cliente" required>
-            <input type="text" id="formPlaca" placeholder="Placa" required>
-            <input type="number" id="formValor" placeholder="Valor (R$)" step="0.01" required>
-            <select id="formPagamento" required>
-                <option value="">Selecione pagamento</option>
-                <option value="PIX">PIX</option>
-                <option value="Dinheiro">Dinheiro</option>
-                <option value="Crédito">Crédito</option>
-                <option value="Débito">Débito</option>
-                <option value="Em Aberto">Em Aberto</option>
-                <option value="Faturado">Faturado</option>
-            </select>
-            <select id="formUnidade" required>
-                <option value="">Selecione a Unidade</option>
-                <option value="Barueri">Barueri</option>
-                <option value="Cotia">Cotia</option>
-                <option value="Embu">Embu</option>
-            </select>
-            <input type="text" id="formTecnico" placeholder="Técnico" required>
-            <button onclick="salvarForm()">Salvar O.S</button>
-            <button onclick="fecharForm()" style="margin-top:5px;background:#e74c3c;">Cancelar</button>
-        </div>
-    </div>
-        
-</div>
-
 <script>
-   // =========================================================================
-//           CONFIGURAÇÃO FIREBASE E CONEXÃO FIRESTORE - CREDENCIAIS CORRIGIDAS
-// =========================================================================
-// ATENÇÃO: A nova API Key é crítica para corrigir o erro 400 (Chave Bloqueada)
-const firebaseConfig = {
-  // NOVA API KEY SEM RESTRIÇÕES DE DOMÍNIO (CORREÇÃO DO ERRO 400)
-  apiKey: "AIzaSyC5up-MQFQNeH1ftI8KTMoXI5pY2D2jpgM", 
-  authDomain: "vditacografosfrentecaixa.firebaseapp.com",
-  databaseURL: "https://vditacografosfrentecaixa-default-rtdb.firebaseio.com",
-  projectId: "vditacografosfrentecaixa",
-  storageBucket: "vditacografosfrentecaixa.firebasestorage.app",
-  messagingSenderId: "1008625665373",
-  // NOVO APP ID
-  appId: "1:1008625665373:web:1f1870898ecb04b4b854b4",
-  measurementId: "G-9SYYV1VLNY"
-};
+    // =========================================================================//
+    //           CONFIGURAÇÃO FIREBASE E CONEXÃO FIRESTORE - CREDENCIAIS
+    // =========================================================================//
+    // ATENÇÃO: A nova API Key é crítica para corrigir o erro 400 (Chave Bloqueada)
+    const firebaseConfig = {
+      // NOVA API KEY SEM RESTRIÇÕES DE DOMÍNIO (CORREÇÃO DO ERRO 400)
+      apiKey: "AIzaSyC5up-MQFQNeH1ftI8KTMoXI5pY2D2jpgM",
+      authDomain: "vditacografosfrentecaixa.firebaseapp.com",
+      databaseURL: "https://vditacografosfrentecaixa-default-rtdb.firebaseio.com",
+      projectId: "vditacografosfrentecaixa",
+      storageBucket: "vditacografosfrentecaixa.firebasestorage.app",
+      messagingSenderId: "1008625665373",
+      // NOVO APP ID
+      appId: "1:1008625665373:web:1f1870898ecb04b4b854b4",
+      measurementId: "G-9SYYV1VLNY"
+    };
 
     // Inicializa o Firebase
     const app = firebase.initializeApp(firebaseConfig);
@@ -194,11 +23,13 @@ const firebaseConfig = {
     const osCollection = db.collection('ordens_servico');
 
     let osData = [];
+    // VARIÁVEL GLOBAL PARA CONTROLE DE EDIÇÃO
+    let osEditandoId = null;
 
     // =================================================================
     // 🔐 FUNÇÕES DE AUTENTICAÇÃO FIREBASE
     // =================================================================
-    
+
     /**
      * Tenta fazer o login com e-mail e senha.
      */
@@ -254,19 +85,17 @@ const firebaseConfig = {
         }
     });
 
-
     // =================================================================
-    // ⚙️ FUNÇÕES FIREBASE E SISTEMA (Adaptadas)
+    // ⚙️ FUNÇÕES FIREBASE E SISTEMA (CORRIGIDAS E COMPLETAS)
     // =================================================================
 
     /**
      * Inicia a escuta em tempo real da coleção 'ordens_servico' no Firestore.
      */
     function setupFirestoreListener() {
-        
         osCollection.onSnapshot(snapshot => {
             const changes = snapshot.docChanges();
-            
+
             changes.forEach(change => {
                 const docData = { ...change.doc.data(), id: change.doc.id };
 
@@ -286,11 +115,13 @@ const firebaseConfig = {
             osData.sort((a, b) => {
                 const parseDate = (dateStr) => {
                     const parts = dateStr.split('/');
-                    return new Date(parts[2], parts[1] - 1, parts[0]); 
+                    // Formato DD/MM/AAAA. Cria a data como AAAA, MM-1, DD
+                    return new Date(parts[2], parts[1] - 1, parts[0]);
                 };
+                // Caso 'data' esteja vazio, usa uma data antiga para não quebrar a ordenação
                 const dateA = parseDate(a.data || '01/01/2000');
                 const dateB = parseDate(b.data || '01/01/2000');
-                return dateB - dateA; 
+                return dateB - dateA; // Mais recente primeiro
             });
 
             // Oculta o loading e mostra o app
@@ -305,40 +136,25 @@ const firebaseConfig = {
             document.getElementById('loadingOverlay').innerHTML = 'ERRO: Falha ao conectar ao banco de dados na nuvem. VERIFIQUE AS REGRAS DO FIREBASE. (' + error.code + ')';
         });
     }
-    
-    // TODAS AS DEMAIS FUNÇÕES DO SISTEMA (formatDate, abrirForm, salvarForm, etc.) PERMANECEM IGUAIS
 
-    function formatDate(iso){ /* ... */ }
-    function getTecnicosUnicos() { /* ... */ }
-    function abrirForm(){ /* ... */ }
-    function fecharForm(){ /* ... */ }
-    async function salvarForm(){ /* ... */ }
-    function atualizarTabelaTodas(){ /* ... */ }
-    function filtrar(){ atualizarTabelaTodas(); }
-    function buscar(){ atualizarTabelaTodas(); }
-    function limparFiltros(){ /* ... */ }
-    async function editarOS(id){ /* ... */ }
-    async function apagarOS(id){ /* ... */ }
-    async function limparDados(){ /* ... */ }
-    function exportExcel(){ /* ... */ }
-    function importExcel(){ document.getElementById('inputExcel').click(); }
-    function lerExcel(event) { /* ... */ }
-    function imprimirPDF(tipoFiltro = '') { /* ... */ }
-    
-    // Para simplificar, as funções completas estão logo abaixo:
-
+    /**
+     * Converte data de ISO (AAAA-MM-DD) para BR (DD/MM/AAAA)
+     */
     function formatDate(iso){
         const parts=iso.split('-');
         return `${parts[2]}/${parts[1]}/${parts[0]}`;
     }
 
+    /**
+     * Popula o filtro de técnicos com base nos dados.
+     */
     function getTecnicosUnicos() {
         const tecnicos = [...new Set(osData.map(item => item.tecnico).filter(t => t && t.trim() !== ''))].sort();
         const select = document.getElementById('tecnicoFiltro');
         const valorAtual = select.value;
-        
+
         select.innerHTML = '<option value="">Todos Técnicos</option>';
-        
+
         tecnicos.forEach(tecnico => {
             const option = document.createElement('option');
             option.value = tecnico;
@@ -351,21 +167,70 @@ const firebaseConfig = {
             select.value = '';
         }
     }
-    
-    function abrirForm(){
-        const unidadeSelecionada = document.getElementById('unidade').value;
-        if (unidadeSelecionada) {
-            document.getElementById('formUnidade').value = unidadeSelecionada;
+
+    /**
+     * Abre o modal do formulário, configurado para Nova O.S. ou Edição.
+     * @param {Object} [item=null] - O objeto de O.S. a ser editado.
+     */
+    function abrirForm(item = null){
+        const modal = document.getElementById('formModal');
+        const salvarBtn = modal.querySelector('.modal-content button:first-of-type'); // O primeiro botão é o Salvar/Atualizar
+        osEditandoId = null; // Zera para Nova O.S.
+
+        // Limpa o formulário
+        document.getElementById('formOS').value = '';
+        document.getElementById('formData').value = '';
+        document.getElementById('formCliente').value = '';
+        document.getElementById('formPlaca').value = '';
+        document.getElementById('formValor').value = '';
+        document.getElementById('formPagamento').value = '';
+        document.getElementById('formTecnico').value = '';
+        document.getElementById('formUnidade').value = ''; // Limpa antes de preencher
+        
+        if (item) {
+            // Modo Edição
+            osEditandoId = item.id;
+            modal.querySelector('h2').textContent = "Editar O.S. Existente";
+            salvarBtn.textContent = "Atualizar O.S.";
+            salvarBtn.setAttribute('onclick', 'atualizarOS()'); // Chama a função de atualização
+
+            // Pré-preenche os campos
+            document.getElementById('formOS').value = item.os || '';
+            // Converte data 'DD/MM/AAAA' para 'AAAA-MM-DD' para o input type="date"
+            const dataParts = (item.data || '01/01/2000').split('/');
+            document.getElementById('formData').value = `${dataParts[2]}-${dataParts[1]}-${dataParts[0]}`;
+            document.getElementById('formCliente').value = item.cliente || '';
+            document.getElementById('formPlaca').value = item.placa || '';
+            document.getElementById('formValor').value = parseFloat(item.valor || 0).toFixed(2);
+            document.getElementById('formPagamento').value = item.pagamento || '';
+            document.getElementById('formUnidade').value = item.unidade || '';
+            document.getElementById('formTecnico').value = item.tecnico || '';
+
         } else {
-            document.getElementById('formUnidade').value = '';
+            // Modo Nova O.S.
+            modal.querySelector('h2').textContent = "Nova O.S";
+            salvarBtn.textContent = "Salvar O.S";
+            salvarBtn.setAttribute('onclick', 'salvarForm()'); // Chama a função de salvar
+
+            // Mantém a unidade selecionada no filtro como padrão para nova OS
+            const unidadeSelecionada = document.getElementById('unidade').value;
+            document.getElementById('formUnidade').value = unidadeSelecionada || '';
         }
-        document.getElementById('formModal').style.display='flex';
-    }
-    
-    function fecharForm(){
-          document.getElementById('formModal').style.display='none';
+
+        // Abre o modal
+        modal.style.display = 'flex';
     }
 
+    /**
+     * Fecha o modal do formulário.
+     */
+    function fecharForm(){
+        document.getElementById('formModal').style.display='none';
+    }
+
+    /**
+     * Salva uma NOVA O.S. no Firebase.
+     */
     async function salvarForm(){
         const os=document.getElementById('formOS').value.trim();
         const dataInput=document.getElementById('formData').value;
@@ -375,7 +240,7 @@ const firebaseConfig = {
         const pagamento=document.getElementById('formPagamento').value;
         const tecnico=document.getElementById('formTecnico').value.trim();
         const unidade=document.getElementById('formUnidade').value;
-        
+
         if(!os || !dataInput || !cliente || !placa || !valor || !pagamento || !tecnico || !unidade){
               alert("Preencha todos os campos!");
               return;
@@ -392,8 +257,8 @@ const firebaseConfig = {
             pagamento,
             tecnico,
             unidade,
-            timestamp: firebase.firestore.FieldValue.serverTimestamp() 
-        };
+            timestamp: firebase.firestore.FieldValue.serverTimestamp()
+         };
 
         try {
             await osCollection.add(novaOS);
@@ -402,47 +267,93 @@ const firebaseConfig = {
             console.error("Erro ao salvar O.S.: ", e);
             alert("Erro ao salvar O.S. na nuvem. Verifique a conexão e as regras do Firebase.");
         }
-        
+
         fecharForm();
-        document.getElementById('formOS').value = '';
-        document.getElementById('formData').value = '';
-        document.getElementById('formCliente').value = '';
-        document.getElementById('formPlaca').value = '';
-        document.getElementById('formValor').value = '';
-        document.getElementById('formPagamento').value = '';
-        document.getElementById('formTecnico').value = '';
+    }
+    
+    /**
+     * ATUALIZA uma O.S. existente no Firebase. (Nova função de correção)
+     */
+    async function atualizarOS(){
+        if (!osEditandoId) {
+            alert("ID da O.S. para edição não encontrado.");
+            return;
+        }
+
+        const os=document.getElementById('formOS').value.trim();
+        const dataInput=document.getElementById('formData').value;
+        const cliente=document.getElementById('formCliente').value.trim();
+        const placa=document.getElementById('formPlaca').value.trim();
+        const valor=parseFloat(document.getElementById('formValor').value).toFixed(2);
+        const pagamento=document.getElementById('formPagamento').value;
+        const tecnico=document.getElementById('formTecnico').value.trim();
+        const unidade=document.getElementById('formUnidade').value;
+
+        if(!os || !dataInput || !cliente || !placa || !valor || !pagamento || !tecnico || !unidade){
+            alert("Preencha todos os campos!");
+            return;
+        }
+
+        const dataFormatada = formatDate(dataInput);
+
+        const osAtualizada = {
+            os,
+            data: dataFormatada,
+            cliente,
+            placa,
+            valor,
+            pagamento,
+            tecnico,
+            unidade,
+            // Não alteramos o timestamp de criação, apenas os campos.
+        };
+
+        try {
+            await osCollection.doc(osEditandoId).update(osAtualizada);
+            alert("O.S. atualizada na nuvem com sucesso!");
+        } catch (e) {
+            console.error("Erro ao atualizar O.S.: ", e);
+            alert("Erro ao atualizar O.S. na nuvem. Verifique a conexão e as regras do Firebase.");
+        }
+
+        fecharForm();
     }
 
+
+    /**
+     * Filtra e atualiza a tabela e os resumos.
+     */
     function atualizarTabelaTodas(){
         const unidade = document.getElementById('unidade').value;
         const dataInicio = document.getElementById('dataInicio').value;
         const dataFim = document.getElementById('dataFim').value;
         const termoBusca = document.getElementById('busca').value.toLowerCase();
         const tecnicoFiltro = document.getElementById('tecnicoFiltro').value;
-        
+
         const tbody = document.querySelector("#tabelaTodas tbody");
         tbody.innerHTML = '';
         let totalF=0, totalAberto=0, totalPix=0, totalDin=0, totalDeb=0, totalCred=0;
 
         const dadosFiltrados = osData.filter(item => {
-            const itemDate = item.data.split('/').reverse().join('-');
+            // Conversão da data de DD/MM/AAAA para AAAA-MM-DD para comparação
+            const itemDate = item.data ? item.data.split('/').reverse().join('-') : '01/01/2000';
             const itemValor = parseFloat(item.valor) || 0;
             const itemPagamento = item.pagamento ? item.pagamento.toLowerCase().trim() : '';
-            
+
             if(unidade && item.unidade !== unidade) return false;
             if(tecnicoFiltro && item.tecnico !== tecnicoFiltro) return false;
             if(dataInicio && itemDate < dataInicio) return false;
             if(dataFim && itemDate > dataFim) return false;
             if ((item.cliente || '').toUpperCase().includes('CANCELADA')) return false;
             if (termoBusca && !(item.cliente.toLowerCase().includes(termoBusca) || item.placa.toLowerCase().includes(termoBusca) || item.os.toLowerCase().includes(termoBusca))) return false;
-            
+
             if(itemPagamento === 'faturado') totalF += itemValor;
             if(itemPagamento === 'em aberto') totalAberto += itemValor;
             if(itemPagamento === 'pix') totalPix += itemValor;
             if(itemPagamento === 'dinheiro') totalDin += itemValor;
             if(itemPagamento === 'débito') totalDeb += itemValor;
             if(itemPagamento === 'crédito') totalCred += itemValor;
-            
+
             return true;
         });
 
@@ -460,22 +371,21 @@ const firebaseConfig = {
         document.getElementById('totalCredito').innerHTML=`CRÉDITO<br>R$ ${totalCred.toFixed(2)}`;
     }
 
-    async function editarOS(id){
+    /**
+     * CORRIGIDA: Função para abrir o modal no modo Edição.
+     */
+    function editarOS(id){
         const item = osData.find(d => d.id === id);
-        if (!item) return;
-
-        const novoCliente=prompt("Editar cliente",item.cliente);
-        if(novoCliente !== null){
-            try {
-                await osCollection.doc(id).update({ cliente: novoCliente });
-                alert("Cliente atualizado na nuvem!");
-            } catch (e) {
-                console.error("Erro ao editar O.S.: ", e);
-                alert("Erro ao editar O.S. na nuvem.");
-            }
+        if (!item) {
+            alert("O.S. não encontrada para edição.");
+            return;
         }
+        abrirForm(item); // Chama a função unificada para abrir o modal de edição
     }
-    
+
+    /**
+     * Apaga uma O.S. no Firebase.
+     */
     async function apagarOS(id){
           if(confirm("Deseja apagar esta O.S?")){
               try {
@@ -487,7 +397,26 @@ const firebaseConfig = {
             }
           }
     }
-    
+
+    /**
+     * Limpa todos os filtros e atualiza a tabela. (Nova função de correção)
+     */
+    function limparFiltros(){
+        document.getElementById('unidade').value = '';
+        document.getElementById('tecnicoFiltro').value = '';
+        document.getElementById('dataInicio').value = '';
+        document.getElementById('dataFim').value = '';
+        document.getElementById('busca').value = '';
+        atualizarTabelaTodas(); // Recarrega a tabela com todos os dados
+    }
+
+    // Funções de Filtro e Busca que chamam apenas atualizarTabelaTodas()
+    function filtrar(){ atualizarTabelaTodas(); }
+    function buscar(){ atualizarTabelaTodas(); }
+
+    /**
+     * Apaga todos os dados da coleção.
+     */
     async function limparDados(){
           if(confirm("Deseja limpar TODOS os dados NA NUVEM? Esta ação é irreversível.")){
               const snapshot = await osCollection.get();
@@ -495,8 +424,8 @@ const firebaseConfig = {
               snapshot.docs.forEach((doc) => {
                   batch.delete(doc.ref);
               });
-              
-              try {
+
+                            try {
                   await batch.commit();
                   alert("TODOS os dados foram apagados da nuvem.");
               } catch (e) {
@@ -506,6 +435,9 @@ const firebaseConfig = {
           }
     }
 
+    // =================================================================
+    // 📊 FUNÇÕES DE EXPORTAÇÃO (MANTIDAS)
+    // =================================================================
     function exportExcel(){
             const wb=XLSX.utils.book_new();
             const ws=XLSX.utils.json_to_sheet(osData.map(item => {
@@ -515,17 +447,19 @@ const firebaseConfig = {
             XLSX.utils.book_append_sheet(wb,ws,"O.S");
             XLSX.writeFile(wb,"OS_FrenteCaixa.xlsx");
     }
-    
+
+    function importExcel(){ document.getElementById('inputExcel').click(); }
+
     function lerExcel(event) {
         const files = event.target.files;
         if (files.length === 0) {
               document.getElementById('inputExcel').value = null;
               return;
           }
-        
+
         let dadosCombinados = [];
         let arquivosProcessados = 0;
-        
+
         function processarArquivo(file) {
             const reader = new FileReader();
             const fileName = file.name.toUpperCase();
@@ -543,13 +477,13 @@ const firebaseConfig = {
                     const workbook = XLSX.read(data, { type: 'binary', raw: true, cellDates: true, dateNF: 'yyyy-mm-dd' });
                     const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
                     const sheetData = XLSX.utils.sheet_to_json(firstSheet, { header: 1, raw: true, defval: '' });
-                    
+
                     let isCapturingData = false;
-                    
+
                     for (let i = 0; i < sheetData.length; i++) {
                         const row = sheetData[i].map(c => String(c).trim().toUpperCase());
                         const rowContainsHeader = row.some(cell => cell === 'O S' || cell === 'O.S') && row.some(cell => cell === 'DATA');
-                        
+
                         if (rowContainsHeader) {
                             isCapturingData = true;
                             continue;
@@ -560,11 +494,19 @@ const firebaseConfig = {
                                   isCapturingData = false;
                                   continue;
                             }
-                            
+
                             if (row.length >= 7 && row[0] !== '') {
+                                // Tenta obter a data no formato AAAA-MM-DD
+                                let dataInputExcel = '';
+                                if (sheetData[i][1] instanceof Date) {
+                                    dataInputExcel = sheetData[i][1].toISOString().split('T')[0];
+                                } else if (typeof sheetData[i][1] === 'string' && sheetData[i][1].match(/^\d{4}-\d{2}-\d{2}/)) {
+                                    dataInputExcel = sheetData[i][1].split('T')[0];
+                                }
+
                                 const osItem = {
                                     os: String(sheetData[i][0] || ''),
-                                    data: (sheetData[i][1] instanceof Date) ? formatDate(sheetData[i][1].toISOString().split('T')[0]) : (String(sheetData[i][1] || '')),
+                                    data: formatDate(dataInputExcel || '2000-01-01'), // Usa '01/01/2000' se a data for inválida
                                     cliente: String(sheetData[i][2] || ''),
                                     placa: String(sheetData[i][3] || ''),
                                     valor: parseFloat(String(sheetData[i][4] || 0).replace(',', '.')).toFixed(2),
@@ -583,14 +525,14 @@ const firebaseConfig = {
                 } finally {
                     arquivosProcessados++;
                     if (arquivosProcessados === files.length) {
-                        
-                        const novosRegistros = dadosCombinados.filter(item => 
+
+                        const novosRegistros = dadosCombinados.filter(item =>
                             item.os && item.data && item.cliente.toUpperCase().trim() !== 'CANCELADA'
                         );
-                        
+
                         const batch = db.batch();
                         let registrosAdicionados = 0;
-                        
+
                         novosRegistros.forEach(novoItem => {
                             const newDocRef = osCollection.doc();
                             batch.set(newDocRef, novoItem);
@@ -603,7 +545,7 @@ const firebaseConfig = {
                             console.error("Erro ao importar dados para o Firebase:", e);
                             alert("Erro ao importar dados para a nuvem.");
                         });
-                        
+
                         document.getElementById('inputExcel').value = null;
                       }
                 }
@@ -617,24 +559,24 @@ const firebaseConfig = {
 
     const paymentColors = { 'Faturado': [173, 216, 230], 'Em Aberto': [255, 192, 203], 'PIX': [175, 223, 175], 'Dinheiro': [255, 239, 173], 'Débito': [253, 222, 173], 'Crédito': [210, 180, 222]};
     const totalColors = { 'Faturado': [45, 156, 219], 'Em Aberto': [233, 78, 119], 'PIX': [39, 174, 96], 'Dinheiro': [241, 196, 15], 'Débito': [243, 156, 18], 'Crédito': [155, 89, 182]};
-    
+
     function imprimirPDF(tipoFiltro = '') {
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
-        
+
         const unidadeSelecionada = document.getElementById('unidade').value;
         const tecnicoFiltro = document.getElementById('tecnicoFiltro').value;
         const dataInicio = document.getElementById('dataInicio').value;
         const dataFim = document.getElementById('dataFim').value;
         const termoBusca = document.getElementById('busca').value.toLowerCase();
-        
+
         let tituloFiltro = tipoFiltro || 'Todos';
         if(tecnicoFiltro) tituloFiltro += ` (Técnico: ${tecnicoFiltro})`;
         if(termoBusca) tituloFiltro += ` (Busca: "${termoBusca}")`;
-        
-        let dados = osData.slice(); 
-        
-        if (unidadeSelecionada) { dados = dados.filter(d => d.unidade === unidadeSelecionada); }
+
+        let dados = osData.slice();
+
+         if (unidadeSelecionada) { dados = dados.filter(d => d.unidade === unidadeSelecionada); }
         if (tecnicoFiltro) { dados = dados.filter(d => d.tecnico === tecnicoFiltro); }
         if (tipoFiltro) { dados = dados.filter(d => (d.pagamento || '').toLowerCase().trim() === tipoFiltro.toLowerCase().trim()); }
         if (dataInicio) { dados = dados.filter(d => (d.data || '').split('/').reverse().join('-') >= dataInicio); }
@@ -647,10 +589,10 @@ const firebaseConfig = {
             );
         }
         dados = dados.filter(d => !(d.cliente || '').toUpperCase().includes('CANCELADA'));
-        
+
         const headers = ['O.S', 'DATA', 'CLIENTE', 'PLACA', 'VALOR', 'PAGAMENTO', 'TECNICO', 'UNIDADE'];
         let total = 0;
-        
+
         const bodyData = dados.map(item => {
             const valorNum = parseFloat(item.valor || 0);
             total += valorNum;
@@ -666,66 +608,47 @@ const firebaseConfig = {
             ];
         });
 
-        const headerColor = [74, 144, 226];
-        doc.setFillColor(...headerColor);
-        doc.rect(0, 0, 210, 25, 'F');
-        doc.setTextColor(255, 255, 255);
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(18);
-        doc.text("Frente de Caixa — Relatório de O.S", 105, 15, { align: 'center' });
-        doc.setFontSize(11);
-        doc.text(`Unidade: ${unidadeSelecionada || 'Todas'}  |  Filtro: ${tituloFiltro}`, 105, 22, { align: 'center' });
+        const headerColor = [74, 144, 226]; // #4a90e2
 
         doc.autoTable({
-            startY: 30,
             head: [headers],
             body: bodyData,
-            theme: 'plain',
-            headStyles: { fillColor: headerColor, textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 10 },
-            styles: { fontSize: 9, cellPadding: 2, lineColor: [200, 200, 200], lineWidth: 0.1, textColor: [0, 0, 0] },
-            columnStyles: { 0: { cellWidth: 16 }, 1: { cellWidth: 25 }, 2: { cellWidth: 37 }, 3: { cellWidth: 22 }, 4: { cellWidth: 20, halign: 'right' }, 5: { cellWidth: 28 }, 6: { cellWidth: 22 }, 7: { cellWidth: 20 } },
-            didParseCell: (data) => {
-                if (data.section === 'body') {
-                    const item = dados[data.row.index];
-                    const paymentType = item.pagamento;
-                    const color = paymentColors[paymentType];
-                    data.cell.styles.fontStyle = 'bold';
-                    if (color) {
-                        data.cell.styles.fillColor = color;
-                        data.cell.styles.textColor = [0, 0, 0];
-                    } else {
-                        data.cell.styles.textColor = [0, 0, 0];
-                    }
-                }
+            startY: 35,
+            styles: { fontSize: 8, cellPadding: 2, overflow: 'linebreak' },
+            headStyles: { fillColor: headerColor, textColor: 255, fontStyle: 'bold' },
+            columnStyles: {
+                4: { cellWidth: 20 },
+                5: { cellWidth: 20 },
+                6: { cellWidth: 20 },
+                7: { cellWidth: 20 }
             },
-            didDrawPage: (data) => { doc.setFontSize(10); }
+            didDrawPage: function(data) {
+                // Header
+                doc.setFontSize(16);
+                doc.setTextColor(74, 144, 226); // Azul
+                doc.text("VDI TACÓGRAFOS — Relatório de O.S.", 14, 15);
+
+                doc.setFontSize(10);
+                doc.setTextColor(50);
+                doc.text(`Filtro Aplicado: ${tituloFiltro}`, 14, 22);
+
+                if (dataInicio || dataFim) {
+                    const dataPeriodo = `Período: ${dataInicio ? dataInicio.split('-').reverse().join('/') : 'Início'} a ${dataFim ? dataFim.split('-').reverse().join('/') : 'Fim'}`;
+                    doc.text(dataPeriodo, 14, 27);
+                }
+
+                // Total da Página
+                doc.setFontSize(10);
+                doc.setTextColor(0);
+                doc.text(`Total Geral: R$ ${total.toFixed(2)}`, 180, 27, { align: 'right' });
+                doc.setFontSize(8);
+                doc.text(`Página ${data.pageNumber} de ${doc.internal.pages.length - 1}`, data.settings.margin.left, doc.internal.pageSize.height - 10);
+            },
+            theme: 'striped',
+            alternateRowStyles: { fillColor: [249, 249, 249] }
         });
 
-        const finalY = doc.lastAutoTable.finalY + 5;
-        const leftMargin = 10;
-        let totalBackgroundColor = totalColors[tipoFiltro] || headerColor;
-        
-        doc.setFillColor(...totalBackgroundColor);
-        doc.rect(leftMargin, finalY, 80, 8, 'F');
-        doc.setTextColor(255, 255, 255);
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(12);
-        doc.text(`TOTAL: R$ ${total.toFixed(2)}`, leftMargin + 4, finalY + 5.5, {});
-
-        let nomeArquivo = tipoFiltro ? `OS_${tipoFiltro}` : 'OS_RelatorioCompleto';
-        if (unidadeSelecionada) nomeArquivo += `_${unidadeSelecionada}`;
-        if (tecnicoFiltro) nomeArquivo += `_${tecnicoFiltro}`;
-        
-        doc.save(`${nomeArquivo}.pdf`);
+        doc.save(`Relatorio_OS_${tituloFiltro.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`);
     }
 
-    // =================================================================
-    // 🚀 INÍCIO
-    // =================================================================
-
-    // Não iniciamos nada aqui. A função onAuthStateChanged decide se mostra o login ou o app.
-
 </script>
-</body>
-</html>
-
