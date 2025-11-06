@@ -64,6 +64,13 @@
             .buttons, .filters, .search { flex-direction:column; }
             table th, table td { font-size:12px; padding:8px; }
         }
+        /* NOVO ESTILO PARA O LOGO NO HEADER */
+        #headerLogo {
+            max-height: 50px; /* Define o tamanho da imagem no cabeçalho */
+            width: auto;
+            display: block;
+            margin: 0 auto; /* Centraliza */
+        }
     </style>
 </head>
 <body>
@@ -83,7 +90,9 @@
 </div>
 
 <div id="appContent" style="display:none;">
-    <header>VDI TACÓGRAFOS — Frente de Caixa (Barueri · Cotia · Embu)</header>
+    <header>
+        <img src="logo.png" alt="Logo VDI Tacógrafos" id="headerLogo">
+    </header>
     <div class="container">
         <div class="buttons">
             <button onclick="abrirForm()">+ Nova O.S</button>
@@ -165,7 +174,7 @@
 
 <script>
     // =========================================================================//
-    //           CONFIGURAÇÃO FIREBASE E CONEXÃO FIRESTORE - CREDENCIAIS
+    //             CONFIGURAÇÃO FIREBASE E CONEXÃO FIRESTORE - CREDENCIAIS
     // =========================================================================//
     const firebaseConfig = {
       apiKey: "AIzaSyC5up-MQFQNeH1ftI8KTMoXI5pY2D2jpgM",
@@ -381,8 +390,8 @@
         const unidade=document.getElementById('formUnidade').value;
 
         if(!os || !dataInput || !cliente || !placa || !valor || !pagamento || !tecnico || !unidade){
-              alert("Preencha todos os campos!");
-              return;
+             alert("Preencha todos os campos!");
+             return;
         }
 
         const dataFormatada = formatDate(dataInput);
@@ -390,7 +399,7 @@
         const novaOS = {
             os, data: dataFormatada, cliente, placa, valor, pagamento, tecnico, unidade,
             timestamp: firebase.firestore.FieldValue.serverTimestamp()
-         };
+           };
 
         try {
             await osCollection.add(novaOS);
@@ -553,13 +562,13 @@
     // 📊 FUNÇÕES DE EXPORTAÇÃO E PDF (COMPLETAS)
     // =================================================================
     function exportExcel(){
-            const wb=XLSX.utils.book_new();
-            const ws=XLSX.utils.json_to_sheet(osData.map(item => {
-                const { id, ...rest } = item;
-                return rest;
-            }));
-            XLSX.utils.book_append_sheet(wb,ws,"O.S");
-            XLSX.writeFile(wb,"OS_FrenteCaixa.xlsx");
+              const wb=XLSX.utils.book_new();
+              const ws=XLSX.utils.json_to_sheet(osData.map(item => {
+                  const { id, ...rest } = item;
+                  return rest;
+              }));
+              XLSX.utils.book_append_sheet(wb,ws,"O.S");
+              XLSX.writeFile(wb,"OS_FrenteCaixa.xlsx");
     }
 
     function importExcel(){ document.getElementById('inputExcel').click(); }
@@ -569,7 +578,7 @@
         if (files.length === 0) {
               document.getElementById('inputExcel').value = null;
               return;
-          }
+            }
 
         let dadosCombinados = [];
         let arquivosProcessados = 0;
@@ -605,16 +614,16 @@
                         if (isCapturingData) {
                             const isSummaryRow = row.some(cell => cell.includes('TOTAL') || cell.includes('RESUMO') || cell.includes('SAIDAS') || cell.includes('INICIO DE CX'));
                             if (isSummaryRow || row[0] === '') {
-                                  isCapturingData = false;
-                                  continue;
+                                 isCapturingData = false;
+                                 continue;
                             }
 
                             if (row.length >= 7 && row[0] !== '') {
                                 let dataInputExcel = '';
                                 if (sheetData[i][1] instanceof Date) {
-                                    dataInputExcel = sheetData[i][1].toISOString().split('T')[0];
+                                     dataInputExcel = sheetData[i][1].toISOString().split('T')[0];
                                 } else if (typeof sheetData[i][1] === 'string' && sheetData[i][1].match(/^\d{4}-\d{2}-\d{2}/)) {
-                                    dataInputExcel = sheetData[i][1].split('T')[0];
+                                     dataInputExcel = sheetData[i][1].split('T')[0];
                                 }
 
                                 const osItem = {
@@ -663,139 +672,123 @@
                       }
                 }
             };
-            reader.readAsBinaryString(file);
+            reader.readAsBinaryString(file)
         }
-        for (let i = 0; i < files.length; i++) {
-            processarArquivo(files[i]);
-        }
+        Array.from(files).forEach(processarArquivo);
     }
-
-    /**
-     * FUNÇÃO FINALIZADA:
-     * - Cores pastel nas linhas para contraste
-     * - Total Geral no fim da tabela
-     * - Largura ajustada para o cabeçalho 'PAGAMENTO'
-     * - LOGOTIPO da VDI Tacógrafos no cabeçalho
-     */
-    function imprimirPDF(tipoFiltro = '') {
+    
+    // Funções PDF - Versão 3.x
+    function imprimirPDF(filtroPagamento = null) {
         const { jsPDF } = window.jspdf;
-        const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
-
-        const unidadeSelecionada = document.getElementById('unidade').value;
-        const tecnicoFiltro = document.getElementById('tecnicoFiltro').value;
-        const dataInicio = document.getElementById('dataInicio').value;
-        const dataFim = document.getElementById('dataFim').value;
-        const termoBusca = document.getElementById('busca').value.toLowerCase();
-
-        let tituloFiltro = tipoFiltro || 'Todos';
-        if(tecnicoFiltro) tituloFiltro += ` (Técnico: ${tecnicoFiltro})`;
-        if(termoBusca) tituloFiltro += ` (Busca: "${termoBusca}")`;
-
-        let dados = osData.slice();
-
-         if (unidadeSelecionada) { dados = dados.filter(d => d.unidade === unidadeSelecionada); }
-        if (tecnicoFiltro) { dados = dados.filter(d => d.tecnico === tecnicoFiltro); }
-        if (tipoFiltro) { dados = dados.filter(d => (d.pagamento || '').toLowerCase().trim() === tipoFiltro.toLowerCase().trim()); }
-        if (dataInicio) { dados = dados.filter(d => (d.data || '').split('/').reverse().join('-') >= dataInicio); }
-        if (dataFim) { dados = dados.filter(d => (d.data || '').split('/').reverse().join('-') <= dataFim); }
-        if (termoBusca) {
-            dados = dados.filter(d =>
-                (d.cliente || '').toLowerCase().includes(termoBusca) ||
-                (d.placa || '').toLowerCase().includes(termoBusca) ||
-                (d.os || '').toLowerCase().includes(termoBusca)
-            );
-        }
-        dados = dados.filter(d => !(d.cliente || '').toUpperCase().includes('CANCELADA'));
-
-        const headers = ['O.S', 'DATA', 'CLIENTE', 'PLACA', 'VALOR', 'PAGAMENTO', 'TECNICO', 'UNIDADE'];
+        const doc = new jsPDF('l', 'mm', 'a4'); // Paisagem (Landscape)
+        const margin = 10;
+        let y = margin;
         
-        let total = 0;
-        const bodyData = dados.map(item => {
-            const valorNum = parseFloat(item.valor || 0);
-            total += valorNum; 
-            return [
-                String(item.os || ''),
-                String(item.data || ''),
-                String(item.cliente || ''),
-                String(item.placa || ''),
-                'R$ ' + valorNum.toFixed(2),
-                String(item.pagamento || ''),
-                String(item.tecnico || ''),
-                String(item.unidade || '')
-            ];
+        // Dados filtrados
+        const dadosTabela = osData.filter(item => {
+            const itemDate = item.data ? item.data.split('/').reverse().join('-') : '01/01/2000';
+            const unidade = document.getElementById('unidade').value;
+            const dataInicio = document.getElementById('dataInicio').value;
+            const dataFim = document.getElementById('dataFim').value;
+            const tecnicoFiltro = document.getElementById('tecnicoFiltro').value;
+            const termoBusca = document.getElementById('busca').value.toLowerCase();
+            const itemPagamento = item.pagamento ? item.pagamento.toLowerCase().trim() : '';
+
+            if(unidade && item.unidade !== unidade) return false;
+            if(tecnicoFiltro && item.tecnico !== tecnicoFiltro) return false;
+            if(dataInicio && itemDate < dataInicio) return false;
+            if(dataFim && itemDate > dataFim) return false;
+            if ((item.cliente || '').toUpperCase().includes('CANCELADA')) return false;
+            if (termoBusca && !(item.cliente.toLowerCase().includes(termoBusca) || item.placa.toLowerCase().includes(termoBusca) || item.os.toLowerCase().includes(termoBusca))) return false;
+            if (filtroPagamento && itemPagamento !== filtroPagamento.toLowerCase()) return false;
+
+            return true;
         });
 
-        const headerColor = [74, 144, 226]; 
+        // Título
+        let titulo = 'RELATÓRIO DE ORDENS DE SERVIÇO';
+        if (filtroPagamento) {
+            titulo = `RESUMO DE CAIXA: ${filtroPagamento.toUpperCase()}`;
+        }
+        
+        doc.setFontSize(16);
+        doc.text(titulo, margin, y + 5);
+        y += 10;
 
-        // O LINK DIRETO PARA O LOGOTIPO DA VDI
-        const logoUrl = 'https://vditacografos.com.br/wp-content/uploads/2021/07/logo-vdi.png'; 
+        // Cabeçalho dos filtros aplicados
+        doc.setFontSize(10);
+        const filtros = [
+            `Unidade: ${document.getElementById('unidade').value || 'Todas'}`,
+            `Técnico: ${document.getElementById('tecnicoFiltro').value || 'Todos'}`,
+            `Período: ${document.getElementById('dataInicio').value ? formatDate(document.getElementById('dataInicio').value) : 'Início'} a ${document.getElementById('dataFim').value ? formatDate(document.getElementById('dataFim').value) : 'Fim'}`,
+            `Busca: ${document.getElementById('busca').value || 'Nenhuma'}`,
+        ].join(' | ');
+        doc.text(filtros, margin, y);
+        y += 5;
 
+        // Preparar dados e totais
+        const corpoTabela = dadosTabela.map(item => [
+            item.os,
+            item.data,
+            item.cliente,
+            item.placa,
+            `R$ ${parseFloat(item.valor).toFixed(2)}`,
+            item.pagamento,
+            item.tecnico,
+            item.unidade
+        ]);
+
+        const totalGeral = dadosTabela.reduce((sum, item) => sum + (parseFloat(item.valor) || 0), 0);
+        const corpoTabelaComTotal = corpoTabela.concat([
+            ['', '', '', '', 'TOTAL GERAL:', `R$ ${totalGeral.toFixed(2)}`, '', '']
+        ]);
+
+        const headStyles = { fillColor: [74, 144, 226], textColor: [255, 255, 255], fontStyle: 'bold' };
+        
+        // Estilos para o corpo da tabela
+        const styles = { fontSize: 8, cellPadding: 3, halign: 'left' };
+        
+        // Geração do AutoTable
         doc.autoTable({
-            head: [headers],
-            body: bodyData,
-            startY: 40, // Começa abaixo do espaço reservado para logo/título/filtros
-            styles: { fontSize: 8, cellPadding: 2, overflow: 'linebreak' },
-            headStyles: { fillColor: headerColor, textColor: 255, fontStyle: 'bold' },
+            head: [['O.S', 'DATA', 'CLIENTE', 'PLACA', 'VALOR', 'PAGAMENTO', 'TECNICO', 'UNIDADE']],
+            body: corpoTabelaComTotal,
+            startY: y + 3,
+            headStyles: headStyles,
+            styles: styles,
             columnStyles: {
-                4: { cellWidth: 20 },  // VALOR
-                5: { cellWidth: 28 },  // PAGAMENTO (Ajustado)
-                6: { cellWidth: 20 },  // TECNICO
-                7: { cellWidth: 20 }   // UNIDADE
+                4: { halign: 'right' },
+                5: { halign: 'center' }
             },
-            willDrawCell: function (data) {
-                if (data.section === 'body') {
-                    const pagamento = data.row.raw[5]; 
-                    const cor = paymentColors[pagamento] || [255, 255, 255]; 
-                    doc.setFillColor(cor[0], cor[1], cor[2]);
-                    doc.setTextColor(0, 0, 0); // Texto preto para contraste com cores pastel
+            didParseCell: (data) => {
+                // Colore a linha do total
+                if (data.row.index === corpoTabela.length) {
+                    data.cell.styles.fillColor = [220, 220, 220]; // Cinza claro
+                    data.cell.styles.textColor = [0, 0, 0];
+                    data.cell.styles.fontStyle = 'bold';
+                }
+                
+                // Colore as linhas de acordo com o pagamento (apenas se for relatório geral)
+                if (!filtroPagamento && data.row.index < corpoTabela.length) {
+                    const pagamento = dadosTabela[data.row.index].pagamento;
+                    const color = paymentColors[pagamento] || [255, 255, 255]; 
+                    data.cell.styles.fillColor = color;
+                    data.cell.styles.textColor = [0, 0, 0]; 
                 }
             },
             didDrawPage: function(data) {
-                // LOGOTIPO (14mm X, 8mm Y, 30mm Largura, 15mm Altura)
-                try {
-                    doc.addImage(logoUrl, 'PNG', 14, 8, 30, 15); 
-                } catch (e) {
-                    console.error("Erro ao adicionar logotipo ao PDF:", e);
-                    doc.text("Logo VDI", 14, 15); 
-                }
-                
-                // Header do Relatório
-                doc.setFontSize(16);
-                doc.setTextColor(74, 144, 226); 
-                // Posição X ajustada para 50, para ficar após o logo
-                doc.text("VDI TACÓGRAFOS — Relatório de O.S.", 50, 15); 
-
-                doc.setFontSize(10);
-                doc.setTextColor(50);
-                doc.text(`Filtro Aplicado: ${tituloFiltro}`, 14, 28); 
-                
-                if (dataInicio || dataFim) {
-                    const dataPeriodo = `Período: ${dataInicio ? dataInicio.split('-').reverse().join('/') : 'Início'} a ${dataFim ? dataFim.split('-').reverse().join('/') : 'Fim'}`;
-                    doc.text(dataPeriodo, 14, 33); 
-                }
-                
-                // Rodapé da Página (número da página)
+                // Rodapé com número da página
                 doc.setFontSize(8);
-                doc.text(`Página ${data.pageNumber} de ${doc.internal.pages.length - 1}`, data.settings.margin.left, doc.internal.pageSize.height - 10);
-            },
-            didDrawCell: function(data) {
-                if (data.section === 'body' && data.row.index === dados.length - 1 && data.column.index === headers.length - 1) {
-                    
-                    const finalY = data.cell.y + data.cell.height + 4;
-                    const rightX = doc.internal.pageSize.width - data.settings.margin.right;
-
-                    doc.setFontSize(12);
-                    doc.setFont(undefined, 'bold');
-                    doc.setTextColor(0);
-                    
-                    doc.text(`Total Geral: R$ ${total.toFixed(2)}`, rightX, finalY, { align: 'right' });
-                }
-            },
-            theme: 'striped',
+                doc.text("Página " + doc.internal.getNumberOfPages(), doc.internal.pageSize.width - margin, doc.internal.pageSize.height - margin);
+                doc.text(`Gerado em: ${new Date().toLocaleDateString('pt-BR')} ${new Date().toLocaleTimeString('pt-BR')}`, margin, doc.internal.pageSize.height - margin);
+            }
         });
-
-        doc.save(`Relatorio_OS_${tituloFiltro.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`);
+        
+        doc.save(`Relatorio_VDI_${filtroPagamento || 'Geral'}.pdf`);
     }
+
+    // Inicialização (Certifica que o login está sempre checando o estado)
+    // O setupFirestoreListener() é chamado dentro do onAuthStateChanged(user)
+    // para garantir que a tabela só seja carregada após o login ser confirmado.
 
 </script>
 </body>
