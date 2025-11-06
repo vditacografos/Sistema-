@@ -167,16 +167,13 @@
     // =========================================================================//
     //           CONFIGURAÇÃO FIREBASE E CONEXÃO FIRESTORE - CREDENCIAIS
     // =========================================================================//
-    // ATENÇÃO: A nova API Key é crítica para corrigir o erro 400 (Chave Bloqueada)
     const firebaseConfig = {
-      // NOVA API KEY SEM RESTRIÇÕES DE DOMÍNIO (CORREÇÃO DO ERRO 400)
       apiKey: "AIzaSyC5up-MQFQNeH1ftI8KTMoXI5pY2D2jpgM",
       authDomain: "vditacografosfrentecaixa.firebaseapp.com",
       databaseURL: "https://vditacografosfrentecaixa-default-rtdb.firebaseio.com",
       projectId: "vditacografosfrentecaixa",
       storageBucket: "vditacografosfrentecaixa.firebasestorage.app",
       messagingSenderId: "1008625665373",
-      // NOVO APP ID
       appId: "1:1008625665373:web:1f1870898ecb04b4b854b4",
       measurementId: "G-9SYYV1VLNY"
     };
@@ -188,7 +185,7 @@
     const osCollection = db.collection('ordens_servico');
 
     let osData = [];
-    // VARIÁVEL GLOBAL PARA CONTROLE DE EDIÇÃO (ESSENCIAL PARA A ATUALIZAÇÃO)
+    // VARIÁVEL GLOBAL PARA CONTROLE DE EDIÇÃO
     let osEditandoId = null;
 
     // =================================================================
@@ -239,7 +236,7 @@
     });
 
     // =================================================================
-    // ⚙️ FUNÇÕES FIREBASE E SISTEMA (CORRIGIDAS E COMPLETAS)
+    // ⚙️ FUNÇÕES FIREBASE E SISTEMA 
     // =================================================================
 
     function setupFirestoreListener() {
@@ -313,13 +310,11 @@
 
     /**
      * Abre o modal do formulário, configurado para Nova O.S. ou Edição.
-     * CORRIGIDA para garantir que o modal abra corretamente no modo Edição.
      */
     function abrirForm(item = null){
         const modal = document.getElementById('formModal');
-        // Encontra o primeiro botão (Salvar/Atualizar) dentro do modal-content
         const salvarBtn = modal.querySelector('.modal-content button:first-of-type'); 
-        osEditandoId = null; // Zera ID
+        osEditandoId = null; 
 
         // Limpa o formulário
         document.getElementById('formOS').value = '';
@@ -336,12 +331,12 @@
             osEditandoId = item.id;
             modal.querySelector('h2').textContent = "Editar O.S. Existente";
             salvarBtn.textContent = "Atualizar O.S.";
-            salvarBtn.setAttribute('onclick', 'atualizarOS()'); // Chama a função de atualização
+            salvarBtn.setAttribute('onclick', 'atualizarOS()'); 
 
             // Pré-preenche os campos
             document.getElementById('formOS').value = item.os || '';
             const dataParts = (item.data || '01/01/2000').split('/');
-            document.getElementById('formData').value = `${dataParts[2]}-${dataParts[1]}-${dataParts[0]}`; // Converte DD/MM/AAAA para AAAA-MM-DD
+            document.getElementById('formData').value = `${dataParts[2]}-${dataParts[1]}-${dataParts[0]}`; 
             document.getElementById('formCliente').value = item.cliente || '';
             document.getElementById('formPlaca').value = item.placa || '';
             document.getElementById('formValor').value = parseFloat(item.valor || 0).toFixed(2);
@@ -401,7 +396,7 @@
     }
     
     /**
-     * FUNÇÃO NOVA: Salva as alterações da O.S. no Firebase (Modo Edição)
+     * Salva as alterações da O.S. no Firebase (Modo Edição)
      */
     async function atualizarOS(){
         if (!osEditandoId) {
@@ -489,7 +484,7 @@
     }
 
     /**
-     * CORRIGIDA: Função para abrir o modal no modo Edição.
+     * Função para abrir o modal no modo Edição (chama abrirForm com o item)
      */
     function editarOS(id){
         const item = osData.find(d => d.id === id);
@@ -497,7 +492,7 @@
             alert("O.S. não encontrada para edição.");
             return;
         }
-        abrirForm(item); // Chama a função unificada para abrir o modal de edição
+        abrirForm(item); 
     }
 
     async function apagarOS(id){
@@ -513,7 +508,7 @@
     }
 
     /**
-     * FUNÇÃO COMPLETA: Limpa todos os filtros e atualiza a tabela.
+     * Limpa todos os filtros e atualiza a tabela.
      */
     function limparFiltros(){
         document.getElementById('unidade').value = '';
@@ -547,7 +542,7 @@
     }
 
     // =================================================================
-    // 📊 FUNÇÕES DE EXPORTAÇÃO (MANTIDAS)
+    // 📊 FUNÇÕES DE EXPORTAÇÃO E PDF (CORRIGIDAS)
     // =================================================================
     function exportExcel(){
             const wb=XLSX.utils.book_new();
@@ -670,6 +665,10 @@
     const paymentColors = { 'Faturado': [173, 216, 230], 'Em Aberto': [255, 192, 203], 'PIX': [175, 223, 175], 'Dinheiro': [255, 239, 173], 'Débito': [253, 222, 173], 'Crédito': [210, 180, 222]};
     const totalColors = { 'Faturado': [45, 156, 219], 'Em Aberto': [233, 78, 119], 'PIX': [39, 174, 96], 'Dinheiro': [241, 196, 15], 'Débito': [243, 156, 18], 'Crédito': [155, 89, 182]};
 
+    /**
+     * CORRIGIDA: Garante que o Total Geral é somado de todos os itens filtrados e exibido
+     * E que as linhas são coloridas de acordo com a forma de pagamento.
+     */
     function imprimirPDF(tipoFiltro = '') {
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
@@ -701,11 +700,12 @@
         dados = dados.filter(d => !(d.cliente || '').toUpperCase().includes('CANCELADA'));
 
         const headers = ['O.S', 'DATA', 'CLIENTE', 'PLACA', 'VALOR', 'PAGAMENTO', 'TECNICO', 'UNIDADE'];
+        
+        // CALCULA O TOTAL GERAL
         let total = 0;
-
         const bodyData = dados.map(item => {
             const valorNum = parseFloat(item.valor || 0);
-            total += valorNum;
+            total += valorNum; 
             return [
                 String(item.os || ''),
                 String(item.data || ''),
@@ -718,7 +718,7 @@
             ];
         });
 
-        const headerColor = [74, 144, 226]; // #4a90e2
+        const headerColor = [74, 144, 226]; 
 
         doc.autoTable({
             head: [headers],
@@ -732,10 +732,18 @@
                 6: { cellWidth: 20 },
                 7: { cellWidth: 20 }
             },
+            // CORREÇÃO DA COR: Função para pintar a linha
+            willDrawCell: function (data) {
+                if (data.section === 'body') {
+                    const pagamento = data.row.raw[5]; // Posição 5 é a coluna 'PAGAMENTO'
+                    const cor = paymentColors[pagamento] || [255, 255, 255]; // Branco se não achar a cor
+                    doc.setFillColor(cor[0], cor[1], cor[2]);
+                }
+            },
             didDrawPage: function(data) {
                 // Header
                 doc.setFontSize(16);
-                doc.setTextColor(74, 144, 226); // Azul
+                doc.setTextColor(74, 144, 226); 
                 doc.text("VDI TACÓGRAFOS — Relatório de O.S.", 14, 15);
 
                 doc.setFontSize(10);
@@ -747,15 +755,15 @@
                     doc.text(dataPeriodo, 14, 27);
                 }
 
-                // Total da Página
+                // Total Geral
                 doc.setFontSize(10);
                 doc.setTextColor(0);
                 doc.text(`Total Geral: R$ ${total.toFixed(2)}`, 180, 27, { align: 'right' });
+                
                 doc.setFontSize(8);
-                doc.text(`Página ${data.pageNumber} de ${doc.internal.pageSize.height - 10}`, data.settings.margin.left, doc.internal.pageSize.height - 10);
+                doc.text(`Página ${data.pageNumber} de ${doc.internal.pages.length - 1}`, data.settings.margin.left, doc.internal.pageSize.height - 10);
             },
             theme: 'striped',
-            alternateRowStyles: { fillColor: [249, 249, 249] }
         });
 
         doc.save(`Relatorio_OS_${tituloFiltro.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`);
