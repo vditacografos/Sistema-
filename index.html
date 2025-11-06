@@ -188,14 +188,14 @@
     // VARIÁVEL GLOBAL PARA CONTROLE DE EDIÇÃO
     let osEditandoId = null;
     
-    // 🎨 CORES FORTES PARA O FUNDO DA LINHA DO PDF (Corrigido para ser vivo)
+    // 🎨 CORES SUAVES/PASTEL PARA O FUNDO DA LINHA DO PDF (Corrigido para suavidade e contraste)
     const paymentColors = { 
-        'Faturado': [27, 126, 207],      // Azul forte (para combinar com o cartão)
-        'Em Aberto': [212, 61, 92],     // Vermelho/Rosa forte (para combinar com o cartão)
-        'PIX': [30, 150, 70],           // Verde forte (para combinar com o cartão)
-        'Dinheiro': [241, 196, 15],     // Amarelo/Ouro forte (para combinar com o cartão)
-        'Débito': [243, 156, 18],       // Laranja forte (para combinar com o cartão)
-        'Crédito': [142, 68, 173]       // Roxo forte (para combinar com o cartão)
+        'Faturado': [173, 216, 230], // Azul Claro
+        'Em Aberto': [255, 192, 203], // Rosa Claro
+        'PIX': [175, 223, 175], // Verde Menta
+        'Dinheiro': [255, 239, 173], // Amarelo Claro
+        'Débito': [253, 222, 173], // Laranja Claro
+        'Crédito': [210, 180, 222] // Lilás Claro
     };
 
     // =================================================================
@@ -671,8 +671,10 @@
     }
 
     /**
-     * CORRIGIDA: Garante que o Total Geral é somado de todos os itens filtrados e exibido
-     * abaixo da tabela (no final do relatório), e que as linhas são coloridas com cores vivas.
+     * FUNÇÃO FINALIZADA:
+     * - Cores pastel nas linhas para contraste
+     * - Total Geral no fim da tabela
+     * - Largura ajustada para o cabeçalho 'PAGAMENTO'
      */
     function imprimirPDF(tipoFiltro = '') {
         const { jsPDF } = window.jspdf;
@@ -731,18 +733,20 @@
             startY: 35,
             styles: { fontSize: 8, cellPadding: 2, overflow: 'linebreak' },
             headStyles: { fillColor: headerColor, textColor: 255, fontStyle: 'bold' },
+            // 📏 CORREÇÃO DA LARGURA: Aumenta a coluna PAGAMENTO (índice 5)
             columnStyles: {
-                4: { cellWidth: 20 },
-                5: { cellWidth: 20 },
-                6: { cellWidth: 20 },
-                7: { cellWidth: 20 }
+                4: { cellWidth: 20 },  // VALOR
+                5: { cellWidth: 28 },  // PAGAMENTO (Ajustado)
+                6: { cellWidth: 20 },  // TECNICO
+                7: { cellWidth: 20 }   // UNIDADE
             },
-            // 🎨 CORREÇÃO DA COR: Função para pintar a linha com cores vivas
+            // 🎨 CORREÇÃO DA COR: Aplica cor pastel e define texto como preto
             willDrawCell: function (data) {
                 if (data.section === 'body') {
                     const pagamento = data.row.raw[5]; 
                     const cor = paymentColors[pagamento] || [255, 255, 255]; 
                     doc.setFillColor(cor[0], cor[1], cor[2]);
+                    doc.setTextColor(0, 0, 0); // Texto preto para contraste com cores pastel
                 }
             },
             didDrawPage: function(data) {
@@ -764,9 +768,8 @@
                 doc.setFontSize(8);
                 doc.text(`Página ${data.pageNumber} de ${doc.internal.pages.length - 1}`, data.settings.margin.left, doc.internal.pageSize.height - 10);
             },
-            // 🎯 CORREÇÃO DE POSIÇÃO: Desenha o total no final da tabela (apenas na última linha/página)
+            // 🎯 POSIÇÃO DO TOTAL: Desenha o total no final da tabela
             didDrawCell: function(data) {
-                // Checa se é a última linha e a última coluna (para desenhar apenas uma vez)
                 if (data.section === 'body' && data.row.index === dados.length - 1 && data.column.index === headers.length - 1) {
                     
                     const finalY = data.cell.y + data.cell.height + 4;
@@ -776,7 +779,6 @@
                     doc.setFont(undefined, 'bold');
                     doc.setTextColor(0);
                     
-                    // Desenha o Total Geral abaixo da última linha da tabela
                     doc.text(`Total Geral: R$ ${total.toFixed(2)}`, rightX, finalY, { align: 'right' });
                 }
             },
