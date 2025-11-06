@@ -187,6 +187,16 @@
     let osData = [];
     // VARIÁVEL GLOBAL PARA CONTROLE DE EDIÇÃO
     let osEditandoId = null;
+    
+    // 🎨 CORES FORTES PARA O FUNDO DA LINHA DO PDF (Corrigido para ser vivo)
+    const paymentColors = { 
+        'Faturado': [27, 126, 207],      // Azul forte (para combinar com o cartão)
+        'Em Aberto': [212, 61, 92],     // Vermelho/Rosa forte (para combinar com o cartão)
+        'PIX': [30, 150, 70],           // Verde forte (para combinar com o cartão)
+        'Dinheiro': [241, 196, 15],     // Amarelo/Ouro forte (para combinar com o cartão)
+        'Débito': [243, 156, 18],       // Laranja forte (para combinar com o cartão)
+        'Crédito': [142, 68, 173]       // Roxo forte (para combinar com o cartão)
+    };
 
     // =================================================================
     // 🔐 FUNÇÕES DE AUTENTICAÇÃO FIREBASE
@@ -207,10 +217,8 @@
             await auth.signInWithEmailAndPassword(email, password);
         } catch (error) {
             console.error("Erro de Login:", error);
-            let errorMessage = "Erro desconhecido.";
-            if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
-                errorMessage = "E-mail ou senha inválidos.";
-            } else if (error.code === 'auth/invalid-email') {
+            let errorMessage = "E-mail ou senha inválidos.";
+            if (error.code === 'auth/invalid-email') {
                 errorMessage = "Formato de e-mail inválido.";
             }
             errorDiv.textContent = errorMessage;
@@ -662,12 +670,9 @@
         }
     }
 
-    const paymentColors = { 'Faturado': [173, 216, 230], 'Em Aberto': [255, 192, 203], 'PIX': [175, 223, 175], 'Dinheiro': [255, 239, 173], 'Débito': [253, 222, 173], 'Crédito': [210, 180, 222]};
-    const totalColors = { 'Faturado': [45, 156, 219], 'Em Aberto': [233, 78, 119], 'PIX': [39, 174, 96], 'Dinheiro': [241, 196, 15], 'Débito': [243, 156, 18], 'Crédito': [155, 89, 182]};
-
     /**
      * CORRIGIDA: Garante que o Total Geral é somado de todos os itens filtrados e exibido
-     * E que as linhas são coloridas de acordo com a forma de pagamento.
+     * abaixo da tabela (no final do relatório), e que as linhas são coloridas com cores vivas.
      */
     function imprimirPDF(tipoFiltro = '') {
         const { jsPDF } = window.jspdf;
@@ -732,16 +737,16 @@
                 6: { cellWidth: 20 },
                 7: { cellWidth: 20 }
             },
-            // CORREÇÃO DA COR: Função para pintar a linha
+            // 🎨 CORREÇÃO DA COR: Função para pintar a linha com cores vivas
             willDrawCell: function (data) {
                 if (data.section === 'body') {
-                    const pagamento = data.row.raw[5]; // Posição 5 é a coluna 'PAGAMENTO'
-                    const cor = paymentColors[pagamento] || [255, 255, 255]; // Branco se não achar a cor
+                    const pagamento = data.row.raw[5]; 
+                    const cor = paymentColors[pagamento] || [255, 255, 255]; 
                     doc.setFillColor(cor[0], cor[1], cor[2]);
                 }
             },
             didDrawPage: function(data) {
-                // Header
+                // Header do Relatório
                 doc.setFontSize(16);
                 doc.setTextColor(74, 144, 226); 
                 doc.text("VDI TACÓGRAFOS — Relatório de O.S.", 14, 15);
@@ -754,14 +759,26 @@
                     const dataPeriodo = `Período: ${dataInicio ? dataInicio.split('-').reverse().join('/') : 'Início'} a ${dataFim ? dataFim.split('-').reverse().join('/') : 'Fim'}`;
                     doc.text(dataPeriodo, 14, 27);
                 }
-
-                // Total Geral
-                doc.setFontSize(10);
-                doc.setTextColor(0);
-                doc.text(`Total Geral: R$ ${total.toFixed(2)}`, 180, 27, { align: 'right' });
                 
+                // Rodapé da Página (número da página)
                 doc.setFontSize(8);
                 doc.text(`Página ${data.pageNumber} de ${doc.internal.pages.length - 1}`, data.settings.margin.left, doc.internal.pageSize.height - 10);
+            },
+            // 🎯 CORREÇÃO DE POSIÇÃO: Desenha o total no final da tabela (apenas na última linha/página)
+            didDrawCell: function(data) {
+                // Checa se é a última linha e a última coluna (para desenhar apenas uma vez)
+                if (data.section === 'body' && data.row.index === dados.length - 1 && data.column.index === headers.length - 1) {
+                    
+                    const finalY = data.cell.y + data.cell.height + 4;
+                    const rightX = doc.internal.pageSize.width - data.settings.margin.right;
+
+                    doc.setFontSize(12);
+                    doc.setFont(undefined, 'bold');
+                    doc.setTextColor(0);
+                    
+                    // Desenha o Total Geral abaixo da última linha da tabela
+                    doc.text(`Total Geral: R$ ${total.toFixed(2)}`, rightX, finalY, { align: 'right' });
+                }
             },
             theme: 'striped',
         });
