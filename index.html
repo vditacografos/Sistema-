@@ -12,7 +12,7 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <style>
-        /* Estilos CSS (MANTIDOS) */
+        /* Estilos CSS */
         body { font-family: 'Poppins', sans-serif; margin:0; padding:0; background:#f4f6f9; }
         header { background: linear-gradient(90deg,#4a90e2,#9013fe); color:white; padding:20px; text-align:center; font-size:24px; font-weight:600; box-shadow:0 4px 6px rgba(0,0,0,0.1); }
         .container { padding:20px; max-width:1200px; margin:auto; }
@@ -188,7 +188,7 @@
     // VARIÁVEL GLOBAL PARA CONTROLE DE EDIÇÃO
     let osEditandoId = null;
     
-    // 🎨 CORES SUAVES/PASTEL PARA O FUNDO DA LINHA DO PDF (Corrigido para suavidade e contraste)
+    // 🎨 CORES SUAVES/PASTEL PARA O FUNDO DA LINHA DO PDF
     const paymentColors = { 
         'Faturado': [173, 216, 230], // Azul Claro
         'Em Aberto': [255, 192, 203], // Rosa Claro
@@ -550,7 +550,7 @@
     }
 
     // =================================================================
-    // 📊 FUNÇÕES DE EXPORTAÇÃO E PDF (CORRIGIDAS)
+    // 📊 FUNÇÕES DE EXPORTAÇÃO E PDF (COMPLETAS)
     // =================================================================
     function exportExcel(){
             const wb=XLSX.utils.book_new();
@@ -675,6 +675,7 @@
      * - Cores pastel nas linhas para contraste
      * - Total Geral no fim da tabela
      * - Largura ajustada para o cabeçalho 'PAGAMENTO'
+     * - LOGOTIPO da VDI Tacógrafos no cabeçalho
      */
     function imprimirPDF(tipoFiltro = '') {
         const { jsPDF } = window.jspdf;
@@ -708,7 +709,6 @@
 
         const headers = ['O.S', 'DATA', 'CLIENTE', 'PLACA', 'VALOR', 'PAGAMENTO', 'TECNICO', 'UNIDADE'];
         
-        // CALCULA O TOTAL GERAL
         let total = 0;
         const bodyData = dados.map(item => {
             const valorNum = parseFloat(item.valor || 0);
@@ -727,20 +727,21 @@
 
         const headerColor = [74, 144, 226]; 
 
+        // O LINK DIRETO PARA O LOGOTIPO DA VDI
+        const logoUrl = 'https://vditacografos.com.br/wp-content/uploads/2021/07/logo-vdi.png'; 
+
         doc.autoTable({
             head: [headers],
             body: bodyData,
-            startY: 35,
+            startY: 40, // Começa abaixo do espaço reservado para logo/título/filtros
             styles: { fontSize: 8, cellPadding: 2, overflow: 'linebreak' },
             headStyles: { fillColor: headerColor, textColor: 255, fontStyle: 'bold' },
-            // 📏 CORREÇÃO DA LARGURA: Aumenta a coluna PAGAMENTO (índice 5)
             columnStyles: {
                 4: { cellWidth: 20 },  // VALOR
                 5: { cellWidth: 28 },  // PAGAMENTO (Ajustado)
                 6: { cellWidth: 20 },  // TECNICO
                 7: { cellWidth: 20 }   // UNIDADE
             },
-            // 🎨 CORREÇÃO DA COR: Aplica cor pastel e define texto como preto
             willDrawCell: function (data) {
                 if (data.section === 'body') {
                     const pagamento = data.row.raw[5]; 
@@ -750,25 +751,33 @@
                 }
             },
             didDrawPage: function(data) {
+                // LOGOTIPO (14mm X, 8mm Y, 30mm Largura, 15mm Altura)
+                try {
+                    doc.addImage(logoUrl, 'PNG', 14, 8, 30, 15); 
+                } catch (e) {
+                    console.error("Erro ao adicionar logotipo ao PDF:", e);
+                    doc.text("Logo VDI", 14, 15); 
+                }
+                
                 // Header do Relatório
                 doc.setFontSize(16);
                 doc.setTextColor(74, 144, 226); 
-                doc.text("VDI TACÓGRAFOS — Relatório de O.S.", 14, 15);
+                // Posição X ajustada para 50, para ficar após o logo
+                doc.text("VDI TACÓGRAFOS — Relatório de O.S.", 50, 15); 
 
                 doc.setFontSize(10);
                 doc.setTextColor(50);
-                doc.text(`Filtro Aplicado: ${tituloFiltro}`, 14, 22);
-
+                doc.text(`Filtro Aplicado: ${tituloFiltro}`, 14, 28); 
+                
                 if (dataInicio || dataFim) {
                     const dataPeriodo = `Período: ${dataInicio ? dataInicio.split('-').reverse().join('/') : 'Início'} a ${dataFim ? dataFim.split('-').reverse().join('/') : 'Fim'}`;
-                    doc.text(dataPeriodo, 14, 27);
+                    doc.text(dataPeriodo, 14, 33); 
                 }
                 
                 // Rodapé da Página (número da página)
                 doc.setFontSize(8);
                 doc.text(`Página ${data.pageNumber} de ${doc.internal.pages.length - 1}`, data.settings.margin.left, doc.internal.pageSize.height - 10);
             },
-            // 🎯 POSIÇÃO DO TOTAL: Desenha o total no final da tabela
             didDrawCell: function(data) {
                 if (data.section === 'body' && data.row.index === dados.length - 1 && data.column.index === headers.length - 1) {
                     
