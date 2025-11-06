@@ -14,7 +14,7 @@
     <style>
         /* Estilos CSS */
         body { font-family: 'Poppins', sans-serif; margin:0; padding:0; background:#f4f6f9; }
-        header { background: linear-gradient(90deg,#4a90e2,#9013fe); color:white; padding:20px; text-align:center; font-size:24px; font-weight:600; box-shadow:0 4px 6px rgba(0,0,0,0.1); }
+        header { background: linear-gradient(90deg,#4a90e2,#9013fe); color:white; padding:20px; text-align:center; box-shadow:0 4px 6px rgba(0,0,0,0.1); }
         .container { padding:20px; max-width:1200px; margin:auto; }
         .buttons, .filters, .search { display:flex; flex-wrap:wrap; gap:10px; margin-bottom:20px; }
         button { background:#4a90e2; color:white; border:none; padding:10px 18px; border-radius:8px; cursor:pointer; font-weight:600; transition:0.2s; display:flex; align-items:center; gap:5px; }
@@ -64,12 +64,17 @@
             .buttons, .filters, .search { flex-direction:column; }
             table th, table td { font-size:12px; padding:8px; }
         }
-        /* NOVO ESTILO PARA O LOGO NO HEADER */
+        /* ESTILO CORRIGIDO PARA O LOGO E O TÍTULO */
         #headerLogo {
-            max-height: 50px; /* Define o tamanho da imagem no cabeçalho */
+            max-height: 50px; 
             width: auto;
             display: block;
-            margin: 0 auto; /* Centraliza */
+            margin: 0 auto 5px auto; /* Centraliza e adiciona margem abaixo do logo */
+        }
+        #headerTitle {
+            margin: 0; /* Remove a margem padrão do h1 */
+            font-size: 24px;
+            font-weight: 600;
         }
     </style>
 </head>
@@ -92,6 +97,7 @@
 <div id="appContent" style="display:none;">
     <header>
         <img src="logo.png" alt="Logo VDI Tacógrafos" id="headerLogo">
+        <h1 id="headerTitle">VDI TACÓGRAFOS — Frente de Caixa (Barueri · Cotia · Embu)</h1>
     </header>
     <div class="container">
         <div class="buttons">
@@ -196,6 +202,8 @@
     let osData = [];
     // VARIÁVEL GLOBAL PARA CONTROLE DE EDIÇÃO
     let osEditandoId = null;
+    // VARIÁVEL GLOBAL PARA LOGO EM PDF
+    let logoBase64 = null; 
     
     // 🎨 CORES SUAVES/PASTEL PARA O FUNDO DA LINHA DO PDF
     const paymentColors = { 
@@ -206,6 +214,33 @@
         'Débito': [253, 222, 173], // Laranja Claro
         'Crédito': [210, 180, 222] // Lilás Claro
     };
+    
+    // =================================================================
+    // 🖼️ FUNÇÃO PARA CARREGAR O LOGO PARA PDF
+    // =================================================================
+
+    function loadLogoForPDF() {
+        const img = new Image();
+        img.crossOrigin = 'Anonymous'; 
+        img.onload = function () {
+            const canvas = document.createElement('canvas');
+            canvas.height = img.naturalHeight;
+            canvas.width = img.naturalWidth;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0);
+            logoBase64 = canvas.toDataURL('image/png');
+            console.log("Logo carregado para PDF.");
+        };
+        img.onerror = function() {
+             console.error("Erro ao carregar o logo para o PDF. Verifique o caminho 'logo.png'.");
+             logoBase64 = 'PLACEHOLDER_ERROR'; // Evita quebrar o PDF
+        };
+        img.src = 'logo.png'; 
+    }
+    
+    // Chama o carregamento do logo no início
+    loadLogoForPDF(); 
+
 
     // =================================================================
     // 🔐 FUNÇÕES DE AUTENTICAÇÃO FIREBASE
@@ -711,9 +746,26 @@
             titulo = `RESUMO DE CAIXA: ${filtroPagamento.toUpperCase()}`;
         }
         
-        doc.setFontSize(16);
-        doc.text(titulo, margin, y + 5);
-        y += 10;
+        // 1. ADICIONAR LOGO E TÍTULO NO PDF
+        const logoWidth = 20; // Largura do logo em mm
+        const logoHeight = 20; // Altura do logo em mm
+        const titleText = titulo; 
+
+        if (logoBase64 && logoBase64 !== 'PLACEHOLDER_ERROR') {
+            const xPos = margin; 
+            
+            doc.addImage(logoBase64, 'PNG', xPos, y, logoWidth, logoHeight);
+            
+            doc.setFontSize(14);
+            // Posição: 5mm de distância do logo na horizontal, 10mm de distância do topo na vertical
+            doc.text(titleText, xPos + logoWidth + 5, y + 10); 
+            y += 25; // Avança a posição Y para depois do bloco logo/título
+        } else {
+            // Fallback: Se o logo não carregar, apenas coloca o título
+            doc.setFontSize(16);
+            doc.text(titleText, margin, y + 5);
+            y += 10;
+        }
 
         // Cabeçalho dos filtros aplicados
         doc.setFontSize(10);
