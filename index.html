@@ -256,7 +256,7 @@ async function salvarForm(){
         placa,        
         valor_os: valorOS.toFixed(2),        
         valor_mo: valorMO.toFixed(2),        
-        valor: (valorOS + valorMO).toFixed(2), // O valor total é mantido no DB para totalização e PDF
+        valor: (valorOS + valorMO).toFixed(2), // O valor total é mantido no DB para consistência
         pagamento,        
         tecnico,        
         os_tecnico: osTecnico,        
@@ -281,12 +281,14 @@ async function salvarForm(){
 
 /* --------------------------   Atualizar tabela e totais   -------------------------- */
 function atualizarTabelaTodas(){    
-    const unidade = document.getElementById('unidade').value;    
+    const unidadeFiltroRaw = document.getElementById('unidade').value;    
     const dataInicio = document.getElementById('dataInicio').value;    
     const dataFim = document.getElementById('dataFim').value;    
     const termoBusca = document.getElementById('busca').value.toLowerCase();    
     const tecnicoFiltroRaw = document.getElementById('tecnicoFiltro').value;    
     const tecnicoFiltro = tecnicoFiltroRaw ? tecnicoFiltroRaw.toString().toLowerCase().trim() : '';
+
+    const unidadeFiltro = unidadeFiltroRaw ? unidadeFiltroRaw.toString().toLowerCase().trim() : '';
     
     const tbody = document.querySelector('#tabelaTodas tbody');    
     tbody.innerHTML = '';
@@ -295,30 +297,34 @@ function atualizarTabelaTodas(){
     
     const dadosFiltrados = osData.filter(item => {        
         const itemDate = item.data ? item.data.split('/').reverse().join('-') : '2000-01-01';        
-        const itemValor = parseFloat(item.valor) || (parseFloat(item.valor_os||0) + parseFloat(item.valor_mo||0));        
+        
+        const itemValorOS = parseFloat(item.valor_os || 0);
+        const itemValorMO = parseFloat(item.valor_mo || 0);
+
         const itemPagamento = (item.pagamento || '').toString().toLowerCase().trim();        
         const itemTecnico = (item.tecnico || '').toString().toLowerCase().trim();
-        
-        if(unidade && item.unidade !== unidade) return false;        
+        const itemUnidade = (item.unidade || '').toString().toLowerCase().trim(); 
+
+        if(unidadeFiltro && itemUnidade !== unidadeFiltro) return false;
         if(tecnicoFiltro && itemTecnico !== tecnicoFiltro) return false;        
         if(dataInicio && itemDate < dataInicio) return false;        
         if(dataFim && itemDate > dataFim) return false;        
         if((item.cliente||'').toUpperCase().includes('CANCELADA')) return false;        
         if(termoBusca && !((item.cliente||'').toLowerCase().includes(termoBusca) || (item.placa||'').toLowerCase().includes(termoBusca) || (item.os||'').toLowerCase().includes(termoBusca))) return false;
         
-        // acumula por pagamento (usando valor total da OS)
-        if(itemPagamento === 'faturado') totalF += itemValor;        
-        if(itemPagamento === 'em aberto') totalAberto += itemValor;        
-        if(itemPagamento === 'pix') totalPix += itemValor;        
-        if(itemPagamento === 'dinheiro') totalDin += itemValor;        
-        if(itemPagamento === 'débito' || itemPagamento === 'debito') totalDeb += itemValor;        
-        if(itemPagamento === 'crédito' || itemPagamento === 'credito') totalCred += itemValor;
+        // Pagamentos (SÓ USA itemValorOS)
+        if(itemPagamento === 'faturado') totalF += itemValorOS;        
+        if(itemPagamento === 'em aberto') totalAberto += itemValorOS;        
+        if(itemPagamento === 'pix') totalPix += itemValorOS;        
+        if(itemPagamento === 'dinheiro') totalDin += itemValorOS;        
+        if(itemPagamento === 'débito' || itemPagamento === 'debito') totalDeb += itemValorOS;        
+        if(itemPagamento === 'crédito' || itemPagamento === 'credito') totalCred += itemValorOS;
         
-        // acumula mão de obra (apenas valor_mo)        
-        totalMo += parseFloat(item.valor_mo || 0);
+        // Mão de Obra (SÓ USA itemValorMO)        
+        totalMo += itemValorMO;
 
-        // acumula total geral (usando valor total da OS)
-        totalGeral += itemValor;
+        // TOTAL GERAL (AGORA SÓ USA itemValorOS, conforme solicitado)
+        totalGeral += itemValorOS;
         
         return true;    
     });
@@ -347,9 +353,9 @@ function atualizarTabelaTodas(){
     document.getElementById('totalPix').innerHTML = `PIX<br>R$ ${totalPix.toFixed(2)}`;    
     document.getElementById('totalDinheiro').innerHTML = `DINHEIRO<br>R$ ${totalDin.toFixed(2)}`;    
     document.getElementById('totalDebito').innerHTML = `DÉBITO<br>R$ ${totalDeb.toFixed(2)}`;    
-    document.getElementById('totalCredito').innerHTML = `CRÉDITO<br>R$ ${totalCred.toFixed(2)}`;    
+    document.getElementById('totalCredito').innerHTML = `CRÉDITO<br>R$ ${totalCredito.toFixed(2)}`;    
     document.getElementById('totalMo').innerHTML = `MÃO DE OBRA<br>R$ ${totalMo.toFixed(2)}`;
-    document.getElementById('totalGeral').innerHTML = `TOTAL GERAL<br>R$ ${totalGeral.toFixed(2)}`; // Novo Total Geral
+    document.getElementById('totalGeral').innerHTML = `TOTAL GERAL<br>R$ ${totalGeral.toFixed(2)}`;
 }
 
 /* abrir modal direto em edição (helper) */
@@ -364,8 +370,7 @@ async function apagarOS(id){
     if(!confirm('Deseja apagar esta O.S? Esta ação é irreversível.')) return;    
     try{        
         await osCollection.doc(id).delete();        
-        alert('O.S. apagada');    
-    } catch(e){        
+        alert('O.S. apagada');    } catch(e){        
         console.error(e);        
         alert('Erro ao apagar');    
     }
@@ -599,7 +604,7 @@ function lerExcel(event){
     Array.from(files).forEach(processarArquivo);
 }
 
-// --------------------------- PDF IMPRIMIR (AJUSTADO PARA A TABELA) --------------------------
+// --------------------------- PDF IMPRIMIR --------------------------
 function imprimirPDF(filtroPagamento = null) {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF('l', 'mm', 'a4');
@@ -607,24 +612,29 @@ function imprimirPDF(filtroPagamento = null) {
     let y = margin;
     
     // Funções de filtro
-    const unidade = document.getElementById('unidade').value;
+    const unidadeFiltroRaw = document.getElementById('unidade').value;
     const tecnicoFiltro = document.getElementById('tecnicoFiltro').value;
     const dataInicio = document.getElementById('dataInicio').value;
     const dataFim = document.getElementById('dataFim').value;
 
+    // PADRONIZAÇÃO DO FILTRO DA UNIDADE
+    const unidadeFiltro = unidadeFiltroRaw ? unidadeFiltroRaw.toString().toLowerCase().trim() : '';
+    const tecnicoFiltroPad = tecnicoFiltro ? tecnicoFiltro.toString().toLowerCase().trim() : '';
+
     const dadosTabela = osData.filter(item => {
         const itemDate = item.data ? item.data.split('/').reverse().join('-') : '2000-01-01';
-        const itemTecnico = (item.tecnico || '').trim();
+        const itemTecnico = (item.tecnico || '').trim().toLowerCase();
+        const itemUnidade = (item.unidade || '').trim().toLowerCase();
 
-        if(unidade && item.unidade !== unidade) return false;        
-        if(tecnicoFiltro && itemTecnico !== tecnicoFiltro) return false;
+        if(unidadeFiltro && itemUnidade !== unidadeFiltro) return false;
+        if(tecnicoFiltroPad && itemTecnico !== tecnicoFiltroPad) return false;
         
         if(dataInicio && itemDate < dataInicio) return false;        
         if(dataFim && itemDate > dataFim) return false;        
         if((item.cliente||'').toUpperCase().includes('CANCELADA')) return false;        
         
         if(filtroPagamento === 'Mão de Obra') return parseFloat(item.valor_mo || 0) > 0;
-        if(filtroPagamento === 'Geral') return true; // Para o novo Total Geral
+        if(filtroPagamento === 'Geral') return true;
         if(filtroPagamento && (item.pagamento || '').trim() !== filtroPagamento) return false;
 
         return true;
@@ -646,14 +656,7 @@ function imprimirPDF(filtroPagamento = null) {
         ];
     });
 
-    // Se o filtro for 'Geral', usa todos os dados filtrados por Unidade/Técnico/Data.
-    if(filtroPagamento === 'Geral' && dadosTabela.length === 0){
-        alert('Nenhum dado para o filtro selecionado.');
-        return;
-    }
-
-    if(dadosTabela.length === 0 && filtroPagamento !== 'Geral') { alert('Nenhum dado para o filtro selecionado.'); return; }
-
+    if(dadosTabela.length === 0) { alert('Nenhum dado para o filtro selecionado.'); return; }
 
     const headers = ['O.S','DATA','CLIENTE','PLACA','VALOR OS','VALOR MO','PAGAMENTO','TECNICO','OS TECNICO','UNIDADE'];
     
@@ -663,7 +666,7 @@ function imprimirPDF(filtroPagamento = null) {
     y+= 8;
 
     const filtrosAplicados = [];
-    if(unidade) filtrosAplicados.push(`Unidade: ${unidade}`);
+    if(unidadeFiltroRaw) filtrosAplicados.push(`Unidade: ${unidadeFiltroRaw}`);
     if(tecnicoFiltro) filtrosAplicados.push(`Técnico: ${tecnicoFiltro}`);
     if(dataInicio && dataFim) filtrosAplicados.push(`Período: ${formatDate(dataInicio)} a ${formatDate(dataFim)}`);
     else if(dataInicio) filtrosAplicados.push(`A partir de: ${formatDate(dataInicio)}`);
@@ -684,7 +687,7 @@ function imprimirPDF(filtroPagamento = null) {
         theme: 'striped',
         headStyles: { fillColor: [74, 144, 226] },
         styles: { fontSize: 8, cellPadding: 2, overflow: 'linebreak' },
-        columnStyles: { 4: { halign: 'right' }, 5: { halign: 'right' }}, // Ajusta o alinhamento das colunas de valor
+        columnStyles: { 4: { halign: 'right' }, 5: { halign: 'right' }},
     });
 
     const finalY = doc.autoTable.previous.finalY;
@@ -695,31 +698,36 @@ function imprimirPDF(filtroPagamento = null) {
     let totalFPDF = 0, totalAbertoPDF = 0, totalPixPDF = 0, totalDinPDF = 0, totalDebPDF = 0, totalCredPDF = 0, totalMoPDF = 0, totalGeralPDF = 0;
     
     osData.filter(item => {
-        // Usa a mesma lógica de filtro da tabela para os totais
         const itemDate = item.data ? item.data.split('/').reverse().join('-') : '2000-01-01';
-        const itemTecnico = (item.tecnico || '').trim();
+        const itemTecnico = (item.tecnico || '').trim().toLowerCase();
+        const itemUnidade = (item.unidade || '').trim().toLowerCase();
 
-        if(unidade && item.unidade !== unidade) return false;
-        if(tecnicoFiltro && itemTecnico !== tecnicoFiltro) return false;
+        if(unidadeFiltro && itemUnidade !== unidadeFiltro) return false;
+        if(tecnicoFiltroPad && itemTecnico !== tecnicoFiltroPad) return false;
         if(dataInicio && itemDate < dataInicio) return false;
         if(dataFim && itemDate > dataFim) return false;
         if((item.cliente||'').toUpperCase().includes('CANCELADA')) return false;
         
         return true;
     }).forEach(item => {
-        const valorOs = parseFloat(item.valor_os || 0);
-        const valorMo = parseFloat(item.valor_mo || 0);
-        const valorTotal = valorOs + valorMo;
+        const itemValorOS = parseFloat(item.valor_os || 0);
+        const itemValorMO = parseFloat(item.valor_mo || 0);
+        
         const pagamento = (item.pagamento || '').toLowerCase().trim();
 
-        if(pagamento === 'faturado') totalFPDF += valorTotal;
-        if(pagamento === 'em aberto') totalAbertoPDF += valorTotal;
-        if(pagamento === 'pix') totalPixPDF += valorTotal;
-        if(pagamento === 'dinheiro') totalDinPDF += valorTotal;
-        if(pagamento === 'débito' || pagamento === 'debito') totalDebPDF += valorTotal;
-        if(pagamento === 'crédito' || pagamento === 'credito') totalCredPDF += valorTotal;
-        totalMoPDF += valorMo;
-        totalGeralPDF += valorTotal;
+        // Pagamentos (SÓ USA itemValorOS)
+        if(pagamento === 'faturado') totalFPDF += itemValorOS;
+        if(pagamento === 'em aberto') totalAbertoPDF += itemValorOS;
+        if(pagamento === 'pix') totalPixPDF += itemValorOS;
+        if(pagamento === 'dinheiro') totalDinPDF += itemValorOS;
+        if(pagamento === 'débito' || pagamento === 'debito') totalDebPDF += itemValorOS;
+        if(pagamento === 'crédito' || pagamento === 'credito') totalCredPDF += itemValorOS;
+        
+        // Mão de Obra (SÓ USA itemValorMO)
+        totalMoPDF += itemValorMO;
+        
+        // TOTAL GERAL (AGORA SÓ USA itemValorOS)
+        totalGeralPDF += itemValorOS;
     });
 
     doc.setFontSize(11);
@@ -732,7 +740,7 @@ function imprimirPDF(filtroPagamento = null) {
     doc.text(`Crédito: R$ ${totalCredPDF.toFixed(2)}`, 70, finalY + 20);
     doc.text(`Total Mão de Obra: R$ ${totalMoPDF.toFixed(2)}`, 140, finalY + 10);
     doc.setFontSize(14);
-    doc.text(`TOTAL GERAL (Todos Pagamentos): R$ ${totalGeralPDF.toFixed(2)}`, 140, finalY + 18);
+    doc.text(`TOTAL GERAL (Valor OS): R$ ${totalGeralPDF.toFixed(2)}`, 140, finalY + 18);
 
     doc.save(`Relatorio_OS_${filtroPagamento || 'Geral'}_${new Date().toLocaleDateString('pt-BR').replace(/\//g,'-')}.pdf`);
 }
