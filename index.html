@@ -155,6 +155,7 @@ function getTecnicosUnicos(){
 
 /* --------------------------   Firestore listener   -------------------------- */
 function setupFirestoreListener(){    
+    document.getElementById('loadingOverlay').style.display = 'flex'; // Mostra o loading ao iniciar
     osCollection.onSnapshot(snapshot => {        
         const changes = snapshot.docChanges();        
         changes.forEach(change => {            
@@ -279,7 +280,7 @@ async function salvarForm(){
     }
 }
 
-/* --------------------------   Atualizar tabela e totais (CORRIGIDO)   -------------------------- */
+/* --------------------------   Atualizar tabela e totais   -------------------------- */
 function atualizarTabelaTodas(){    
     const unidadeFiltroRaw = document.getElementById('unidade').value;    
     const dataInicio = document.getElementById('dataInicio').value;    
@@ -294,6 +295,7 @@ function atualizarTabelaTodas(){
     const tbody = document.querySelector('#tabelaTodas tbody');    
     tbody.innerHTML = '';
     
+    // ZERAR TOTAIS ANTES DE RECALCULAR
     let totalF = 0, totalAberto = 0, totalPix = 0, totalDin = 0, totalDeb = 0, totalCred = 0, totalMo = 0, totalGeral = 0;
     
     const dadosFiltrados = osData.filter(item => {        
@@ -350,6 +352,7 @@ function atualizarTabelaTodas(){
         tbody.appendChild(tr);    
     });
     
+    // ATUALIZAR VISUALIZAÇÃO DOS TOTAIS
     document.getElementById('totalFaturadas').innerHTML = `FATURADAS<br>R$ ${totalF.toFixed(2)}`;    
     document.getElementById('totalAberto').innerHTML = `EM ABERTO<br>R$ ${totalAberto.toFixed(2)}`;    
     document.getElementById('totalPix').innerHTML = `PIX<br>R$ ${totalPix.toFixed(2)}`;    
@@ -606,7 +609,7 @@ function lerExcel(event){
     Array.from(files).forEach(processarArquivo);
 }
 
-// --------------------------- PDF IMPRIMIR (CORRIGIDO) --------------------------
+// --------------------------- PDF IMPRIMIR --------------------------
 function imprimirPDF(filtroPagamento = null) {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF('l', 'mm', 'a4');
