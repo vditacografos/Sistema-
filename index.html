@@ -20,7 +20,7 @@
     <div id="loadingOverlay" style="display:none;">Conectando à Nuvem...</div>
     <div id="appContent" style="display:block;">        
         <header>            
-            <img id="headerLogo" src="/mnt/data/72dc2255-4317-4e18-98e6-f02cb6962926.png" alt="Logo VDI Tacógrafos">            
+            <img id="headerLogo" src="logo.png" alt="Logo VDI Tacógrafos">            
             <h1 id="headerTitle">VDI TACÓGRAFOS — Frente de Caixa (Barueri · Cotia · Embu)</h1>        
         </header>
         
@@ -97,7 +97,7 @@
                 <input type="date" id="formData">                
                 <input type="text" id="formCliente" placeholder="Cliente">                
                 <input type="text" id="formPlaca" placeholder="Placa">                
-                <input type="number" id="formValorOS" placeholder="Valor OS (R$)" step="0.01">                
+                <input type="number" id="formValorOS" placeholder="Valor OS (apenas itens) (R$)" step="0.01">                
                 <input type="number" id="formValorMO" placeholder="Valor MO (R$)" step="0.01">                
                 <select id="formPagamento">                    
                     <option value="">Selecione pagamento</option>                    
@@ -355,7 +355,7 @@ function atualizarTabelaTodas(){
     document.getElementById('totalPix').innerHTML = `PIX<br>R$ ${totalPix.toFixed(2)}`;    
     document.getElementById('totalDinheiro').innerHTML = `DINHEIRO<br>R$ ${totalDin.toFixed(2)}`;    
     document.getElementById('totalDebito').innerHTML = `DÉBITO<br>R$ ${totalDeb.toFixed(2)}`;    
-    document.getElementById('totalCredito').innerHTML = `CRÉDITO<br>R$ ${totalCred.toFixed(2)}`;    
+    document.getElementById('totalCredito').innerHTML = `CRÉDITO<br>R$ ${totalCredito.toFixed(2)}`;    
     document.getElementById('totalMo').innerHTML = `MÃO DE OBRA<br>R$ ${totalMo.toFixed(2)}`;
     document.getElementById('totalGeral').innerHTML = `TOTAL GERAL<br>R$ ${totalGeral.toFixed(2)}`;
 }
