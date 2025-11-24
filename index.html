@@ -352,7 +352,7 @@ function atualizarTabelaTodas(){
     const tbody = document.querySelector('#tabelaTodas tbody');
     tbody.innerHTML = '';
 
-    let totalF = 0, totalAberto = 0, totalPix = 0, totalDin = 0, totalDeb = 0, totalCred = 0;
+    let totalF = 0, totalAberto = 0, totalPix = 0, totalDin = 0, totalDeb = 0, totalCred = 0, total mão de obra = 0;
 
     const dadosFiltrados = osData.filter(item => {
         const itemDate = item.data ? item.data.split('/').reverse().join('-') : '2000-01-01';
@@ -721,4 +721,5 @@ function imprimirPDF(filtroPagamento = null) {
 </script>
 </body>
 </html>
+
 
