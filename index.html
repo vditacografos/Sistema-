@@ -99,7 +99,6 @@
                     <th>PLACA</th>
                     <th>VALOR OS</th>
                     <th>VALOR MO</th>
-                    <th>VALOR (TOTAL)</th>
                     <th>PAGAMENTO</th>
                     <th>TECNICO</th>
                     <th>OS TECNICO</th>
@@ -390,7 +389,6 @@ function atualizarTabelaTodas(){
                         <td>${item.placa || ''}</td>
                         <td>R$ ${valorOs.toFixed(2)}</td>
                         <td>R$ ${valorMo.toFixed(2)}</td>
-                        <td style="text-align:right;">R$ ${parseFloat(valorTotal).toFixed(2)}</td>
                         <td>${item.pagamento || ''}</td>
                         <td>${item.tecnico || ''}</td>
                         <td>${item.os_tecnico || ''}</td>
@@ -723,3 +721,4 @@ function imprimirPDF(filtroPagamento = null) {
 </script>
 </body>
 </html>
+
