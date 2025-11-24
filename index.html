@@ -3,9 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VDT FRENTE DE CAIXA</title>
-    <link rel="stylesheet" href="style.css"> 
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <title>VDT FRENTE DE CAIXA - Gerenciamento de O.S</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.0/xlsx.full.min.js"></script>
@@ -13,113 +11,159 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
     
     <style>
-        /* CSS Básico para o Layout dos Cards e Botões */
-        body { background-color: #f8f9fa; }
-        .card-custom { margin-bottom: 20px; text-align: center; color: white; border-radius: 8px; }
+        /* CSS para replicar o layout original compacto */
+        body { font-family: sans-serif; margin: 20px; background-color: #f4f4f4; }
+        
+        /* Contêiner de Cards */
+        .card-container { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; }
+        .card-custom { 
+            flex-grow: 1; 
+            min-width: 120px; 
+            padding: 10px; 
+            text-align: center; 
+            color: white; 
+            border-radius: 5px; 
+            font-size: 12px;
+            font-weight: bold;
+            line-height: 1.2;
+        }
+        
+        /* Cores dos Cards */
         .card-faturadas { background-color: #007bff; }
-        .card-aberto { background-color: #ffc107; }
+        .card-aberto { background-color: #ffc107; color: #333; }
         .card-pix { background-color: #28a745; }
         .card-dinheiro { background-color: #17a2b8; }
         .card-debito { background-color: #dc3545; }
         .card-credito { background-color: #6f42c1; }
         .card-mo { background-color: #fd7e14; }
-        .container-fluid { padding: 20px; }
-        .btn-acao { margin-right: 5px; }
-        .table-responsive { overflow-x: auto; }
-        #tabelaTodas th, #tabelaTodas td { white-space: nowrap; }
+
+        /* Filtros */
+        .filter-container { 
+            display: flex; 
+            flex-wrap: wrap; 
+            gap: 15px; 
+            padding: 15px; 
+            background: white; 
+            border-radius: 5px; 
+            margin-bottom: 20px;
+        }
+        .filter-group { display: flex; flex-direction: column; min-width: 150px; }
+        .filter-group label { font-weight: bold; margin-bottom: 5px; font-size: 14px; }
+        .filter-group input, .filter-group select { padding: 5px; border: 1px solid #ccc; border-radius: 4px; }
+
+        /* Tabela */
+        .table-wrapper { overflow-x: auto; background: white; padding: 10px; border-radius: 5px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        #tabelaTodas { width: 100%; border-collapse: collapse; }
+        #tabelaTodas th, #tabelaTodas td { 
+            padding: 8px 12px; 
+            text-align: left; 
+            border: 1px solid #ddd; 
+            white-space: nowrap;
+            font-size: 13px;
+        }
+        #tabelaTodas th { background-color: #007bff; color: white; }
+        #tabelaTodas tr:nth-child(even) { background-color: #f2f2f2; }
+        
+        /* Botões de Ação */
+        .action-buttons { margin-bottom: 20px; display: flex; gap: 10px; flex-wrap: wrap; }
+        .action-buttons button { padding: 8px 15px; border-radius: 4px; cursor: pointer; border: none; }
+        .btn-new { background-color: #28a745; color: white; }
+        .btn-export { background-color: #007bff; color: white; }
+        .btn-print { background-color: #17a2b8; color: white; }
+        .btn-import { background-color: #6c757d; color: white; }
+        .btn-clear { background-color: #f8f9fa; color: #333; border: 1px solid #ccc !important; }
+
+        /* Modal */
+        .modal {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6); display: flex; justify-content: center; align-items: center; z-index: 1000;
+        }
+        .modal-content {
+            background: white; padding: 20px; border-radius: 8px; max-width: 500px; width: 90%;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 10px; margin-bottom: 15px; }
+        .modal-footer { display: flex; justify-content: flex-end; gap: 10px; border-top: 1px solid #eee; padding-top: 10px; margin-top: 15px; }
+        .form-label { display: block; margin-bottom: 5px; font-weight: bold; }
+        .form-control, .form-select { width: 100%; padding: 8px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+        
+        /* Loading */
         #loadingOverlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(255, 255, 255, 0.8); display: flex;
             justify-content: center; align-items: center; z-index: 1000;
+            font-size: 20px; font-weight: bold;
         }
     </style>
 </head>
 <body>
 
 <div id="loadingOverlay">
-    <div class="spinner-border text-primary" role="status">
-        <span class="visually-hidden">Carregando...</span>
-    </div>
+    Carregando Dados...
 </div>
 
-<div class="container-fluid">
-    <h1 class="mb-4">VDT FRENTE DE CAIXA - Gerenciamento de O.S</h1>
+<div class="main-container">
+    <h1>VDT FRENTE DE CAIXA - Gerenciamento de O.S</h1>
 
-    <div class="row mb-4">
-        <div class="col-12 d-flex flex-wrap align-items-center">
-            <button class="btn btn-success btn-acao" onclick="abrirForm()">+ Nova O.S</button>
-            <button class="btn btn-primary btn-acao" onclick="exportExcel()">Exportar Excel</button>
-            <button class="btn btn-info btn-acao" onclick="imprimirPDF('')">Imprimir Relatório</button>
-            <button class="btn btn-secondary btn-acao" onclick="importExcel()">Importar Excel</button>
-            <input type="file" id="inputExcel" accept=".xlsx, .xls" onchange="lerExcel(event)" style="display:none;">
-            <button class="btn btn-light btn-acao border" onclick="limparFiltros()">Limpar Filtros</button>
-        </div>
+    <div class="action-buttons">
+        <button class="btn-new" onclick="abrirForm()">+ Nova O.S</button>
+        <button class="btn-export" onclick="exportExcel()">Exportar Excel</button>
+        <button class="btn-print" onclick="imprimirPDF('')">Imprimir Relatório</button>
+        <button class="btn-import" onclick="importExcel()">Importar Excel</button>
+        <input type="file" id="inputExcel" accept=".xlsx, .xls" onchange="lerExcel(event)" style="display:none;">
+        <button class="btn-clear" onclick="limparFiltros()">Limpar Filtros</button>
     </div>
 
-    <div class="row mb-4">
-        <div class="col-md-4 col-lg-2">
-            <div id="totalFaturadas" class="card-custom card-faturadas p-3">FATURADAS<br>R$ 0.00</div>
-        </div>
-        <div class="col-md-4 col-lg-2">
-            <div id="totalAberto" class="card-custom card-aberto p-3">EM ABERTO<br>R$ 0.00</div>
-        </div>
-        <div class="col-md-4 col-lg-2">
-            <div id="totalPix" class="card-custom card-pix p-3">PIX<br>R$ 0.00</div>
-        </div>
-        <div class="col-md-4 col-lg-2">
-            <div id="totalDinheiro" class="card-custom card-dinheiro p-3">DINHEIRO<br>R$ 0.00</div>
-        </div>
-        <div class="col-md-4 col-lg-2">
-            <div id="totalDebito" class="card-custom card-debito p-3">DÉBITO<br>R$ 0.00</div>
-        </div>
-        <div class="col-md-4 col-lg-2">
-            <div id="totalCredito" class="card-custom card-credito p-3">CRÉDITO<br>R$ 0.00</div>
-        </div>
-        <div class="col-12 col-lg-4">
-            <div id="totalMo" class="card-custom card-mo p-3">MÃO DE OBRA<br>R$ 0.00</div>
-        </div>
+    <div class="card-container">
+        <div id="totalFaturadas" class="card-custom card-faturadas">FATURADAS<br>R$ 0.00</div>
+        <div id="totalAberto" class="card-custom card-aberto">EM ABERTO<br>R$ 0.00</div>
+        <div id="totalPix" class="card-custom card-pix">PIX<br>R$ 0.00</div>
+        <div id="totalDinheiro" class="card-custom card-dinheiro">DINHEIRO<br>R$ 0.00</div>
+        <div id="totalDebito" class="card-custom card-debito">DÉBITO<br>R$ 0.00</div>
+        <div id="totalCredito" class="card-custom card-credito">CRÉDITO<br>R$ 0.00</div>
+        <div id="totalMo" class="card-custom card-mo">MÃO DE OBRA<br>R$ 0.00</div>
     </div>
 
-    <div class="row mb-4 bg-light p-3 rounded shadow-sm">
-        <div class="col-md-3 mb-2">
-            <label for="unidade" class="form-label">Unidade:</label>
-            <select id="unidade" class="form-select" onchange="filtrar()">
+    <div class="filter-container">
+        <div class="filter-group">
+            <label for="unidade">Unidade:</label>
+            <select id="unidade" onchange="filtrar()">
                 <option value="">Todas Unidades</option>
                 <option value="Barueri">Barueri</option>
                 <option value="Cotia">Cotia</option>
                 <option value="Embu">Embu</option>
             </select>
         </div>
-        <div class="col-md-3 mb-2">
-            <label for="tecnicoFiltro" class="form-label">Técnico:</label>
-            <select id="tecnicoFiltro" class="form-select" onchange="filtrar()">
+        <div class="filter-group">
+            <label for="tecnicoFiltro">Técnico:</label>
+            <select id="tecnicoFiltro" onchange="filtrar()">
                 <option value="">Todos Técnicos</option>
                 </select>
         </div>
-        <div class="col-md-3 mb-2">
-            <label for="dataInicio" class="form-label">Data Início:</label>
-            <input type="date" id="dataInicio" class="form-control" onchange="filtrar()">
+        <div class="filter-group">
+            <label for="dataInicio">Data Início:</label>
+            <input type="date" id="dataInicio" onchange="filtrar()">
         </div>
-        <div class="col-md-3 mb-2">
-            <label for="dataFim" class="form-label">Data Fim:</label>
-            <input type="date" id="dataFim" class="form-control" onchange="filtrar()">
+        <div class="filter-group">
+            <label for="dataFim">Data Fim:</label>
+            <input type="date" id="dataFim" onchange="filtrar()">
         </div>
-        <div class="col-md-4 mt-3">
-            <label for="busca" class="form-label">Buscar (OS/Cliente/Placa):</label>
-            <input type="text" id="busca" class="form-control" onkeyup="buscar()">
+        <div class="filter-group">
+            <label for="busca">Buscar (OS/Cliente/Placa):</label>
+            <input type="text" id="busca" onkeyup="buscar()">
         </div>
     </div>
 
-    <div class="table-responsive">
-        <table id="tabelaTodas" class="table table-striped table-hover">
+    <div class="table-wrapper">
+        <table id="tabelaTodas">
             <thead>
                 <tr>
                     <th>O.S</th>
                     <th>DATA</th>
                     <th>CLIENTE</th>
                     <th>PLACA</th>
-                    <th>VALOR OS</th>
-                    <th>VALOR MO</th>
+                    <th style="text-align:right;">VALOR OS</th>
+                    <th style="text-align:right;">VALOR MO</th>
                     <th>PAGAMENTO</th>
                     <th>TÉCNICO</th>
                     <th>O.S TÉCNICO</th>
@@ -132,73 +176,71 @@
         </table>
     </div>
 
-    <div class="modal" id="formModal" tabindex="-1" style="display: none; background: rgba(0,0,0,0.5);">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Cadastrar/Editar O.S</h5>
-                    <button type="button" class="btn-close" onclick="fecharForm()"></button>
-                </div>
-                <div class="modal-body">
-                    <form id="osForm">
-                        <div class="mb-3">
-                            <label for="formOS" class="form-label">O.S:</label>
-                            <input type="text" class="form-control" id="formOS" required>
-                        </div>
-                        <div class="mb-3">
-                            <label for="formData" class="form-label">Data:</label>
-                            <input type="date" class="form-control" id="formData" required>
-                        </div>
-                        <div class="mb-3">
-                            <label for="formCliente" class="form-label">Cliente:</label>
-                            <input type="text" class="form-control" id="formCliente" required>
-                        </div>
-                        <div class="mb-3">
-                            <label for="formPlaca" class="form-label">Placa:</label>
-                            <input type="text" class="form-control" id="formPlaca" required>
-                        </div>
-                        <div class="mb-3">
-                            <label for="formValorOS" class="form-label">Valor O.S (Peças/Serviços):</label>
-                            <input type="number" step="0.01" class="form-control" id="formValorOS">
-                        </div>
-                        <div class="mb-3">
-                            <label for="formValorMO" class="form-label">Valor Mão de Obra:</label>
-                            <input type="number" step="0.01" class="form-control" id="formValorMO">
-                        </div>
-                        <div class="mb-3">
-                            <label for="formPagamento" class="form-label">Pagamento:</label>
-                            <select class="form-select" id="formPagamento">
-                                <option value="">Selecione</option>
-                                <option value="Faturado">Faturado</option>
-                                <option value="Em Aberto">Em Aberto</option>
-                                <option value="PIX">PIX</option>
-                                <option value="Dinheiro">Dinheiro</option>
-                                <option value="Débito">Débito</option>
-                                <option value="Crédito">Crédito</option>
-                            </select>
-                        </div>
-                        <div class="mb-3">
-                            <label for="formTecnico" class="form-label">Técnico:</label>
-                            <input type="text" class="form-control" id="formTecnico">
-                        </div>
-                        <div class="mb-3">
-                            <label for="formOsTecnico" class="form-label">O.S Técnico:</label>
-                            <input type="text" class="form-control" id="formOsTecnico">
-                        </div>
-                        <div class="mb-3">
-                            <label for="formUnidade" class="form-label">Unidade:</label>
-                            <select class="form-select" id="formUnidade">
-                                <option value="Barueri">Barueri</option>
-                                <option value="Cotia">Cotia</option>
-                                <option value="Embu">Embu</option>
-                            </select>
-                        </div>
-                    </form>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" onclick="fecharForm()">Fechar</button>
-                    <button type="button" class="btn btn-primary" id="btnSalvar" onclick="salvarForm()">Salvar O.S</button>
-                </div>
+    <div class="modal" id="formModal" tabindex="-1" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Cadastrar/Editar O.S</h5>
+                <button type="button" class="btn-close" onclick="fecharForm()">X</button>
+            </div>
+            <div class="modal-body">
+                <form id="osForm">
+                    <div class="mb-3">
+                        <label for="formOS" class="form-label">O.S:</label>
+                        <input type="text" class="form-control" id="formOS" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="formData" class="form-label">Data:</label>
+                        <input type="date" class="form-control" id="formData" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="formCliente" class="form-label">Cliente:</label>
+                        <input type="text" class="form-control" id="formCliente" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="formPlaca" class="form-label">Placa:</label>
+                        <input type="text" class="form-control" id="formPlaca" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="formValorOS" class="form-label">Valor O.S (Peças/Serviços):</label>
+                        <input type="number" step="0.01" class="form-control" id="formValorOS">
+                    </div>
+                    <div class="mb-3">
+                        <label for="formValorMO" class="form-label">Valor Mão de Obra:</label>
+                        <input type="number" step="0.01" class="form-control" id="formValorMO">
+                    </div>
+                    <div class="mb-3">
+                        <label for="formPagamento" class="form-label">Pagamento:</label>
+                        <select class="form-select" id="formPagamento">
+                            <option value="">Selecione</option>
+                            <option value="Faturado">Faturado</option>
+                            <option value="Em Aberto">Em Aberto</option>
+                            <option value="PIX">PIX</option>
+                            <option value="Dinheiro">Dinheiro</option>
+                            <option value="Débito">Débito</option>
+                            <option value="Crédito">Crédito</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="formTecnico" class="form-label">Técnico:</label>
+                        <input type="text" class="form-control" id="formTecnico">
+                    </div>
+                    <div class="mb-3">
+                        <label for="formOsTecnico" class="form-label">O.S Técnico:</label>
+                        <input type="text" class="form-control" id="formOsTecnico">
+                    </div>
+                    <div class="mb-3">
+                        <label for="formUnidade" class="form-label">Unidade:</label>
+                        <select class="form-select" id="formUnidade">
+                            <option value="Barueri">Barueri</option>
+                            <option value="Cotia">Cotia</option>
+                            <option value="Embu">Embu</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" style="background-color: #6c757d; color: white;" onclick="fecharForm()">Fechar</button>
+                <button type="button" style="background-color: #007bff; color: white;" id="btnSalvar" onclick="salvarForm()">Salvar O.S</button>
             </div>
         </div>
     </div>
@@ -865,7 +907,5 @@ function imprimirPDF(filtroPagamento=''){
     doc.save(`Relatorio_OS_${filtroPagamento || 'Geral'}_${new Date().toLocaleDateString('pt-BR').replace(/\//g,'-')}.pdf`);
 }
 </script>
-
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
