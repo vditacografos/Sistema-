@@ -26,7 +26,7 @@
         th { background:#4a90e2; color:white; font-weight:600; position:sticky; top:0; z-index:1; }
         tr:nth-child(even) { background:#fbfcfd; }
         tr:hover { background:#eef6ff; }
-        .summary { display:flex; gap:12px; flex-wrap:wrap; margin-bottom:10px; align-items:center; } /* Mudei o margin-bottom para 10px aqui */
+        .summary { display:flex; gap:12px; flex-wrap:wrap; margin-bottom:10px; align-items:center; }
         .card { flex:1 1 150px; padding:14px; border-radius:10px; color:white; font-weight:700; text-align:center; box-shadow:0 2px 6px rgba(0,0,0,0.06); cursor:pointer; transition:0.14s; }
         .card:hover { transform: translateY(-3px); }
         .faturadas { background: linear-gradient(45deg,#2d9cdb,#1b7ecf); }
@@ -35,8 +35,8 @@
         .dinheiro { background: linear-gradient(45deg,#f1c40f,#d4ac0d); color:#222; }
         .debito { background: linear-gradient(45deg,#f39c12,#d68910); color:#222; }
         .credito { background: linear-gradient(45deg,#9b59b6,#8e44ad); }
-        .maoobra { background: linear-gradient(45deg,#6c5ce7,#4b32b8); flex: 1; } /* botão MÃO DE OBRA */
-        .totalgeral { background: linear-gradient(45deg,#222222,#555555); flex: 1; } /* Novo Total Geral */
+        .maoobra { background: linear-gradient(45deg,#6c5ce7,#4b32b8); flex: 1; }
+        .totalgeral { background: linear-gradient(45deg,#222222,#555555); flex: 1; }
         .edit, .delete { border:none; padding:6px 10px; border-radius:6px; color:white; cursor:pointer; margin-right:6px; font-size:12px; }
         .edit { background:#27ae60; }
         .delete { background:#e74c3c; }
@@ -46,15 +46,15 @@
         .modal-content input, .modal-content select, .modal-content button { margin-bottom:10px; width:100%; box-sizing:border-box; }
         #loadingOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.9); display: flex; justify-content: center; align-items: center; z-index:2000; font-size: 18px; font-weight: 700; color: #4a90e2; }
         
-        /* NOVO CSS para a linha inferior (Mão de Obra e Total Geral) */
+        /* CSS para a linha inferior (Mão de Obra e Total Geral) */
         .bottom-summary-row { display: flex; gap: 12px; width: 100%; margin-bottom: 20px;}
-        .bottom-summary-row .card { flex: 1 1 50%; } /* Garante que dividem o espaço igualmente */
+        .bottom-summary-row .card { flex: 1 1 50%; }
 
         @media(max-width:900px){ 
             .card { flex: 1 1 100%; margin-bottom: 5px; } 
             .summary { display:block; } 
-            .bottom-summary-row { display: block; } /* Quebra a linha inferior em telas pequenas */
-            .bottom-summary-row .card { flex: 1 1 100%; } /* Garante que ocupam 100% em telas pequenas */
+            .bottom-summary-row { display: block; }
+            .bottom-summary-row .card { flex: 1 1 100%; }
             table th, table td { font-size:12px; } 
             .buttons { gap:8px; } 
         }
@@ -407,15 +407,15 @@ function atualizarTabelaTodas(){
         tbody.appendChild(tr);    
     });
     
-    // ATUALIZAR VISUALIZAÇÃO DOS TOTAIS (USANDO OS NOVOS TOTAIS CALCULADOS)
+    // ATUALIZAR VISUALIZAÇÃO DOS TOTAIS
     document.getElementById('totalFaturadas').innerHTML = `FATURADAS<br>R$ ${totalF.toFixed(2)}`;    
     document.getElementById('totalAberto').innerHTML = `EM ABERTO<br>R$ ${totalAberto.toFixed(2)}`;    
     document.getElementById('totalPix').innerHTML = `PIX<br>R$ ${totalPix.toFixed(2)}`;    
     document.getElementById('totalDinheiro').innerHTML = `DINHEIRO<br>R$ ${totalDin.toFixed(2)}`;    
     document.getElementById('totalDebito').innerHTML = `DÉBITO<br>R$ ${totalDeb.toFixed(2)}`;    
-    document.getElementById('totalCredito').innerHTML = `CRÉDITO<br>R$ ${totalCredito.toFixed(2)}`;    
-    document.getElementById('totalMo').innerHTML = `MÃO DE OBRA<br>R$ ${totalMo.toFixed(2)}`;
-    document.getElementById('totalGeral').innerHTML = `TOTAL GERAL<br>R$ ${totalGeral.toFixed(2)}`;
+    document.getElementById('totalCredito').innerHTML = `CRÉDITO<br>R$ ${totalCred.toFixed(2)}`; // CORRIGIDO
+    document.getElementById('totalMo').innerHTML = `MÃO DE OBRA<br>R$ ${totalMo.toFixed(2)}`; // CORRIGIDO
+    document.getElementById('totalGeral').innerHTML = `TOTAL GERAL<br>R$ ${totalGeral.toFixed(2)}`; // CORRIGIDO
 }
 
 /* abrir modal direto em edição (helper) */
