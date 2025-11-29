@@ -174,6 +174,7 @@
 /* ===========================   Configuração Firebase / DB   =========================== */
 const { jsPDF } = window.jspdf; // Garante que jsPDF seja carregado corretamente
 
+// !!! ATENÇÃO: SUBSTITUA ESTAS CHAVES PELAS SUAS CHAVES REAIS DO FIREBASE !!!
 const firebaseConfig = {
   apiKey: "AIzaSyC5up-MQFQNeH1ftI8KTMoXI5pY2D2jpgM",
   authDomain: "vditacografosfrentecaixa.firebaseapp.com",
@@ -189,16 +190,6 @@ const db = firebase.firestore(app);
 const osCollection = db.collection('ordens_servico');
 let osData = []; // cache local
 
-/* cores (mantive para PDF se quiser usar theming) */
-const paymentColors = {
-  'Faturado': [173,216,230],
-  'Em Aberto': [255,192,203],
-  'PIX': [175,223,175],
-  'Dinheiro': [255,239,173],
-  'Débito': [253,222,173],
-  'Crédito': [210,180,222]
-};
-
 /* --------------------------   Utilities   -------------------------- */
 function formatDate(iso){
     if(!iso) return '01/01/2000';
@@ -213,7 +204,6 @@ function getTecnicosUnicos(){
     const select = document.getElementById('tecnicoFiltro');
     const current = select.value;
     const tecnicos = [...new Set(osData.map(i=> (i.tecnico||'').toString().trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b, 'pt-BR'));
-    // rebuild options
     select.innerHTML = '<option value="">Todos Técnicos</option>';
     tecnicos.forEach(t => {
         const opt = document.createElement('option');
@@ -221,12 +211,11 @@ function getTecnicosUnicos(){
         opt.textContent = t;
         select.appendChild(opt);
     });
-    // restore previous if still present
     if(current && Array.from(select.options).some(o=>o.value===current)) select.value = current;}
 
 /* --------------------------   Firestore listener   -------------------------- */
 function setupFirestoreListener(){
-    document.getElementById('loadingOverlay').style.display = 'flex'; // Exibe o loading
+    document.getElementById('loadingOverlay').style.display = 'flex';
     osCollection.onSnapshot(snapshot => {
         const changes = snapshot.docChanges();
         changes.forEach(change => {
@@ -240,7 +229,6 @@ function setupFirestoreListener(){
                 osData = osData.filter(i=>i.id!==docData.id);
             }
         });
-        // ordenar por data (DD/MM/YYYY)
         osData.sort((a,b)=>{
             const pa = a.data ? a.data.split('/') : ['01','01','2000'];
             const pb = b.data ? b.data.split('/') : ['01','01','2000'];
@@ -248,7 +236,6 @@ function setupFirestoreListener(){
             const db = new Date(pb[2], pb[1]-1, pb[0]);
             return db - da;
         });
-        // atualizar tecnicos e tabela
         getTecnicosUnicos();
         atualizarTabelaTodas();
         document.getElementById('loadingOverlay').style.display = 'none';
@@ -261,7 +248,6 @@ setupFirestoreListener();
 /* --------------------------   Modal open/close / salvar (suporta edição)   -------------------------- */
 function abrirForm(item=null){
     const modal = document.getElementById('formModal');
-    // clear / populate
     document.getElementById('formOS').value = item ? (item.os||'') : '';
     if(item && item.data){
         const parts = item.data.split('/');
@@ -275,7 +261,6 @@ function abrirForm(item=null){
     document.getElementById('formUnidade').value = item ? (item.unidade||'') : '';
     document.getElementById('formTecnico').value = item ? (item.tecnico||'') : '';
     document.getElementById('formOsTecnico').value = item ? (item.os_tecnico||'') : '';
-    // set edit id marker
     if(item && item.id) {
         modal.dataset.editId = item.id;
         document.getElementById('btnSalvar').textContent = 'Atualizar O.S';
@@ -318,7 +303,7 @@ async function salvarForm(){
         placa,
         valor_os: valorOS.toFixed(2),
         valor_mo: valorMO.toFixed(2),
-        valor: (valorOS + valorMO).toFixed(2), // O valor total é mantido no DB para consistência
+        valor: (valorOS + valorMO).toFixed(2),
         pagamento,
         tecnico,
         os_tecnico: osTecnico,
@@ -341,7 +326,7 @@ async function salvarForm(){
         alert('Erro ao salvar na nuvem');
     }}
 
-/* --------------------------   Atualizar tabela e totais (COMPLETO E CORRIGIDO)   -------------------------- */
+/* --------------------------   Atualizar tabela e totais (CORRIGIDO)   -------------------------- */
 function atualizarTabelaTodas(){
     const unidadeFiltroRaw = document.getElementById('unidade').value;
     const dataInicio = document.getElementById('dataInicio').value;
@@ -349,23 +334,18 @@ function atualizarTabelaTodas(){
     const termoBusca = document.getElementById('busca').value.toLowerCase();
     const tecnicoFiltroRaw = document.getElementById('tecnicoFiltro').value;
 
-    // PADRONIZAÇÃO DOS FILTROS
     const unidadeFiltro = unidadeFiltroRaw ? unidadeFiltroRaw.toString().toLowerCase().trim() : '';
     const tecnicoFiltro = tecnicoFiltroRaw ? tecnicoFiltroRaw.toString().toLowerCase().trim() : '';
 
     const tbody = document.querySelector('#tabelaTodas tbody');
     tbody.innerHTML = '';
 
-    // ZERAR TOTAIS ANTES DE RECALCULAR
     let totalF = 0, totalAberto = 0, totalPix = 0, totalDin = 0, totalDeb = 0, totalCred = 0, totalMo = 0, totalGeral = 0;
 
     const dadosFiltrados = osData.filter(item => {
         const itemDate = item.data ? item.data.split('/').reverse().join('-') : '2000-01-01';
-
-        // Garante que os valores são lidos como números
         const itemValorOS = parseFloat(item.valor_os || 0);
         const itemValorMO = parseFloat(item.valor_mo || 0);
-
         const itemPagamento = (item.pagamento || '').toString().toLowerCase().trim();
         const itemTecnico = (item.tecnico || '').toString().toLowerCase().trim();
         const itemUnidade = (item.unidade || '').toString().toLowerCase().trim();
@@ -378,23 +358,17 @@ function atualizarTabelaTodas(){
         if((item.cliente||'').toUpperCase().includes('CANCELADA')) return false;
         if(termoBusca && !((item.cliente||'').toLowerCase().includes(termoBusca) || (item.placa||'').toLowerCase().includes(termoBusca) || (item.os||'').toLowerCase().includes(termoBusca))) return false;
 
-        // CÁLCULO DOS TOTAIS (PARA TODOS OS ITENS QUE PASSAM NOS FILTROS ATIVOS)
+        // CÁLCULO DOS TOTAIS
+        const pagamentoClean = itemPagamento.replace(/á|à|ã/g, 'a').replace(/é|è/g, 'e').replace(/í|ì/g, 'i').replace(/ó|ò|õ|ô/g, 'o').replace(/ú|ù/g, 'u').replace(/ /g, '').trim();
 
-        // Normaliza o pagamento do item para evitar problemas de acentuação/case
-        const pagamentoClean = itemPagamento.replace(/á|à|ã/g, 'a').replace(/é|è/g, 'e').replace(/í|ì/g, 'i').replace(/ó|ò|õ/g, 'o').replace(/ú|ù/g, 'u').replace(/ /g, '').trim();
-
-        // Pagamentos (SOMAM SÓ O VALOR OS - Valor de Vendas/Itens)
         if(pagamentoClean === 'faturado') totalF += itemValorOS;
         if(pagamentoClean === 'emaberto') totalAberto += itemValorOS;
         if(pagamentoClean === 'pix') totalPix += itemValorOS;
         if(pagamentoClean === 'dinheiro') totalDin += itemValorOS;
-        if(pagamentoClean === 'debito') totalDeb += itemValorOS; // Acentuação removida para comparação
-        if(pagamentoClean === 'credito') totalCred += itemValorOS; // Acentuação removida para comparação
+        if(pagamentoClean === 'debito') totalDeb += itemValorOS;
+        if(pagamentoClean === 'credito') totalCred += itemValorOS;
 
-        // Mão de Obra (SOMA SÓ O VALOR MO)
         totalMo += itemValorMO;
-
-        // TOTAL GERAL (SOMA O VALOR OS - Vendas/Itens)
         totalGeral += itemValorOS;
 
         return true;
@@ -410,8 +384,8 @@ function atualizarTabelaTodas(){
                         <td>${item.data || ''}</td>
                         <td>${item.cliente || ''}</td>
                         <td>${item.placa || ''}</td>
-                        <td style="text-align:right;">R$ ${valorOs.toFixed(2)}</td>
-                        <td style="text-align:right;">R$ ${valorMo.toFixed(2)}</td>
+                        <td style="text-align:right;">R$ ${valorOs.toFixed(2).replace('.', ',')}</td>
+                        <td style="text-align:right;">R$ ${valorMo.toFixed(2).replace('.', ',')}</td>
                         <td>${item.pagamento || ''}</td>
                         <td>${item.tecnico || ''}</td>
                         <td>${item.os_tecnico || ''}</td>
@@ -431,13 +405,11 @@ function atualizarTabelaTodas(){
     document.getElementById('totalGeral').innerHTML = `TOTAL GERAL<br>R$ ${totalGeral.toFixed(2).replace('.', ',')}`;
 }
 
-/* abrir modal direto em edição (helper) */
 function abrirFormForEdit(id){
     const item = osData.find(d => d.id === id);
     if(!item){ alert('Registro não encontrado'); return; }
     abrirForm(item);}
 
-/* apagar */
 async function apagarOS(id){
     if(!confirm('Deseja apagar esta O.S? Esta ação é irreversível.')) return;
     try{
@@ -448,7 +420,6 @@ async function apagarOS(id){
         alert('Erro ao apagar');
     }}
 
-/* limpar filtros */
 function limparFiltros(){
     document.getElementById('unidade').value = '';
     document.getElementById('tecnicoFiltro').value = '';
@@ -459,7 +430,6 @@ function limparFiltros(){
 function filtrar(){ atualizarTabelaTodas(); }
 function buscar(){ atualizarTabelaTodas(); }
 
-/* limpar todos os dados (cuidado!) */
 async function limparDados(){
     if(!confirm('Deseja limpar TODOS os dados NA NUVEM?')) return;
     const snapshot = await osCollection.get();
@@ -473,7 +443,7 @@ async function limparDados(){
         alert('Erro ao apagar dados');
     }}
 
-/* --------------------------   Export / Import Excel   -------------------------- */
+/* --------------------------   Export / Import Excel (Sem alterações)   -------------------------- */
 function exportExcel(){
     const items = osData.map(it => ({
         'O S': it.os || '',
@@ -604,13 +574,12 @@ function lerExcel(event){
             } finally {
                 arquivosProcessados++;
                 if(arquivosProcessados === files.length){
-                    // Finaliza o processamento de todos os arquivos
                     if(dadosCombinados.length > 0){
                         subirDadosExcel(dadosCombinados);
                     } else {
                         alert('Nenhuma O.S. válida encontrada nos arquivos.');
                     }
-                    event.target.value = null; // Limpa o input file
+                    event.target.value = null;
                 }
             }
         };
@@ -623,7 +592,6 @@ function lerExcel(event){
         reader.readAsBinaryString(file);
     }
 
-    // Processar múltiplos arquivos
     for (let i = 0; i < files.length; i++) {
         processarArquivo(files[i]);
     }
@@ -636,7 +604,7 @@ async function subirDadosExcel(dados){
     let sucesso = 0;
     try {
         dados.forEach(registro => {
-            const docRef = osCollection.doc(); // Cria uma nova referência de documento
+            const docRef = osCollection.doc();
             batch.set({...registro, timestamp: firebase.firestore.FieldValue.serverTimestamp()});
             sucesso++;
         });
@@ -647,11 +615,10 @@ async function subirDadosExcel(dados){
         alert(`Erro ao importar dados. ${sucesso} O.S. foram importadas antes do erro.`);
     } finally {
         document.getElementById('loadingOverlay').style.display = 'none';
-        // O listener do Firestore fará a atualização automática
     }
 }
 
-/* --------------------------   Geração de PDF (COMPLETO E CORRIGIDO)   -------------------------- */
+/* --------------------------   Geração de PDF (FINAL: Total só na última página)   -------------------------- */
 /**
  * @param {string} categoria - Chave de filtro: 'Geral', 'Faturado', 'EmAberto', 'PIX', 'Dinheiro', 'Debito', 'Credito', 'MaoObra'
  */
@@ -678,10 +645,9 @@ function imprimirPDF(categoria) {
 
     // 2. Filtrar os dados aplicando TODOS os filtros
     const dadosFiltrados = osData.filter(item => {
-        // Normaliza o pagamento do item do DB para comparação (remove acentos e espaços)
-        const pagamentoClean = (item.pagamento || '').toLowerCase().trim().replace(/á|à|ã/g, 'a').replace(/é|è/g, 'e').replace(/í|ì/g, 'i').replace(/ó|ò|õ/g, 'o').replace(/ú|ù/g, 'u').replace(/ /g, '').trim();
+        // Normaliza o pagamento do item do DB (sem acentos e espaços)
+        const pagamentoClean = (item.pagamento || '').toLowerCase().trim().replace(/á|à|ã/g, 'a').replace(/é|è/g, 'e').replace(/í|ì/g, 'i').replace(/ó|ò|õ|ô/g, 'o').replace(/ú|ù/g, 'u').replace(/ /g, '').trim();
 
-        // Aplica o filtro da tabela (Unidade, Técnico, Data, Busca)
         const itemDate = item.data ? item.data.split('/').reverse().join('-') : '2000-01-01';
         const itemUnidade = (item.unidade || '').toString().toLowerCase().trim();
         const itemTecnico = (item.tecnico || '').toString().toLowerCase().trim();
@@ -692,15 +658,11 @@ function imprimirPDF(categoria) {
         if (dataInicio && itemDate < dataInicio) return false;
         if (dataFim && itemDate > dataFim) return false;
         if (termoBusca && !((item.cliente||'').toLowerCase().includes(termoBusca) || (item.placa||'').toLowerCase().includes(termoBusca) || (item.os||'').toLowerCase().includes(termoBusca))) return false;
-        // Exclui O.S. Canceladas
         if ((item.cliente || '').toUpperCase().includes('CANCELADA')) return false;
 
-
         // --- FILTRO DE CATEGORIA DE PAGAMENTO (do botão clicado) ---
-        if (categoriaNormalizada === 'geral') return true;
-        if (categoriaNormalizada === 'maoobra') return true; 
+        if (categoriaNormalizada === 'geral' || categoriaNormalizada === 'maoobra') return true;
         
-        // Filtro por Forma de Pagamento (comparação com a chave limpa)
         if (categoriaNormalizada === 'faturado' && pagamentoClean === 'faturado') return true;
         if (categoriaNormalizada === 'emaberto' && pagamentoClean === 'emaberto') return true;
         if (categoriaNormalizada === 'pix' && pagamentoClean === 'pix') return true;
@@ -711,12 +673,11 @@ function imprimirPDF(categoria) {
         return false;
     });
 
-    // 3. Calcular os totais (APENAS para os itens que passaram no filtro GERAL e Categoria)
+    // 3. Calcular os totais (APENAS para os itens filtrados)
     dadosFiltrados.forEach(item => {
         const valorOS = parseFloat(item.valor_os || 0);
         const valorMO = parseFloat(item.valor_mo || 0);
 
-        // Acumula os totais para o relatório GERAL
         totalOS += valorOS;
         totalMO += valorMO;
     });
@@ -727,26 +688,23 @@ function imprimirPDF(categoria) {
         case 'geral': 
             titulo = 'Relatório Geral de O.S.'; 
             nomeArquivo = 'Relatorio_Geral.pdf'; 
-            totalDaCategoria = totalOS; // Total de Vendas (OS)
+            totalDaCategoria = totalOS;
             break;
         case 'maoobra': 
             titulo = 'Resumo: Mão de Obra'; 
             nomeArquivo = 'Resumo_MaoObra.pdf';
-            totalDaCategoria = totalMO; // Total de Mão de Obra (MO)
+            totalDaCategoria = totalMO;
             break;
-        default: // Faturado, EmAberto, PIX, Dinheiro, Debito, Credito
-            // Formata o título da categoria
+        default:
             let catTitle = categoria.replace('Debito', 'Débito').replace('Credito', 'Crédito').replace('EmAberto', 'Em Aberto');
-            // Capitaliza a primeira letra de cada palavra (ex: pix -> Pix)
             catTitle = catTitle.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-
             titulo = `Resumo: ${catTitle}`; 
             nomeArquivo = `Resumo_${categoria}.pdf`;
-            totalDaCategoria = totalOS; // Total de Vendas (OS) para a forma de pagamento
+            totalDaCategoria = totalOS;
             break;
     }
     
-    // 5. Adicionar informações de filtro ao título (Técnico, Unidade, Data)
+    // 5. Adicionar informações de filtro ao título
     if (tecnicoFiltro) titulo += ` (Técnico: ${tecnicoFiltro.toUpperCase()})`;
     if (unidadeFiltro) titulo += ` (Unidade: ${unidadeFiltro.toUpperCase()})`;
     
@@ -760,7 +718,6 @@ function imprimirPDF(categoria) {
         const valorOS = parseFloat(item.valor_os || 0).toFixed(2);
         const valorMO = parseFloat(item.valor_mo || 0).toFixed(2);
 
-        // Se for Mão de Obra, o Valor OS listado no PDF deve ser 0 (o foco é o Valor MO)
         const valorOSExibir = categoriaNormalizada === 'maoobra' ? 'R$ 0,00' : `R$ ${valorOS.replace('.', ',')}`;
 
         return [
@@ -794,27 +751,33 @@ function imprimirPDF(categoria) {
         theme: 'striped',
         headStyles: { fillColor: [74, 144, 226] },
         columnStyles: columnStyles,
+        
+        // Rodapé de controle (Repete em todas as páginas)
         didDrawPage: function(data) {
-            // Rodapé com o total da categoria
             doc.setFontSize(10);
             let footerText = `Total de Registros: ${dadosFiltrados.length}`;
             
-            // Texto do rodapé com Totais Detalhados para GERAL
             if (categoriaNormalizada === 'geral') {
                  footerText += ` | Total de Vendas (OS): R$ ${totalOS.toFixed(2).replace('.', ',')} | Total Mão de Obra: R$ ${totalMO.toFixed(2).replace('.', ',')}`;
             }
 
             doc.text(footerText, data.settings.margin.left, doc.internal.pageSize.height - 10);
-            
-            // Coloca o total grande no final da tabela (valor da categoria)
-            const totalValueFormatted = `R$ ${totalDaCategoria.toFixed(2).replace('.', ',')}`;
-            doc.setFontSize(12);
-            doc.setFont('helvetica', 'bold');
-            doc.text(`TOTAL DA CATEGORIA: ${totalValueFormatted}`, 190, data.cursor.y + 10, { align: 'right' });
         }
     });
+    
+    // 8. ADICIONA O TOTAL DA CATEGORIA APENAS UMA VEZ, APÓS O autoTable
+    const finalY = doc.autoTable.previous.finalY || 25; 
 
-    // 8. Salvar o PDF
+    // Garante que o total não fique sobreposto ao rodapé padrão (se houver)
+    const totalValueFormatted = `R$ ${totalDaCategoria.toFixed(2).replace('.', ',')}`;
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    
+    // Posiciona o total na última página, logo abaixo da tabela.
+    doc.text(`TOTAL DA CATEGORIA: ${totalValueFormatted}`, 190, finalY + 10, { align: 'right' });
+
+
+    // 9. Salvar o PDF
     doc.save(nomeArquivo);
 }
 
