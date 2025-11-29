@@ -341,7 +341,7 @@ function atualizarTabelaTodas(){
     const tbody = document.querySelector('#tabelaTodas tbody');
     tbody.innerHTML = '';
 
-    // CORREÇÃO: GARANTIR QUE TODOS OS TOTAIS SÃO INICIALIZADOS COMO NÚMEROS (0)
+    // CORREÇÃO: GARANTINDO QUE TODOS OS TOTAIS SÃO INICIALIZADOS COMO NÚMEROS (0)
     let totalF = 0, totalAberto = 0, totalPix = 0, totalDin = 0, totalDeb = 0, totalCred = 0, totalMo = 0, totalGeral = 0;
 
     const dadosFiltrados = osData.filter(item => {
@@ -402,7 +402,7 @@ function atualizarTabelaTodas(){
     document.getElementById('totalPix').innerHTML = `PIX<br>R$ ${totalPix.toFixed(2).replace('.', ',')}`;
     document.getElementById('totalDinheiro').innerHTML = `DINHEIRO<br>R$ ${totalDin.toFixed(2).replace('.', ',')}`;
     document.getElementById('totalDebito').innerHTML = `DÉBITO<br>R$ ${totalDeb.toFixed(2).replace('.', ',')}`;
-    document.getElementById('totalCredito').innerHTML = `CRÉDITO<br>R$ ${totalCredito.toFixed(2).replace('.', ',')}`;
+    document.getElementById('totalCredito').innerHTML = `CRÉDITO<br>R$ ${totalCred.toFixed(2).replace('.', ',')}`;
     document.getElementById('totalMo').innerHTML = `MÃO DE OBRA<br>R$ ${totalMo.toFixed(2).replace('.', ',')}`;
     document.getElementById('totalGeral').innerHTML = `TOTAL GERAL<br>R$ ${totalGeral.toFixed(2).replace('.', ',')}`;
 }
