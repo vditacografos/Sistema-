@@ -341,7 +341,7 @@ async function salvarForm(){
         alert('Erro ao salvar na nuvem');
     }}
 
-/* --------------------------   Atualizar tabela e totais (CORRIGIDO)   -------------------------- */
+/* --------------------------   Atualizar tabela e totais (COMPLETO E CORRIGIDO)   -------------------------- */
 function atualizarTabelaTodas(){
     const unidadeFiltroRaw = document.getElementById('unidade').value;
     const dataInicio = document.getElementById('dataInicio').value;
@@ -370,7 +370,7 @@ function atualizarTabelaTodas(){
         const itemTecnico = (item.tecnico || '').toString().toLowerCase().trim();
         const itemUnidade = (item.unidade || '').toString().toLowerCase().trim();
 
-        // APLICAÇÃO DOS FILTROS
+        // APLICAÇÃO DOS FILTROS DE TELA
         if(unidadeFiltro && itemUnidade !== unidadeFiltro) return false;
         if(tecnicoFiltro && itemTecnico !== tecnicoFiltro) return false;
         if(dataInicio && itemDate < dataInicio) return false;
@@ -400,6 +400,7 @@ function atualizarTabelaTodas(){
         return true;
     });
 
+    // POPULAÇÃO DA TABELA
     dadosFiltrados.forEach(item => {
         const valorOs = parseFloat(item.valor_os || 0);
         const valorMo = parseFloat(item.valor_mo || 0);
@@ -420,14 +421,14 @@ function atualizarTabelaTodas(){
     });
 
     // ATUALIZAR VISUALIZAÇÃO DOS TOTAIS
-    document.getElementById('totalFaturadas').innerHTML = `FATURADAS<br>R$ ${totalF.toFixed(2)}`;
-    document.getElementById('totalAberto').innerHTML = `EM ABERTO<br>R$ ${totalAberto.toFixed(2)}`;
-    document.getElementById('totalPix').innerHTML = `PIX<br>R$ ${totalPix.toFixed(2)}`;
-    document.getElementById('totalDinheiro').innerHTML = `DINHEIRO<br>R$ ${totalDin.toFixed(2)}`;
-    document.getElementById('totalDebito').innerHTML = `DÉBITO<br>R$ ${totalDeb.toFixed(2)}`;
-    document.getElementById('totalCredito').innerHTML = `CRÉDITO<br>R$ ${totalCred.toFixed(2)}`;
-    document.getElementById('totalMo').innerHTML = `MÃO DE OBRA<br>R$ ${totalMo.toFixed(2)}`;
-    document.getElementById('totalGeral').innerHTML = `TOTAL GERAL<br>R$ ${totalGeral.toFixed(2)}`;
+    document.getElementById('totalFaturadas').innerHTML = `FATURADAS<br>R$ ${totalF.toFixed(2).replace('.', ',')}`;
+    document.getElementById('totalAberto').innerHTML = `EM ABERTO<br>R$ ${totalAberto.toFixed(2).replace('.', ',')}`;
+    document.getElementById('totalPix').innerHTML = `PIX<br>R$ ${totalPix.toFixed(2).replace('.', ',')}`;
+    document.getElementById('totalDinheiro').innerHTML = `DINHEIRO<br>R$ ${totalDin.toFixed(2).replace('.', ',')}`;
+    document.getElementById('totalDebito').innerHTML = `DÉBITO<br>R$ ${totalDeb.toFixed(2).replace('.', ',')}`;
+    document.getElementById('totalCredito').innerHTML = `CRÉDITO<br>R$ ${totalCredito.toFixed(2).replace('.', ',')}`;
+    document.getElementById('totalMo').innerHTML = `MÃO DE OBRA<br>R$ ${totalMo.toFixed(2).replace('.', ',')}`;
+    document.getElementById('totalGeral').innerHTML = `TOTAL GERAL<br>R$ ${totalGeral.toFixed(2).replace('.', ',')}`;
 }
 
 /* abrir modal direto em edição (helper) */
@@ -650,7 +651,7 @@ async function subirDadosExcel(dados){
     }
 }
 
-/* --------------------------   Geração de PDF (CORRIGIDO: Filtro e Lógica de Soma)   -------------------------- */
+/* --------------------------   Geração de PDF (COMPLETO E CORRIGIDO)   -------------------------- */
 /**
  * @param {string} categoria - Chave de filtro: 'Geral', 'Faturado', 'EmAberto', 'PIX', 'Dinheiro', 'Debito', 'Credito', 'MaoObra'
  */
@@ -668,14 +669,14 @@ function imprimirPDF(categoria) {
     let totalMO = 0; // Total de Valor MO (Mão de Obra)
     let totalDaCategoria = 0; // O valor que aparecerá no rodapé/título do PDF
 
-    // Define o filtro da tabela (Data, Unidade, Técnico, Busca)
+    // 1. Capturar TODOS os filtros de TELA
     const unidadeFiltro = document.getElementById('unidade').value.toLowerCase().trim();
     const tecnicoFiltro = document.getElementById('tecnicoFiltro').value.toLowerCase().trim();
     const dataInicio = document.getElementById('dataInicio').value;
     const dataFim = document.getElementById('dataFim').value;
     const termoBusca = document.getElementById('busca').value.toLowerCase();
 
-    // 1. Filtrar os dados
+    // 2. Filtrar os dados aplicando TODOS os filtros
     const dadosFiltrados = osData.filter(item => {
         // Normaliza o pagamento do item do DB para comparação (remove acentos e espaços)
         const pagamentoClean = (item.pagamento || '').toLowerCase().trim().replace(/á|à|ã/g, 'a').replace(/é|è/g, 'e').replace(/í|ì/g, 'i').replace(/ó|ò|õ/g, 'o').replace(/ú|ù/g, 'u').replace(/ /g, '').trim();
@@ -685,6 +686,7 @@ function imprimirPDF(categoria) {
         const itemUnidade = (item.unidade || '').toString().toLowerCase().trim();
         const itemTecnico = (item.tecnico || '').toString().toLowerCase().trim();
         
+        // --- FILTROS DE TELA ---
         if (unidadeFiltro && itemUnidade !== unidadeFiltro) return false;
         if (tecnicoFiltro && itemTecnico !== tecnicoFiltro) return false;
         if (dataInicio && itemDate < dataInicio) return false;
@@ -694,9 +696,9 @@ function imprimirPDF(categoria) {
         if ((item.cliente || '').toUpperCase().includes('CANCELADA')) return false;
 
 
-        // Define o filtro baseado na CHAVE DA CATEGORIA
+        // --- FILTRO DE CATEGORIA DE PAGAMENTO (do botão clicado) ---
         if (categoriaNormalizada === 'geral') return true;
-        if (categoriaNormalizada === 'maoobra') return true; // Para MO, listamos todos (o valor somado será MO)
+        if (categoriaNormalizada === 'maoobra') return true; 
         
         // Filtro por Forma de Pagamento (comparação com a chave limpa)
         if (categoriaNormalizada === 'faturado' && pagamentoClean === 'faturado') return true;
@@ -709,17 +711,17 @@ function imprimirPDF(categoria) {
         return false;
     });
 
-    // 2. Calcular os totais (apenas para os itens filtrados)
+    // 3. Calcular os totais (APENAS para os itens que passaram no filtro GERAL e Categoria)
     dadosFiltrados.forEach(item => {
         const valorOS = parseFloat(item.valor_os || 0);
         const valorMO = parseFloat(item.valor_mo || 0);
 
-        // Acumula os totais gerais (para o relatório geral)
+        // Acumula os totais para o relatório GERAL
         totalOS += valorOS;
         totalMO += valorMO;
     });
 
-    // 3. Determinar o Título e o Total específico da Categoria
+    // 4. Determinar o Título e o Total específico da Categoria
     let nomeArquivo = '';
     switch (categoriaNormalizada) {
         case 'geral': 
@@ -733,19 +735,27 @@ function imprimirPDF(categoria) {
             totalDaCategoria = totalMO; // Total de Mão de Obra (MO)
             break;
         default: // Faturado, EmAberto, PIX, Dinheiro, Debito, Credito
-            titulo = `Resumo: ${categoria.replace('Debito', 'Débito').replace('Credito', 'Crédito').replace('EmAberto', 'Em Aberto')}`; 
+            // Formata o título da categoria
+            let catTitle = categoria.replace('Debito', 'Débito').replace('Credito', 'Crédito').replace('EmAberto', 'Em Aberto');
+            // Capitaliza a primeira letra de cada palavra (ex: pix -> Pix)
+            catTitle = catTitle.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+
+            titulo = `Resumo: ${catTitle}`; 
             nomeArquivo = `Resumo_${categoria}.pdf`;
             totalDaCategoria = totalOS; // Total de Vendas (OS) para a forma de pagamento
             break;
     }
     
-    // Adicionar filtro de data ao título
+    // 5. Adicionar informações de filtro ao título (Técnico, Unidade, Data)
+    if (tecnicoFiltro) titulo += ` (Técnico: ${tecnicoFiltro.toUpperCase()})`;
+    if (unidadeFiltro) titulo += ` (Unidade: ${unidadeFiltro.toUpperCase()})`;
+    
     if (dataInicio || dataFim) {
         const dataStr = (dataInicio ? formatDate(dataInicio) : '') + (dataFim ? ' a ' + formatDate(dataFim) : '');
         titulo += ` (${dataStr.trim()})`;
     }
 
-    // 4. Mapeamento dos dados para a tabela
+    // 6. Mapeamento dos dados para a tabela
     const body = dadosFiltrados.map(item => {
         const valorOS = parseFloat(item.valor_os || 0).toFixed(2);
         const valorMO = parseFloat(item.valor_mo || 0).toFixed(2);
@@ -773,7 +783,7 @@ function imprimirPDF(categoria) {
         5: { halign: 'right' } 
     };
 
-    // 5. Geração do PDF
+    // 7. Geração do PDF
     doc.setFontSize(14);
     doc.text(titulo, 14, 20);
 
@@ -804,7 +814,7 @@ function imprimirPDF(categoria) {
         }
     });
 
-    // 6. Salvar o PDF
+    // 8. Salvar o PDF
     doc.save(nomeArquivo);
 }
 
