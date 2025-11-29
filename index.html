@@ -792,12 +792,12 @@ function imprimirPDF(filtroPagamento = null) {
 
     doc.setFontSize(11);
     doc.text(`--- RESUMO DE TOTAIS ---`, margin, finalY + 5);
-    doc.text(`Faturadas: R$ ${totalFPDF.toFixed(2)}`, margin, finalY + 10);
+    doc.text(`Faturadas: R$ ${totalFaturadasFPDF.toFixed(2)}`, margin, finalY + 10);
     doc.text(`Em Aberto: R$ ${totalAbertoPDF.toFixed(2)}`, margin, finalY + 15);
     doc.text(`PIX: R$ ${totalPixPDF.toFixed(2)}`, margin, finalY + 20);
-    doc.text(`Dinheiro: R$ ${totalDinPDF.toFixed(2)}`, 70, finalY + 10);
-    doc.text(`Débito: R$ ${totalDebPDF.toFixed(2)}`, 70, finalY + 15);
-    doc.text(`Crédito: R$ ${totalCredPDF.toFixed(2)}`, 70, finalY + 20);
+    doc.text(`Dinheiro: R$ ${totalDinheiroPDF.toFixed(2)}`, 70, finalY + 10);
+    doc.text(`Débito: R$ ${totalDebitoPDF.toFixed(2)}`, 70, finalY + 15);
+    doc.text(`Crédito: R$ ${totalCreditoPDF.toFixed(2)}`, 70, finalY + 20);
     doc.text(`Total Mão de Obra: R$ ${totalMoPDF.toFixed(2)}`, 140, finalY + 10);
     doc.setFontSize(14);
     doc.text(`TOTAL GERAL (Valor OS): R$ ${totalGeralPDF.toFixed(2)}`, 140, finalY + 18);
@@ -807,3 +807,4 @@ function imprimirPDF(filtroPagamento = null) {
 </script>
 </body>
 </html>
+
