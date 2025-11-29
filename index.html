@@ -650,7 +650,7 @@ async function subirDadosExcel(dados){
     }
 }
 
-/* --------------------------   Geração de PDF (CORRIGIDO)   -------------------------- */
+/* --------------------------   Geração de PDF (CORRIGIDO: Filtro e Lógica de Soma)   -------------------------- */
 /**
  * @param {string} categoria - Chave de filtro: 'Geral', 'Faturado', 'EmAberto', 'PIX', 'Dinheiro', 'Debito', 'Credito', 'MaoObra'
  */
@@ -664,150 +664,116 @@ function imprimirPDF(categoria) {
     const categoriaNormalizada = categoria.toLowerCase().trim();
 
     let titulo = 'Relatório de O.S. - ';
-    let totalOS = 0;
-    let totalMO = 0;
-    let totalGeral = 0;
+    let totalOS = 0; // Total de Valor OS (Itens/Venda)
+    let totalMO = 0; // Total de Valor MO (Mão de Obra)
+    let totalDaCategoria = 0; // O valor que aparecerá no rodapé/título do PDF
+
+    // Define o filtro da tabela (Data, Unidade, Técnico, Busca)
+    const unidadeFiltro = document.getElementById('unidade').value.toLowerCase().trim();
+    const tecnicoFiltro = document.getElementById('tecnicoFiltro').value.toLowerCase().trim();
+    const dataInicio = document.getElementById('dataInicio').value;
+    const dataFim = document.getElementById('dataFim').value;
+    const termoBusca = document.getElementById('busca').value.toLowerCase();
 
     // 1. Filtrar os dados
     const dadosFiltrados = osData.filter(item => {
-        // Normaliza o pagamento do item do DB para comparação
+        // Normaliza o pagamento do item do DB para comparação (remove acentos e espaços)
         const pagamentoClean = (item.pagamento || '').toLowerCase().trim().replace(/á|à|ã/g, 'a').replace(/é|è/g, 'e').replace(/í|ì/g, 'i').replace(/ó|ò|õ/g, 'o').replace(/ú|ù/g, 'u').replace(/ /g, '').trim();
 
-        // Valores numéricos
-        const valorOS = parseFloat(item.valor_os || 0);
-        const valorMO = parseFloat(item.valor_mo || 0);
-
-        // Define o filtro baseado na chave (categoria)
-        let deveIncluir = false;
-
-        if (categoriaNormalizada === 'geral') {
-            deveIncluir = true;
-        } else if (categoriaNormalizada === 'faturado' && pagamentoClean === 'faturado') {
-            deveIncluir = true;
-        } else if (categoriaNormalizada === 'emaberto' && pagamentoClean === 'emaberto') {
-            deveIncluir = true;
-        } else if (categoriaNormalizada === 'pix' && pagamentoClean === 'pix') {
-            deveIncluir = true;
-        } else if (categoriaNormalizada === 'dinheiro' && pagamentoClean === 'dinheiro') {
-            deveIncluir = true;
-        } else if (categoriaNormalizada === 'debito' && pagamentoClean === 'debito') {
-            deveIncluir = true;
-        } else if (categoriaNormalizada === 'credito' && pagamentoClean === 'credito') {
-            deveIncluir = true;
-        } else if (categoriaNormalizada === 'maoobra') {
-            // Para Mão de Obra, incluímos todos os registros válidos para somar M.O.
-            deveIncluir = true;
-        }
-
-        // Se o item for incluído, somamos os totais
-        if (deveIncluir) {
-            // Na Mão de Obra, o total é o VALOR MO. No restante, o total é o VALOR OS
-            if (categoriaNormalizada === 'maoobra') {
-                totalGeral += valorMO; // Total MO
-            } else if (categoriaNormalizada !== 'geral') {
-                totalGeral += valorOS; // Total da forma de pagamento (Valor OS)
-            }
-            
-            // Para o Relatório GERAL
-            if (categoriaNormalizada === 'geral') {
-                totalOS += valorOS;
-                totalMO += valorMO;
-                totalGeral = totalOS; // Total Geral da O.S. (Valor OS)
-            }
-        }
-
-        // Exclui O.S. Canceladas
-        if ((item.cliente || '').toUpperCase().includes('CANCELADA')) {
-            deveIncluir = false;
-        }
-        
-        // Aplica o filtro da tabela (Data, Unidade, Técnico, Busca) ao PDF
-        const unidadeFiltro = document.getElementById('unidade').value.toLowerCase().trim();
-        const tecnicoFiltro = document.getElementById('tecnicoFiltro').value.toLowerCase().trim();
-        const dataInicio = document.getElementById('dataInicio').value;
-        const dataFim = document.getElementById('dataFim').value;
-        const termoBusca = document.getElementById('busca').value.toLowerCase();
+        // Aplica o filtro da tabela (Unidade, Técnico, Data, Busca)
         const itemDate = item.data ? item.data.split('/').reverse().join('-') : '2000-01-01';
         const itemUnidade = (item.unidade || '').toString().toLowerCase().trim();
         const itemTecnico = (item.tecnico || '').toString().toLowerCase().trim();
-
+        
         if (unidadeFiltro && itemUnidade !== unidadeFiltro) return false;
         if (tecnicoFiltro && itemTecnico !== tecnicoFiltro) return false;
         if (dataInicio && itemDate < dataInicio) return false;
         if (dataFim && itemDate > dataFim) return false;
         if (termoBusca && !((item.cliente||'').toLowerCase().includes(termoBusca) || (item.placa||'').toLowerCase().includes(termoBusca) || (item.os||'').toLowerCase().includes(termoBusca))) return false;
+        // Exclui O.S. Canceladas
+        if ((item.cliente || '').toUpperCase().includes('CANCELADA')) return false;
 
-        return deveIncluir;
-    }).map(item => {
-        // Mapeamento dos dados para a tabela do PDF
+
+        // Define o filtro baseado na CHAVE DA CATEGORIA
+        if (categoriaNormalizada === 'geral') return true;
+        if (categoriaNormalizada === 'maoobra') return true; // Para MO, listamos todos (o valor somado será MO)
+        
+        // Filtro por Forma de Pagamento (comparação com a chave limpa)
+        if (categoriaNormalizada === 'faturado' && pagamentoClean === 'faturado') return true;
+        if (categoriaNormalizada === 'emaberto' && pagamentoClean === 'emaberto') return true;
+        if (categoriaNormalizada === 'pix' && pagamentoClean === 'pix') return true;
+        if (categoriaNormalizada === 'dinheiro' && pagamentoClean === 'dinheiro') return true;
+        if (categoriaNormalizada === 'debito' && pagamentoClean === 'debito') return true;
+        if (categoriaNormalizada === 'credito' && pagamentoClean === 'credito') return true;
+        
+        return false;
+    });
+
+    // 2. Calcular os totais (apenas para os itens filtrados)
+    dadosFiltrados.forEach(item => {
+        const valorOS = parseFloat(item.valor_os || 0);
+        const valorMO = parseFloat(item.valor_mo || 0);
+
+        // Acumula os totais gerais (para o relatório geral)
+        totalOS += valorOS;
+        totalMO += valorMO;
+    });
+
+    // 3. Determinar o Título e o Total específico da Categoria
+    let nomeArquivo = '';
+    switch (categoriaNormalizada) {
+        case 'geral': 
+            titulo = 'Relatório Geral de O.S.'; 
+            nomeArquivo = 'Relatorio_Geral.pdf'; 
+            totalDaCategoria = totalOS; // Total de Vendas (OS)
+            break;
+        case 'maoobra': 
+            titulo = 'Resumo: Mão de Obra'; 
+            nomeArquivo = 'Resumo_MaoObra.pdf';
+            totalDaCategoria = totalMO; // Total de Mão de Obra (MO)
+            break;
+        default: // Faturado, EmAberto, PIX, Dinheiro, Debito, Credito
+            titulo = `Resumo: ${categoria.replace('Debito', 'Débito').replace('Credito', 'Crédito').replace('EmAberto', 'Em Aberto')}`; 
+            nomeArquivo = `Resumo_${categoria}.pdf`;
+            totalDaCategoria = totalOS; // Total de Vendas (OS) para a forma de pagamento
+            break;
+    }
+    
+    // Adicionar filtro de data ao título
+    if (dataInicio || dataFim) {
+        const dataStr = (dataInicio ? formatDate(dataInicio) : '') + (dataFim ? ' a ' + formatDate(dataFim) : '');
+        titulo += ` (${dataStr.trim()})`;
+    }
+
+    // 4. Mapeamento dos dados para a tabela
+    const body = dadosFiltrados.map(item => {
         const valorOS = parseFloat(item.valor_os || 0).toFixed(2);
         const valorMO = parseFloat(item.valor_mo || 0).toFixed(2);
 
-        // Se for Mão de Obra, o Valor OS é 0, e o total é o Valor MO
-        if (categoriaNormalizada === 'maoobra') {
-            return [
-                item.os || '',
-                item.data || '',
-                item.cliente || '',
-                item.placa || '',
-                'R$ 0,00', // Força R$ 0,00 para OS
-                `R$ ${valorMO.replace('.', ',')}`,
-                item.pagamento || '',
-                item.tecnico || '',
-                item.unidade || ''
-            ];
-        }
+        // Se for Mão de Obra, o Valor OS listado no PDF deve ser 0 (o foco é o Valor MO)
+        const valorOSExibir = categoriaNormalizada === 'maoobra' ? 'R$ 0,00' : `R$ ${valorOS.replace('.', ',')}`;
 
-        // Para os demais
         return [
             item.os || '',
             item.data || '',
             item.cliente || '',
             item.placa || '',
-            `R$ ${valorOS.replace('.', ',')}`,
+            valorOSExibir,
             `R$ ${valorMO.replace('.', ',')}`,
             item.pagamento || '',
             item.tecnico || '',
             item.unidade || ''
         ];
     });
-
-    // 2. Definir o título do relatório e o nome do arquivo
-    let nomeArquivo = '';
-    switch (categoriaNormalizada) {
-        case 'geral': titulo = 'Relatório Geral de O.S.'; nomeArquivo = 'Relatorio_Geral.pdf'; break;
-        case 'faturado': titulo = 'Resumo: Faturadas'; nomeArquivo = 'Resumo_Faturadas.pdf'; break;
-        case 'emaberto': titulo = 'Resumo: Em Aberto'; nomeArquivo = 'Resumo_EmAberto.pdf'; break;
-        case 'pix': titulo = 'Resumo: PIX'; nomeArquivo = 'Resumo_PIX.pdf'; break;
-        case 'dinheiro': titulo = 'Resumo: Dinheiro'; nomeArquivo = 'Resumo_Dinheiro.pdf'; break;
-        case 'debito': titulo = 'Resumo: Débito'; nomeArquivo = 'Resumo_Debito.pdf'; break;
-        case 'credito': titulo = 'Resumo: Crédito'; nomeArquivo = 'Resumo_Credito.pdf'; break;
-        case 'maoobra': titulo = 'Resumo: Mão de Obra'; nomeArquivo = 'Resumo_MaoObra.pdf'; break;
-        default: titulo = 'Relatório de O.S.'; nomeArquivo = 'Relatorio_OS.pdf'; break;
-    }
     
-    // Adicionar filtro de data ao título
-    const dataInicio = document.getElementById('dataInicio').value;
-    const dataFim = document.getElementById('dataFim').value;
-    if (dataInicio && dataFim) {
-        titulo += ` (${formatDate(dataInicio)} a ${formatDate(dataFim)})`;
-    } else if (dataInicio) {
-        titulo += ` (A partir de ${formatDate(dataInicio)})`;
-    } else if (dataFim) {
-        titulo += ` (Até ${formatDate(dataFim)})`;
-    }
-
-
-    // 3. Configuração do AutoTable
+    // ... Configuração do AutoTable ...
     const head = [['O.S', 'DATA', 'CLIENTE', 'PLACA', 'VALOR OS', 'VALOR MO', 'PAGAMENTO', 'TECNICO', 'UNIDADE']];
     const columnStyles = {
-        4: { halign: 'right' }, // VALOR OS
-        5: { halign: 'right' }  // VALOR MO
+        4: { halign: 'right' }, 
+        5: { halign: 'right' } 
     };
-    
-    const body = dadosFiltrados;
 
-    // 4. Geração do PDF
+    // 5. Geração do PDF
     doc.setFontSize(14);
     doc.text(titulo, 14, 20);
 
@@ -816,41 +782,29 @@ function imprimirPDF(categoria) {
         body: body,
         startY: 25,
         theme: 'striped',
-        headStyles: { fillColor: [74, 144, 226] }, // Cor do cabeçalho (igual ao tema do site)
+        headStyles: { fillColor: [74, 144, 226] },
         columnStyles: columnStyles,
-        didParseCell: function(data) {
-            // Adiciona R$ aos valores
-            if (data.column.index === 4 || data.column.index === 5) {
-                // jspdf-autotable já faz o alinhamento via columnStyles, mas podemos garantir a formatação final aqui se necessário.
-            }
-        },
         didDrawPage: function(data) {
             // Rodapé com o total da categoria
             doc.setFontSize(10);
             let footerText = `Total de Registros: ${dadosFiltrados.length}`;
-            let totalValueFormatted = 'R$ 0,00';
             
+            // Texto do rodapé com Totais Detalhados para GERAL
             if (categoriaNormalizada === 'geral') {
-                footerText += ` | Total de Vendas (OS): R$ ${totalOS.toFixed(2).replace('.', ',')} | Total Mão de Obra: R$ ${totalMO.toFixed(2).replace('.', ',')}`;
-                totalValueFormatted = `R$ ${totalOS.toFixed(2).replace('.', ',')}`;
-            } else if (categoriaNormalizada === 'maoobra') {
-                footerText += ` | Total Mão de Obra: R$ ${totalGeral.toFixed(2).replace('.', ',')}`;
-                totalValueFormatted = `R$ ${totalGeral.toFixed(2).replace('.', ',')}`;
-            } else {
-                footerText += ` | Total ${titulo.replace('Resumo: ', '')}: R$ ${totalGeral.toFixed(2).replace('.', ',')}`;
-                totalValueFormatted = `R$ ${totalGeral.toFixed(2).replace('.', ',')}`;
+                 footerText += ` | Total de Vendas (OS): R$ ${totalOS.toFixed(2).replace('.', ',')} | Total Mão de Obra: R$ ${totalMO.toFixed(2).replace('.', ',')}`;
             }
 
             doc.text(footerText, data.settings.margin.left, doc.internal.pageSize.height - 10);
             
-            // Coloca o total grande no final da tabela (opcional)
+            // Coloca o total grande no final da tabela (valor da categoria)
+            const totalValueFormatted = `R$ ${totalDaCategoria.toFixed(2).replace('.', ',')}`;
             doc.setFontSize(12);
             doc.setFont('helvetica', 'bold');
             doc.text(`TOTAL DA CATEGORIA: ${totalValueFormatted}`, 190, data.cursor.y + 10, { align: 'right' });
         }
     });
 
-    // 5. Salvar o PDF
+    // 6. Salvar o PDF
     doc.save(nomeArquivo);
 }
 
