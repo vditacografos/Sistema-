@@ -11,7 +11,7 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
-    
+
     <style>
         /* Estilos CSS */
         body { font-family: 'Poppins', sans-serif; margin:0; padding:0; background:#f4f6f9; color:#222; }
@@ -45,18 +45,17 @@
         .modal-content h2 { color:#4a90e2; margin-top:0; margin-bottom:8px; }
         .modal-content input, .modal-content select, .modal-content button { margin-bottom:10px; width:100%; box-sizing:border-box; }
         #loadingOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.9); display: flex; justify-content: center; align-items: center; z-index:2000; font-size: 18px; font-weight: 700; color: #4a90e2; }
-        
+
         /* CSS para a linha inferior (Mão de Obra e Total Geral) */
         .bottom-summary-row { display: flex; gap: 12px; width: 100%; margin-bottom: 20px;}
         .bottom-summary-row .card { flex: 1 1 50%; }
-
-        @media(max-width:900px){ 
-            .card { flex: 1 1 100%; margin-bottom: 5px; } 
-            .summary { display:block; } 
+        @media(max-width:900px){
+            .card { flex: 1 1 100%; margin-bottom: 5px; }
+            .summary { display:block; }
             .bottom-summary-row { display: block; }
             .bottom-summary-row .card { flex: 1 1 100%; }
-            table th, table td { font-size:12px; } 
-            .buttons { gap:8px; } 
+            table th, table td { font-size:12px; }
+            .buttons { gap:8px; }
         }
         #headerLogo { max-height:72px; width:auto; display:block; margin:0 auto 6px auto; }
         #headerTitle { margin:0; font-size:18px; font-weight:700; text-align:center; }
@@ -69,18 +68,17 @@
             <img id="headerLogo" src="logo.png" alt="Logo VDI Tacógrafos">
             <h1 id="headerTitle">VDI TACÓGRAFOS — Frente de Caixa (Barueri · Cotia · Embu)</h1>
         </header>
-        
+
         <div class="container">
             <div class="buttons">
                 <button onclick="abrirForm()">+ Nova O.S</button>
                 <button onclick="exportExcel()">Exportar Excel</button>
                 <button onclick="importExcel()">Importar Excel</button>
-                <button onclick="imprimirPDF()">Imprimir / Salvar PDF</button>
-                <button onclick="limparDados()">Limpar dados</button>
+                <button onclick="imprimirPDF('Geral')">Imprimir / Salvar PDF</button> <button onclick="limparDados()">Limpar dados</button>
             </div>
-            
+
             <input type="file" id="inputExcel" accept=".xlsx,.csv" style="display:none" onchange="lerExcel(event)" multiple>
-            
+
             <div class="filters">
                 <select id="unidade" onchange="atualizarTabelaTodas()">
                     <option value="">Todas Unidades</option>
@@ -88,22 +86,22 @@
                     <option value="Cotia">Cotia</option>
                     <option value="Embu">Embu</option>
                 </select>
-                
+
                 <select id="tecnicoFiltro" onchange="atualizarTabelaTodas()">
                     <option value="">Todos Técnicos</option>
                 </select>
-                
+
                 <input type="date" id="dataInicio">
                 <input type="date" id="dataFim">
                 <button onclick="filtrar()">Filtrar</button>
                 <button onclick="limparFiltros()">Limpar filtros</button>
             </div>
-            
+
             <div class="search">
                 <input type="text" id="busca" placeholder="Buscar cliente, placa ou O.S">
                 <button onclick="buscar()">Buscar</button>
             </div>
-            
+
             <h3>Todas as O.S</h3>
             <table id="tabelaTodas">
                 <thead>
@@ -123,25 +121,23 @@
                 </thead>
                 <tbody></tbody>
             </table>
-            
+
             <h3>Resumo — Controle de Caixa Diário</h3>
-            
+
             <div class="summary">
                 <div class="card faturadas" id="totalFaturadas" onclick="imprimirPDF('Faturado')">FATURADAS<br>R$ 0,00</div>
-                <div class="card emaberto" id="totalAberto" onclick="imprimirPDF('Em Aberto')">EM ABERTO<br>R$ 0,00</div>
+                <div class="card emaberto" id="totalAberto" onclick="imprimirPDF('EmAberto')">EM ABERTO<br>R$ 0,00</div>
                 <div class="card pix" id="totalPix" onclick="imprimirPDF('PIX')">PIX<br>R$ 0,00</div>
                 <div class="card dinheiro" id="totalDinheiro" onclick="imprimirPDF('Dinheiro')">DINHEIRO<br>R$ 0,00</div>
-                <div class="card debito" id="totalDebito" onclick="imprimirPDF('Débito')">DÉBITO<br>R$ 0,00</div>
-                <div class="card credito" id="totalCredito" onclick="imprimirPDF('Crédito')">CRÉDITO<br>R$ 0,00</div>
+                <div class="card debito" id="totalDebito" onclick="imprimirPDF('Debito')">DÉBITO<br>R$ 0,00</div>
+                <div class="card credito" id="totalCredito" onclick="imprimirPDF('Credito')">CRÉDITO<br>R$ 0,00</div>
             </div>
-
             <div class="bottom-summary-row">
-                <div class="card maoobra" id="totalMo" onclick="imprimirPDF('Mão de Obra')">MÃO DE OBRA<br>R$ 0,00</div>
+                <div class="card maoobra" id="totalMo" onclick="imprimirPDF('MaoObra')">MÃO DE OBRA<br>R$ 0,00</div>
                 <div class="card totalgeral" id="totalGeral" onclick="imprimirPDF('Geral')">TOTAL GERAL<br>R$ 0,00</div>
             </div>
-            
         </div>
-        
+
         <div id="formModal" class="modal">
             <div class="modal-content">
                 <h2>Nova O.S</h2>
@@ -176,223 +172,239 @@
 
 <script>
 /* ===========================   Configuração Firebase / DB   =========================== */
-const firebaseConfig = {  apiKey: "AIzaSyC5up-MQFQNeH1ftI8KTMoXI5pY2D2jpgM",  authDomain: "vditacografosfrentecaixa.firebaseapp.com",  databaseURL: "https://vditacografosfrentecaixa-default-rtdb.firebaseio.com",  projectId: "vditacografosfrentecaixa",  storageBucket: "vditacografosfrentecaixa.firebasestorage.app",  messagingSenderId: "1008625665373",  appId: "1:1008625665373:web:1f1870898ecb04b4b854b4",  measurementId: "G-9SYYV1VLNY"};
+const { jsPDF } = window.jspdf; // Garante que jsPDF seja carregado corretamente
+
+const firebaseConfig = {
+  apiKey: "AIzaSyC5up-MQFQNeH1ftI8KTMoXI5pY2D2jpgM",
+  authDomain: "vditacografosfrentecaixa.firebaseapp.com",
+  databaseURL: "https://vditacografosfrentecaixa-default-rtdb.firebaseio.com",
+  projectId: "vditacografosfrentecaixa",
+  storageBucket: "vditacografosfrentecaixa.firebasestorage.app",
+  messagingSenderId: "1008625665373",
+  appId: "1:1008625665373:web:1f1870898ecb04b4b854b4",
+  measurementId: "G-9SYYV1VLNY"
+};
 const app = firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore(app);
 const osCollection = db.collection('ordens_servico');
 let osData = []; // cache local
+
 /* cores (mantive para PDF se quiser usar theming) */
-const paymentColors = {  'Faturado': [173,216,230],  'Em Aberto': [255,192,203],  'PIX': [175,223,175],  'Dinheiro': [255,239,173],  'Débito': [253,222,173],  'Crédito': [210,180,222]};
+const paymentColors = {
+  'Faturado': [173,216,230],
+  'Em Aberto': [255,192,203],
+  'PIX': [175,223,175],
+  'Dinheiro': [255,239,173],
+  'Débito': [253,222,173],
+  'Crédito': [210,180,222]
+};
 
 /* --------------------------   Utilities   -------------------------- */
-function formatDate(iso){    if(!iso) return '01/01/2000';    const parts = iso.split('-');    if(parts.length !== 3) return iso;    return `${parts[2]}/${parts[1]}/${parts[0]}`;}
+function formatDate(iso){
+    if(!iso) return '01/01/2000';
+    const parts = iso.split('-');
+    if(parts.length !== 3) return iso;
+    return `${parts[2]}/${parts[1]}/${parts[0]}`;}
+
 function normalizeText(s){ return String(s||'').toLowerCase().trim(); }
 
 /* --------------------------   Preenche select técnicos   -------------------------- */
-function getTecnicosUnicos(){    
-    const select = document.getElementById('tecnicoFiltro');    
-    const current = select.value;    
-    const tecnicos = [...new Set(osData.map(i=> (i.tecnico||'').toString().trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b, 'pt-BR'));    
-    // rebuild options    
-    select.innerHTML = '<option value="">Todos Técnicos</option>';    
-    tecnicos.forEach(t => {        
-        const opt = document.createElement('option');        
-        opt.value = t;        
-        opt.textContent = t;        
-        select.appendChild(opt);    
-    });    
-    // restore previous if still present    
-    if(current && Array.from(select.options).some(o=>o.value===current)) select.value = current;
-}
+function getTecnicosUnicos(){
+    const select = document.getElementById('tecnicoFiltro');
+    const current = select.value;
+    const tecnicos = [...new Set(osData.map(i=> (i.tecnico||'').toString().trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b, 'pt-BR'));
+    // rebuild options
+    select.innerHTML = '<option value="">Todos Técnicos</option>';
+    tecnicos.forEach(t => {
+        const opt = document.createElement('option');
+        opt.value = t;
+        opt.textContent = t;
+        select.appendChild(opt);
+    });
+    // restore previous if still present
+    if(current && Array.from(select.options).some(o=>o.value===current)) select.value = current;}
 
 /* --------------------------   Firestore listener   -------------------------- */
-function setupFirestoreListener(){    
-    osCollection.onSnapshot(snapshot => {        
-        const changes = snapshot.docChanges();        
-        changes.forEach(change => {            
-            const docData = {...change.doc.data(), id: change.doc.id};            
-            if(change.type === 'added' || change.type === 'modified'){                
-                const idx = osData.findIndex(i=>i.id===docData.id);                
-                if(idx>-1) osData[idx] = docData;                
-                else osData.push(docData);            
-            }            
-            if(change.type === 'removed'){                
-                osData = osData.filter(i=>i.id!==docData.id);            
-            }        
+function setupFirestoreListener(){
+    document.getElementById('loadingOverlay').style.display = 'flex'; // Exibe o loading
+    osCollection.onSnapshot(snapshot => {
+        const changes = snapshot.docChanges();
+        changes.forEach(change => {
+            const docData = {...change.doc.data(), id: change.doc.id};
+            if(change.type === 'added' || change.type === 'modified'){
+                const idx = osData.findIndex(i=>i.id===docData.id);
+                if(idx>-1) osData[idx] = docData;
+                else osData.push(docData);
+            }
+            if(change.type === 'removed'){
+                osData = osData.filter(i=>i.id!==docData.id);
+            }
         });
-        
-        // ordenar por data (DD/MM/YYYY)        
-        osData.sort((a,b)=>{            
-            const pa = a.data ? a.data.split('/') : ['01','01','2000'];            
-            const pb = b.data ? b.data.split('/') : ['01','01','2000'];            
-            const da = new Date(pa[2], pa[1]-1, pa[0]);            
-            const db = new Date(pb[2], pb[1]-1, pb[0]);            
-            return db - da;        
+        // ordenar por data (DD/MM/YYYY)
+        osData.sort((a,b)=>{
+            const pa = a.data ? a.data.split('/') : ['01','01','2000'];
+            const pb = b.data ? b.data.split('/') : ['01','01','2000'];
+            const da = new Date(pa[2], pa[1]-1, pa[0]);
+            const db = new Date(pb[2], pb[1]-1, pb[0]);
+            return db - da;
         });
-        
-        // atualizar tecnicos e tabela        
-        getTecnicosUnicos();        
+        // atualizar tecnicos e tabela
+        getTecnicosUnicos();
         atualizarTabelaTodas();
-        
-        document.getElementById('loadingOverlay').style.display = 'none';    
-    }, err=>{        
-        console.error('Erro Firestore:', err);        
-        document.getElementById('loadingOverlay').style.display = 'none';    
-    });
-}
+        document.getElementById('loadingOverlay').style.display = 'none';
+    }, err=>{
+        console.error('Erro Firestore:', err);
+        document.getElementById('loadingOverlay').style.display = 'none';
+    });}
 setupFirestoreListener();
 
 /* --------------------------   Modal open/close / salvar (suporta edição)   -------------------------- */
-function abrirForm(item=null){    
-    const modal = document.getElementById('formModal');    
-    // clear / populate    
-    document.getElementById('formOS').value = item ? (item.os||'') : '';    
-    if(item && item.data){        
-        const parts = item.data.split('/');        
-        document.getElementById('formData').value = `${parts[2]}-${parts[1]}-${parts[0]}`;    
+function abrirForm(item=null){
+    const modal = document.getElementById('formModal');
+    // clear / populate
+    document.getElementById('formOS').value = item ? (item.os||'') : '';
+    if(item && item.data){
+        const parts = item.data.split('/');
+        document.getElementById('formData').value = `${parts[2]}-${parts[1]}-${parts[0]}`;
     } else document.getElementById('formData').value = '';
-    
-    document.getElementById('formCliente').value = item ? (item.cliente||'') : '';    
-    document.getElementById('formPlaca').value = item ? (item.placa||'') : '';    
-    document.getElementById('formValorOS').value = item ? (item.valor_os ? parseFloat(item.valor_os).toFixed(2) : '') : '';    
-    document.getElementById('formValorMO').value = item ? (item.valor_mo ? parseFloat(item.valor_mo).toFixed(2) : '') : '';    
-    document.getElementById('formPagamento').value = item ? (item.pagamento||'') : '';    
-    document.getElementById('formUnidade').value = item ? (item.unidade||'') : '';    
-    document.getElementById('formTecnico').value = item ? (item.tecnico||'') : '';    
+    document.getElementById('formCliente').value = item ? (item.cliente||'') : '';
+    document.getElementById('formPlaca').value = item ? (item.placa||'') : '';
+    document.getElementById('formValorOS').value = item ? (item.valor_os ? parseFloat(item.valor_os).toFixed(2) : '') : '';
+    document.getElementById('formValorMO').value = item ? (item.valor_mo ? parseFloat(item.valor_mo).toFixed(2) : '') : '';
+    document.getElementById('formPagamento').value = item ? (item.pagamento||'') : '';
+    document.getElementById('formUnidade').value = item ? (item.unidade||'') : '';
+    document.getElementById('formTecnico').value = item ? (item.tecnico||'') : '';
     document.getElementById('formOsTecnico').value = item ? (item.os_tecnico||'') : '';
-    
-    // set edit id marker    
-    if(item && item.id) {        
-        modal.dataset.editId = item.id;        
-        document.getElementById('btnSalvar').textContent = 'Atualizar O.S';    
-    } else {        
-        delete modal.dataset.editId;        
-        document.getElementById('btnSalvar').textContent = 'Salvar O.S';    
+    // set edit id marker
+    if(item && item.id) {
+        modal.dataset.editId = item.id;
+        document.getElementById('btnSalvar').textContent = 'Atualizar O.S';
+    } else {
+        delete modal.dataset.editId;
+        document.getElementById('btnSalvar').textContent = 'Salvar O.S';
     }
-    
-    modal.style.display = 'flex';
-}
+    modal.style.display = 'flex';}
 
-function fecharForm(){    
-    const modal = document.getElementById('formModal');    
-    modal.style.display = 'none';    
-    delete modal.dataset.editId;    
-    // limpa campos (opcional)
-}
+function fecharForm(){
+    const modal = document.getElementById('formModal');
+    modal.style.display = 'none';
+    delete modal.dataset.editId;}
 
-async function salvarForm(){    
-    const modal = document.getElementById('formModal');    
+async function salvarForm(){
+    const modal = document.getElementById('formModal');
     const editId = modal.dataset.editId || null;
-    
-    const os = document.getElementById('formOS').value.trim();    
-    const dataInput = document.getElementById('formData').value;    
-    const cliente = document.getElementById('formCliente').value.trim();    
-    const placa = document.getElementById('formPlaca').value.trim();    
-    const valorOS = parseFloat(document.getElementById('formValorOS').value || 0);    
-    const valorMO = parseFloat(document.getElementById('formValorMO').value || 0);    
-    const pagamento = document.getElementById('formPagamento').value;    
-    const tecnico = document.getElementById('formTecnico').value.trim();    
-    const unidade = document.getElementById('formUnidade').value;    
+    const os = document.getElementById('formOS').value.trim();
+    const dataInput = document.getElementById('formData').value;
+    const cliente = document.getElementById('formCliente').value.trim();
+    const placa = document.getElementById('formPlaca').value.trim();
+    const valorOS = parseFloat(document.getElementById('formValorOS').value || 0);
+    const valorMO = parseFloat(document.getElementById('formValorMO').value || 0);
+    const pagamento = document.getElementById('formPagamento').value;
+    const tecnico = document.getElementById('formTecnico').value.trim();
+    const unidade = document.getElementById('formUnidade').value;
     const osTecnico = document.getElementById('formOsTecnico').value.trim();
-    
-    if(!os || !dataInput || !cliente || !placa){        
-        alert('Preencha os campos mínimos: O.S, DATA, CLIENTE, PLACA');        
-        return;    
+
+    if(!os || !dataInput || !cliente || !placa){
+        alert('Preencha os campos mínimos: O.S, DATA, CLIENTE, PLACA');
+        return;
     }
-    
-    const dataFormatada = formatDate(dataInput);    
-    const registro = {        
-        os,        
-        data: dataFormatada,        
-        cliente,        
-        placa,        
-        valor_os: valorOS.toFixed(2),        
-        valor_mo: valorMO.toFixed(2),        
+
+    const dataFormatada = formatDate(dataInput);
+
+    const registro = {
+        os,
+        data: dataFormatada,
+        cliente,
+        placa,
+        valor_os: valorOS.toFixed(2),
+        valor_mo: valorMO.toFixed(2),
         valor: (valorOS + valorMO).toFixed(2), // O valor total é mantido no DB para consistência
-        pagamento,        
-        tecnico,        
-        os_tecnico: osTecnico,        
-        unidade,        
-        timestamp: firebase.firestore.FieldValue.serverTimestamp()    
+        pagamento,
+        tecnico,
+        os_tecnico: osTecnico,
+        unidade,
+        timestamp: firebase.firestore.FieldValue.serverTimestamp()
     };
-    
-    try {        
-        if(editId){            
-            await osCollection.doc(editId).update(registro);            
-            alert('O.S. atualizada com sucesso!');        
-        } else {            
-            await osCollection.add(registro);            
-            alert('O.S. salva com sucesso!');        
-        }        
-        fecharForm();        
-        getTecnicosUnicos();    
-    } catch(e){        
-        console.error(e);        
-        alert('Erro ao salvar na nuvem');    
-    }
-}
+
+    try {
+        if(editId){
+            await osCollection.doc(editId).update(registro);
+            alert('O.S. atualizada com sucesso!');
+        } else {
+            await osCollection.add(registro);
+            alert('O.S. salva com sucesso!');
+        }
+        fecharForm();
+        getTecnicosUnicos();
+    } catch(e){
+        console.error(e);
+        alert('Erro ao salvar na nuvem');
+    }}
 
 /* --------------------------   Atualizar tabela e totais (CORRIGIDO)   -------------------------- */
-function atualizarTabelaTodas(){    
-    const unidadeFiltroRaw = document.getElementById('unidade').value;    
-    const dataInicio = document.getElementById('dataInicio').value;    
-    const dataFim = document.getElementById('dataFim').value;    
-    const termoBusca = document.getElementById('busca').value.toLowerCase();    
+function atualizarTabelaTodas(){
+    const unidadeFiltroRaw = document.getElementById('unidade').value;
+    const dataInicio = document.getElementById('dataInicio').value;
+    const dataFim = document.getElementById('dataFim').value;
+    const termoBusca = document.getElementById('busca').value.toLowerCase();
     const tecnicoFiltroRaw = document.getElementById('tecnicoFiltro').value;
-    
+
     // PADRONIZAÇÃO DOS FILTROS
     const unidadeFiltro = unidadeFiltroRaw ? unidadeFiltroRaw.toString().toLowerCase().trim() : '';
-    const tecnicoFiltro = tecnicoFiltroRaw ? tecnicoFiltroRaw.toString().toLowerCase().trim() : ''; 
+    const tecnicoFiltro = tecnicoFiltroRaw ? tecnicoFiltroRaw.toString().toLowerCase().trim() : '';
 
-    const tbody = document.querySelector('#tabelaTodas tbody');    
+    const tbody = document.querySelector('#tabelaTodas tbody');
     tbody.innerHTML = '';
-    
+
     // ZERAR TOTAIS ANTES DE RECALCULAR
     let totalF = 0, totalAberto = 0, totalPix = 0, totalDin = 0, totalDeb = 0, totalCred = 0, totalMo = 0, totalGeral = 0;
-    
-    const dadosFiltrados = osData.filter(item => {        
-        const itemDate = item.data ? item.data.split('/').reverse().join('-') : '2000-01-01';        
-        
+
+    const dadosFiltrados = osData.filter(item => {
+        const itemDate = item.data ? item.data.split('/').reverse().join('-') : '2000-01-01';
+
         // Garante que os valores são lidos como números
         const itemValorOS = parseFloat(item.valor_os || 0);
         const itemValorMO = parseFloat(item.valor_mo || 0);
 
-        const itemPagamento = (item.pagamento || '').toString().toLowerCase().trim();        
-        const itemTecnico = (item.tecnico || '').toString().toLowerCase().trim(); 
-        const itemUnidade = (item.unidade || '').toString().toLowerCase().trim(); 
+        const itemPagamento = (item.pagamento || '').toString().toLowerCase().trim();
+        const itemTecnico = (item.tecnico || '').toString().toLowerCase().trim();
+        const itemUnidade = (item.unidade || '').toString().toLowerCase().trim();
 
         // APLICAÇÃO DOS FILTROS
         if(unidadeFiltro && itemUnidade !== unidadeFiltro) return false;
-        if(tecnicoFiltro && itemTecnico !== tecnicoFiltro) return false; 
-        if(dataInicio && itemDate < dataInicio) return false;        
-        if(dataFim && itemDate > dataFim) return false;        
-        if((item.cliente||'').toUpperCase().includes('CANCELADA')) return false;        
+        if(tecnicoFiltro && itemTecnico !== tecnicoFiltro) return false;
+        if(dataInicio && itemDate < dataInicio) return false;
+        if(dataFim && itemDate > dataFim) return false;
+        if((item.cliente||'').toUpperCase().includes('CANCELADA')) return false;
         if(termoBusca && !((item.cliente||'').toLowerCase().includes(termoBusca) || (item.placa||'').toLowerCase().includes(termoBusca) || (item.os||'').toLowerCase().includes(termoBusca))) return false;
-        
+
         // CÁLCULO DOS TOTAIS (PARA TODOS OS ITENS QUE PASSAM NOS FILTROS ATIVOS)
-        
-        // Pagamentos (SOMAM SÓ O VALOR OS)
-        if(itemPagamento === 'faturado') totalF += itemValorOS;        
-        if(itemPagamento === 'em aberto') totalAberto += itemValorOS;        
-        if(itemPagamento === 'pix') totalPix += itemValorOS;        
-        if(itemPagamento === 'dinheiro') totalDin += itemValorOS;        
-        if(itemPagamento === 'débito' || itemPagamento === 'debito') totalDeb += itemValorOS;        
-        if(itemPagamento === 'crédito' || itemPagamento === 'credito') totalCred += itemValorOS;
-        
-        // Mão de Obra (SOMA SÓ O VALOR MO)        
+
+        // Normaliza o pagamento do item para evitar problemas de acentuação/case
+        const pagamentoClean = itemPagamento.replace(/á|à|ã/g, 'a').replace(/é|è/g, 'e').replace(/í|ì/g, 'i').replace(/ó|ò|õ/g, 'o').replace(/ú|ù/g, 'u').replace(/ /g, '').trim();
+
+        // Pagamentos (SOMAM SÓ O VALOR OS - Valor de Vendas/Itens)
+        if(pagamentoClean === 'faturado') totalF += itemValorOS;
+        if(pagamentoClean === 'emaberto') totalAberto += itemValorOS;
+        if(pagamentoClean === 'pix') totalPix += itemValorOS;
+        if(pagamentoClean === 'dinheiro') totalDin += itemValorOS;
+        if(pagamentoClean === 'debito') totalDeb += itemValorOS; // Acentuação removida para comparação
+        if(pagamentoClean === 'credito') totalCred += itemValorOS; // Acentuação removida para comparação
+
+        // Mão de Obra (SOMA SÓ O VALOR MO)
         totalMo += itemValorMO;
 
-        // TOTAL GERAL (SOMA SÓ O VALOR OS - Valor de Vendas/Itens)
+        // TOTAL GERAL (SOMA O VALOR OS - Vendas/Itens)
         totalGeral += itemValorOS;
-        
-        return true;    
+
+        return true;
     });
-    
-    dadosFiltrados.forEach(item => {        
-        const valorOs = parseFloat(item.valor_os || 0);        
-        const valorMo = parseFloat(item.valor_mo || 0);        
-        
-        const tr = document.createElement('tr');        
+
+    dadosFiltrados.forEach(item => {
+        const valorOs = parseFloat(item.valor_os || 0);
+        const valorMo = parseFloat(item.valor_mo || 0);
+
+        const tr = document.createElement('tr');
         tr.innerHTML = `<td>${item.os || ''}</td>
                         <td>${item.data || ''}</td>
                         <td>${item.cliente || ''}</td>
@@ -403,408 +415,445 @@ function atualizarTabelaTodas(){
                         <td>${item.tecnico || ''}</td>
                         <td>${item.os_tecnico || ''}</td>
                         <td>${item.unidade || ''}</td>
-                        <td><button class="edit" onclick="abrirFormForEdit('${item.id}')">Editar</button> <button class="delete" onclick="apagarOS('${item.id}')">Apagar</button></td>`;        
-        tbody.appendChild(tr);    
+                        <td><button class="edit" onclick="abrirFormForEdit('${item.id}')">Editar</button> <button class="delete" onclick="apagarOS('${item.id}')">Apagar</button></td>`;
+        tbody.appendChild(tr);
     });
-    
+
     // ATUALIZAR VISUALIZAÇÃO DOS TOTAIS
-    document.getElementById('totalFaturadas').innerHTML = `FATURADAS<br>R$ ${totalF.toFixed(2)}`;    
-    document.getElementById('totalAberto').innerHTML = `EM ABERTO<br>R$ ${totalAberto.toFixed(2)}`;    
-    document.getElementById('totalPix').innerHTML = `PIX<br>R$ ${totalPix.toFixed(2)}`;    
-    document.getElementById('totalDinheiro').innerHTML = `DINHEIRO<br>R$ ${totalDin.toFixed(2)}`;    
-    document.getElementById('totalDebito').innerHTML = `DÉBITO<br>R$ ${totalDeb.toFixed(2)}`;    
-    document.getElementById('totalCredito').innerHTML = `CRÉDITO<br>R$ ${totalCred.toFixed(2)}`; // CORRIGIDO
-    document.getElementById('totalMo').innerHTML = `MÃO DE OBRA<br>R$ ${totalMo.toFixed(2)}`; // CORRIGIDO
-    document.getElementById('totalGeral').innerHTML = `TOTAL GERAL<br>R$ ${totalGeral.toFixed(2)}`; // CORRIGIDO
+    document.getElementById('totalFaturadas').innerHTML = `FATURADAS<br>R$ ${totalF.toFixed(2)}`;
+    document.getElementById('totalAberto').innerHTML = `EM ABERTO<br>R$ ${totalAberto.toFixed(2)}`;
+    document.getElementById('totalPix').innerHTML = `PIX<br>R$ ${totalPix.toFixed(2)}`;
+    document.getElementById('totalDinheiro').innerHTML = `DINHEIRO<br>R$ ${totalDin.toFixed(2)}`;
+    document.getElementById('totalDebito').innerHTML = `DÉBITO<br>R$ ${totalDeb.toFixed(2)}`;
+    document.getElementById('totalCredito').innerHTML = `CRÉDITO<br>R$ ${totalCred.toFixed(2)}`;
+    document.getElementById('totalMo').innerHTML = `MÃO DE OBRA<br>R$ ${totalMo.toFixed(2)}`;
+    document.getElementById('totalGeral').innerHTML = `TOTAL GERAL<br>R$ ${totalGeral.toFixed(2)}`;
 }
 
 /* abrir modal direto em edição (helper) */
-function abrirFormForEdit(id){    
-    const item = osData.find(d => d.id === id);    
-    if(!item){ alert('Registro não encontrado'); return; }    
-    abrirForm(item);
-}
+function abrirFormForEdit(id){
+    const item = osData.find(d => d.id === id);
+    if(!item){ alert('Registro não encontrado'); return; }
+    abrirForm(item);}
 
 /* apagar */
-async function apagarOS(id){    
-    if(!confirm('Deseja apagar esta O.S? Esta ação é irreversível.')) return;    
-    try{        
-        await osCollection.doc(id).delete();        
-        alert('O.S. apagada');    
-    } catch(e){        
-        console.error(e);        
-        alert('Erro ao apagar');    
-    }
-}
+async function apagarOS(id){
+    if(!confirm('Deseja apagar esta O.S? Esta ação é irreversível.')) return;
+    try{
+        await osCollection.doc(id).delete();
+        alert('O.S. apagada');
+    } catch(e){
+        console.error(e);
+        alert('Erro ao apagar');
+    }}
 
 /* limpar filtros */
-function limparFiltros(){    
-    document.getElementById('unidade').value = '';    
-    document.getElementById('tecnicoFiltro').value = '';    
-    document.getElementById('dataInicio').value = '';    
-    document.getElementById('dataFim').value = '';    
-    document.getElementById('busca').value = '';    
-    atualizarTabelaTodas();
-}
+function limparFiltros(){
+    document.getElementById('unidade').value = '';
+    document.getElementById('tecnicoFiltro').value = '';
+    document.getElementById('dataInicio').value = '';
+    document.getElementById('dataFim').value = '';
+    document.getElementById('busca').value = '';
+    atualizarTabelaTodas();}
 function filtrar(){ atualizarTabelaTodas(); }
 function buscar(){ atualizarTabelaTodas(); }
 
 /* limpar todos os dados (cuidado!) */
-async function limparDados(){    
-    if(!confirm('Deseja limpar TODOS os dados NA NUVEM?')) return;    
-    const snapshot = await osCollection.get();    
-    const batch = db.batch();    
-    snapshot.docs.forEach(doc => batch.delete(doc.ref));    
-    try {        
-        await batch.commit();        
-        alert('Dados apagados');    
-    } catch(e){        
-        console.error(e);        
-        alert('Erro ao apagar dados');    
-    }
-}
+async function limparDados(){
+    if(!confirm('Deseja limpar TODOS os dados NA NUVEM?')) return;
+    const snapshot = await osCollection.get();
+    const batch = db.batch();
+    snapshot.docs.forEach(doc => batch.delete(doc.ref));
+    try {
+        await batch.commit();
+        alert('Dados apagados');
+    } catch(e){
+        console.error(e);
+        alert('Erro ao apagar dados');
+    }}
 
 /* --------------------------   Export / Import Excel   -------------------------- */
-function exportExcel(){    
-    const items = osData.map(it => ({        
-        'O S': it.os || '',        
-        'DATA': it.data || '',        
-        'CLIENTE': it.cliente || '',        
-        'PLACA': it.placa || '',        
-        'VALOR OS': it.valor_os || '',        
-        'VALOR MO': it.valor_mo || '',        
-        'PAGAMENTO': it.pagamento || '',        
-        'TECNICO': it.tecnico || '',        
-        'OS TECNICO': it.os_tecnico || '',        
-        'UNIDADE': it.unidade || ''    
-    }));    
-    const wb = XLSX.utils.book_new();    
-    const ws = XLSX.utils.json_to_sheet(items, {header: ['O S','DATA','CLIENTE','PLACA','VALOR OS','VALOR MO','PAGAMENTO','TECNICO','OS TECNICO','UNIDADE']});    
-    XLSX.utils.book_append_sheet(wb, ws, 'O.S');    
-    XLSX.writeFile(wb, 'OS_FrenteCaixa_Export.xlsx');
-}
+function exportExcel(){
+    const items = osData.map(it => ({
+        'O S': it.os || '',
+        'DATA': it.data || '',
+        'CLIENTE': it.cliente || '',
+        'PLACA': it.placa || '',
+        'VALOR OS': it.valor_os || '',
+        'VALOR MO': it.valor_mo || '',
+        'PAGAMENTO': it.pagamento || '',
+        'TECNICO': it.tecnico || '',
+        'OS TECNICO': it.os_tecnico || '',
+        'UNIDADE': it.unidade || ''
+    }));
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(items, {header: ['O S','DATA','CLIENTE','PLACA','VALOR OS','VALOR MO','PAGAMENTO','TECNICO','OS TECNICO','UNIDADE']});
+    XLSX.utils.book_append_sheet(wb, ws, 'O.S');
+    XLSX.writeFile(wb, 'OS_FrenteCaixa_Export.xlsx');}
 
 function importExcel(){ document.getElementById('inputExcel').click(); }
 
-function lerExcel(event){    
-    const files = event.target.files;    
+function lerExcel(event){
+    const files = event.target.files;
     if(!files || files.length === 0){ event.target.value = null; return; }
-    
-    let arquivosProcessados = 0;    
+    let arquivosProcessados = 0;
     let dadosCombinados = [];
-    
-    function normalizeHeader(cell){        
-        return String(cell||'').toUpperCase().replace(/\s+/g,' ').trim();    
-    }    
-    function parseDateCell(cell){        
-        if(!cell && cell !== 0) return null;        
-        if (cell instanceof Date) return cell.toISOString().split('T')[0];        
-        const txt = String(cell).trim();        
-        if(/^\d{4}-\d{2}-\d{2}/.test(txt)) return txt.split('T')[0];        
-        if(/^\d{2}\/\d{2}\/\d{4}$/.test(txt)){            
-            const [d,m,y] = txt.split('/');            
-            return `${y}-${m}-${d}`;        
-        }        
-        const dt = new Date(txt);        
-        if(!isNaN(dt)) return dt.toISOString().split('T')[0];        
-        return null;    
-    }    
-    function parseMoneyCell(cell){        
-        if(cell === null || cell === undefined || cell === '') return 0;        
-        let txt = String(cell).replace(/\s/g,'').replace(/\u00A0/g,'');        
-        if(/^\d{1,3}(\.\d{3})+,\d{2}$/.test(txt) || (txt.indexOf(',')>-1 && txt.indexOf('.')>-1)){            
-            txt = txt.replace(/\./g,'').replace(',', '.');        
-        } else txt = txt.replace(',', '.');        
-        const val = parseFloat(txt);        
-        return isNaN(val) ? 0 : val;    
+    function normalizeHeader(cell){
+        return String(cell||'').toUpperCase().replace(/\s+/g,' ').trim();
     }
-    
-    function processarArquivo(file){        
-        const reader = new FileReader();        
-        const fileName = file.name.toUpperCase();        
-        let unidadeDetect = '';        
-        if(fileName.includes('BARUERI')) unidadeDetect = 'Barueri';        
-        if(fileName.includes('COTIA')) unidadeDetect = 'Cotia';        
+    function parseDateCell(cell){
+        if(!cell && cell !== 0) return null;
+        if (cell instanceof Date) return cell.toISOString().split('T')[0];
+        const txt = String(cell).trim();
+        if(/^\d{4}-\d{2}-\d{2}/.test(txt)) return txt.split('T')[0];
+        if(/^\d{2}\/\d{2}\/\d{4}$/.test(txt)){
+            const [d,m,y] = txt.split('/');
+            return `${y}-${m}-${d}`;
+        }
+        const dt = new Date(txt);
+        if(!isNaN(dt)) return dt.toISOString().split('T')[0];
+        return null;
+    }
+    function parseMoneyCell(cell){
+        if(cell === null || cell === undefined || cell === '') return 0;
+        let txt = String(cell).replace(/\s/g,'').replace(/\u00A0/g,'');
+        if(/^\d{1,3}(\.\d{3})+,\d{2}$/.test(txt) || (txt.indexOf(',')>-1 && txt.indexOf('.')>-1)){
+            txt = txt.replace(/\./g,'').replace(',', '.');
+        } else txt = txt.replace(',', '.');
+        const val = parseFloat(txt);
+        return isNaN(val) ? 0 : val;
+    }
+    function processarArquivo(file){
+        const reader = new FileReader();
+        const fileName = file.name.toUpperCase();
+        let unidadeDetect = '';
+        if(fileName.includes('BARUERI')) unidadeDetect = 'Barueri';
+        if(fileName.includes('COTIA')) unidadeDetect = 'Cotia';
         if(fileName.includes('EMBU')) unidadeDetect = 'Embu';
-        
-        reader.onload = function(e){            
-            const data = e.target.result;            
-            try{                
-                const workbook = XLSX.read(data, {type:'binary', raw:true, cellDates:true});                
-                const first = workbook.Sheets[workbook.SheetNames[0]];                
+        reader.onload = function(e){
+            const data = e.target.result;
+            try{
+                const workbook = XLSX.read(data, {type:'binary', raw:true, cellDates:true});
+                const first = workbook.Sheets[workbook.SheetNames[0]];
                 const sheet = XLSX.utils.sheet_to_json(first, {header:1, raw:true, defval:''});
-                
-                let headerMap = null;                
+                let headerMap = null;
                 let capturing = false;
-                
-                for(let i=0;i<sheet.length;i++){                    
-                    const rawRow = sheet[i] || [];                    
-                    const normalizedRow = rawRow.map(c => normalizeHeader(c));                    
-                    const hasData = normalizedRow.some(c => c === 'DATA');                    
-                    const hasOS = normalizedRow.some(c => c === 'O S' || c === 'O.S' || c === 'OS');                    
-                    const hasCliente = normalizedRow.some(c => c === 'CLIENTE');                    
-                    if(!headerMap && hasData && hasOS && hasCliente){                        
-                        headerMap = {};                        
-                        normalizedRow.forEach((cellText, idx) => {                            
-                            if(cellText === 'O S' || cellText === 'O.S' || cellText === 'OS') headerMap.os = idx;                            
-                            else if(cellText === 'DATA') headerMap.data = idx;                            
-                            else if(cellText === 'CLIENTE') headerMap.cliente = idx;                            
-                            else if(cellText === 'PLACA') headerMap.placa = idx;                            
-                            else if(cellText === 'VALOR OS' || cellText === 'VALOR_OS' || cellText === 'VALOR') headerMap.valor_os = idx;                            
-                            else if(cellText === 'VALOR MO' || cellText === 'VALOR_MO') headerMap.valor_mo = idx;                            
-                            else if(cellText === 'PAGAMENTO') headerMap.pagamento = idx;                            
-                            else if(cellText === 'TECNICO') headerMap.tecnico = idx;                            
-                            else if(cellText === 'OS TECNICO' || cellText === 'OS_TECNICO') headerMap.os_tecnico = idx;                            
-                            else if(cellText === 'UNIDADE') headerMap.unidade = idx;                        
-                        });                        
-                        capturing = true;                        
-                        continue;                    
+                for(let i=0;i<sheet.length;i++){
+                    const rawRow = sheet[i] || [];
+                    const normalizedRow = rawRow.map(c => normalizeHeader(c));
+                    const hasData = normalizedRow.some(c => c === 'DATA');
+                    const hasOS = normalizedRow.some(c => c === 'O S' || c === 'O.S' || c === 'OS');
+                    const hasCliente = normalizedRow.some(c => c === 'CLIENTE');
+                    if(!headerMap && hasData && hasOS && hasCliente){
+                        headerMap = {};
+                        normalizedRow.forEach((cellText, idx) => {
+                            if(cellText === 'O S' || cellText === 'O.S' || cellText === 'OS') headerMap.os = idx;
+                            else if(cellText === 'DATA') headerMap.data = idx;
+                            else if(cellText === 'CLIENTE') headerMap.cliente = idx;
+                            else if(cellText === 'PLACA') headerMap.placa = idx;
+                            else if(cellText === 'VALOR OS' || cellText === 'VALOR_OS' || cellText === 'VALOR') headerMap.valor_os = idx;
+                            else if(cellText === 'VALOR MO' || cellText === 'VALOR_MO') headerMap.valor_mo = idx;
+                            else if(cellText === 'PAGAMENTO') headerMap.pagamento = idx;
+                            else if(cellText === 'TECNICO') headerMap.tecnico = idx;
+                            else if(cellText === 'OS TECNICO' || cellText === 'OS_TECNICO') headerMap.os_tecnico = idx;
+                            else if(cellText === 'UNIDADE') headerMap.unidade = idx;
+                        });
+                        capturing = true;
+                        continue;
                     }
-                    
-                    if(capturing){                        
-                        const rowText = normalizedRow.join(' ');                        
-                        if(rowText.includes('TOTAL') || rowText.includes('RESUMO') || rowText.includes('SAIDAS') || rowText.includes('INICIO DE CX') || (!rawRow || rawRow.length===0)){                            
-                            capturing = false;                            
-                            continue;                        
-                        }                        
-                        if(headerMap){                            
-                            const rawOS = rawRow[headerMap.os] || rawRow[0];                            
+                    if(capturing){
+                        const rowText = normalizedRow.join(' ');
+                        if(rowText.includes('TOTAL') || rowText.includes('RESUMO') || rowText.includes('SAIDAS') || rowText.includes('INICIO DE CX') || (!rawRow || rawRow.length===0)){
+                            capturing = false;
+                            continue;
+                        }
+                        if(headerMap){
+                            const rawOS = rawRow[headerMap.os] || rawRow[0];
                             if(!rawOS || String(rawOS).trim()==='') continue;
-                            
-                            let dataCell = headerMap.data !== undefined ? rawRow[headerMap.data] : rawRow[1];                            
-                            let dateISO = parseDateCell(dataCell) || null;                            
+                            let dataCell = headerMap.data !== undefined ? rawRow[headerMap.data] : rawRow[1];
+                            let dateISO = parseDateCell(dataCell) || null;
                             if(!dateISO && String(dataCell).trim().length===10 && /^\d{2}\/\d{2}\/\d{4}$/.test(String(dataCell))) dateISO = parseDateCell(dataCell);
-                            
-                            const valorOsCell = headerMap.valor_os!==undefined ? rawRow[headerMap.valor_os] : rawRow[4];                            
-                            const valorMoCell = headerMap.valor_mo!==undefined ? rawRow[headerMap.valor_mo] : rawRow[5];                            
-                            const pagamentoCell = headerMap.pagamento!==undefined ? rawRow[headerMap.pagamento] : '';                            
-                            const tecnicoCell = headerMap.tecnico!==undefined ? rawRow[headerMap.tecnico] : '';                            
-                            const osTecnicoCell = headerMap.os_tecnico!==undefined ? rawRow[headerMap.os_tecnico] : '';                            
-                            const unidadeCell = headerMap.unidade!==undefined ? rawRow[headerMap.unidade] : unidadeDetect;
-                            
-                            const vOs = parseMoneyCell(valorOsCell);                            
-                            const vMo = parseMoneyCell(valorMoCell);                            
-                            const totalValor = (vOs + vMo);
-                            
-                            const item = {                                
-                                os: String(rawOS || ''),                                
-                                data: formatDate(dateISO || '2000-01-01'),                                
-                                cliente: String(rawRow[ headerMap.cliente !== undefined ? headerMap.cliente : 2 ] || ''),                                
-                                placa: String(rawRow[ headerMap.placa !== undefined ? headerMap.placa : 3 ] || ''),                                
-                                valor_os: vOs.toFixed(2),                                
-                                valor_mo: vMo.toFixed(2),                                
-                                valor: totalValor.toFixed(2), // Manter valor total no DB
-                                pagamento: String(pagamentoCell || '').trim(),                                
-                                tecnico: String(tecnicoCell || '').trim(),                                
-                                os_tecnico: String(osTecnicoCell || '').trim(),                                
-                                unidade: String(unidadeCell || unidadeDetect || '').trim(),                                
-                                timestamp: firebase.firestore.FieldValue.serverTimestamp()                            
-                            };                            
-                            dadosCombinados.push(item);                        
-                        } else {                            
-                            // fallback old style                            
-                            if(rawRow.length >= 7 && rawRow[0] !== ''){                                
-                                const dataCell = rawRow[1];                                
-                                const dateISO = parseDateCell(dataCell);                                
-                                const v = parseMoneyCell(rawRow[4]);                                
-                                const item = {                                    
-                                    os: String(rawRow[0] || ''),                                    
-                                    data: formatDate(dateISO || '2000-01-01'),                                    
-                                    cliente: String(rawRow[2] || ''),                                    
-                                    placa: String(rawRow[3] || ''),                                    
-                                    valor_os: v.toFixed(2),                                    
-                                    valor_mo: '0.00',                                    
-                                    valor: v.toFixed(2),                                    
-                                    pagamento: String(rawRow[5] || ''),                                    
-                                    tecnico: String(rawRow[6] || ''),                                    
-                                    os_tecnico: '',                                    
-                                    unidade: unidadeDetect,                                    
-                                    timestamp: firebase.firestore.FieldValue.serverTimestamp()                                
-                                };                                
-                                dadosCombinados.push(item);                            
-                            }                        
-                        }                    
-                    }                
-                } // end rows            
-            } catch(err){                
-                console.error('Erro processar', file.name, err);                
-                alert('Erro ao ler ' + file.name);            
-            } finally {                
-                arquivosProcessados++;                
-                if(arquivosProcessados === files.length){                    
-                    const novos = dadosCombinados.filter(it => it.os && it.data && (it.cliente||'').toUpperCase().trim() !== 'CANCELADA');                    
-                    if(novos.length === 0){                        
-                        alert('Nenhum registro válido encontrado nos arquivos importados.');                        
-                        document.getElementById('inputExcel').value = null;                        
-                        return;                    
-                    }        
-                    if(!confirm(`Deseja salvar ${novos.length} novos registros na nuvem?`)) return;
 
-                    const batch = db.batch();
-                    novos.forEach(n => {
-                        const ref = osCollection.doc();
-                        batch.set(ref, n);
-                    });
-                    
-                    document.getElementById('loadingOverlay').style.display = 'flex';
+                            const valorOsCell = headerMap.valor_os!==undefined ? rawRow[headerMap.valor_os] : rawRow[4];
+                            const valorMoCell = headerMap.valor_mo!==undefined ? rawRow[headerMap.valor_mo] : rawRow[5];
+                            const pagamentoCell = headerMap.pagamento!==undefined ? rawRow[headerMap.pagamento] : rawRow[6];
 
-                    batch.commit().then(()=>{
-                        alert(`Importação concluída: ${files.length} arquivo(s) processado(s). ${novos.length} registro(s) adicionados.`);
-                        document.getElementById('inputExcel').value = null;
-                        document.getElementById('loadingOverlay').style.display = 'none';
-                    }).catch(e=>{
-                        console.error(e); 
-                        alert('Erro ao gravar importação na nuvem.');
-                        document.getElementById('loadingOverlay').style.display = 'none';
-                    });
+                            const valorOS = parseMoneyCell(valorOsCell);
+                            const valorMO = parseMoneyCell(valorMoCell);
+                            
+                            dadosCombinados.push({
+                                os: String(rawOS).trim() || '',
+                                data: dateISO ? formatDate(dateISO) : '',
+                                cliente: String(headerMap.cliente !== undefined ? rawRow[headerMap.cliente] : rawRow[2] || '').trim(),
+                                placa: String(headerMap.placa !== undefined ? rawRow[headerMap.placa] : rawRow[3] || '').trim(),
+                                valor_os: valorOS.toFixed(2),
+                                valor_mo: valorMO.toFixed(2),
+                                valor: (valorOS + valorMO).toFixed(2),
+                                pagamento: String(pagamentoCell || '').trim(),
+                                tecnico: String(headerMap.tecnico !== undefined ? rawRow[headerMap.tecnico] : rawRow[7] || '').trim(),
+                                os_tecnico: String(headerMap.os_tecnico !== undefined ? rawRow[headerMap.os_tecnico] : rawRow[8] || '').trim(),
+                                unidade: String(headerMap.unidade !== undefined ? rawRow[headerMap.unidade] : unidadeDetect || '').trim(),
+                            });
+                        }
+                    }
+                }
+            } catch(error){
+                console.error("Erro ao processar arquivo Excel:", error);
+                alert(`Erro ao processar o arquivo ${file.name}.`);
+            } finally {
+                arquivosProcessados++;
+                if(arquivosProcessados === files.length){
+                    // Finaliza o processamento de todos os arquivos
+                    if(dadosCombinados.length > 0){
+                        subirDadosExcel(dadosCombinados);
+                    } else {
+                        alert('Nenhuma O.S. válida encontrada nos arquivos.');
+                    }
+                    event.target.value = null; // Limpa o input file
                 }
             }
         };
+        reader.onerror = function(e){
+            console.error("Erro na leitura do arquivo:", e);
+            alert(`Erro ao ler o arquivo ${file.name}.`);
+            arquivosProcessados++;
+            if(arquivosProcessados === files.length) event.target.value = null;
+        };
         reader.readAsBinaryString(file);
     }
-    Array.from(files).forEach(processarArquivo);
+
+    // Processar múltiplos arquivos
+    for (let i = 0; i < files.length; i++) {
+        processarArquivo(files[i]);
+    }
 }
 
-// --------------------------- PDF IMPRIMIR --------------------------
-function imprimirPDF(filtroPagamento = null) {
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF('l', 'mm', 'a4');
-    const margin = 10;
-    let y = margin;
-    
-    // Funções de filtro
-    const unidadeFiltroRaw = document.getElementById('unidade').value;
-    const tecnicoFiltroRaw = document.getElementById('tecnicoFiltro').value;
-    const dataInicio = document.getElementById('dataInicio').value;
-    const dataFim = document.getElementById('dataFim').value;
+async function subirDadosExcel(dados){
+    if(!confirm(`Deseja importar ${dados.length} O.S. para a nuvem? Isso pode levar tempo.`)) return;
+    document.getElementById('loadingOverlay').style.display = 'flex';
+    const batch = db.batch();
+    let sucesso = 0;
+    try {
+        dados.forEach(registro => {
+            const docRef = osCollection.doc(); // Cria uma nova referência de documento
+            batch.set({...registro, timestamp: firebase.firestore.FieldValue.serverTimestamp()});
+            sucesso++;
+        });
+        await batch.commit();
+        alert(`${sucesso} O.S. importadas com sucesso!`);
+    } catch(e){
+        console.error(e);
+        alert(`Erro ao importar dados. ${sucesso} O.S. foram importadas antes do erro.`);
+    } finally {
+        document.getElementById('loadingOverlay').style.display = 'none';
+        // O listener do Firestore fará a atualização automática
+    }
+}
 
-    // PADRONIZAÇÃO DOS FILTROS
-    const unidadeFiltro = unidadeFiltroRaw ? unidadeFiltroRaw.toString().toLowerCase().trim() : '';
-    const tecnicoFiltroPad = tecnicoFiltroRaw ? tecnicoFiltroRaw.toString().toLowerCase().trim() : ''; 
-    
-    const dadosTabela = osData.filter(item => {
+/* --------------------------   Geração de PDF (CORRIGIDO)   -------------------------- */
+/**
+ * @param {string} categoria - Chave de filtro: 'Geral', 'Faturado', 'EmAberto', 'PIX', 'Dinheiro', 'Debito', 'Credito', 'MaoObra'
+ */
+function imprimirPDF(categoria) {
+    if (!jsPDF) {
+        alert('Erro: jsPDF não carregado. Verifique as dependências.');
+        return;
+    }
+
+    const doc = new jsPDF();
+    const categoriaNormalizada = categoria.toLowerCase().trim();
+
+    let titulo = 'Relatório de O.S. - ';
+    let totalOS = 0;
+    let totalMO = 0;
+    let totalGeral = 0;
+
+    // 1. Filtrar os dados
+    const dadosFiltrados = osData.filter(item => {
+        // Normaliza o pagamento do item do DB para comparação
+        const pagamentoClean = (item.pagamento || '').toLowerCase().trim().replace(/á|à|ã/g, 'a').replace(/é|è/g, 'e').replace(/í|ì/g, 'i').replace(/ó|ò|õ/g, 'o').replace(/ú|ù/g, 'u').replace(/ /g, '').trim();
+
+        // Valores numéricos
+        const valorOS = parseFloat(item.valor_os || 0);
+        const valorMO = parseFloat(item.valor_mo || 0);
+
+        // Define o filtro baseado na chave (categoria)
+        let deveIncluir = false;
+
+        if (categoriaNormalizada === 'geral') {
+            deveIncluir = true;
+        } else if (categoriaNormalizada === 'faturado' && pagamentoClean === 'faturado') {
+            deveIncluir = true;
+        } else if (categoriaNormalizada === 'emaberto' && pagamentoClean === 'emaberto') {
+            deveIncluir = true;
+        } else if (categoriaNormalizada === 'pix' && pagamentoClean === 'pix') {
+            deveIncluir = true;
+        } else if (categoriaNormalizada === 'dinheiro' && pagamentoClean === 'dinheiro') {
+            deveIncluir = true;
+        } else if (categoriaNormalizada === 'debito' && pagamentoClean === 'debito') {
+            deveIncluir = true;
+        } else if (categoriaNormalizada === 'credito' && pagamentoClean === 'credito') {
+            deveIncluir = true;
+        } else if (categoriaNormalizada === 'maoobra') {
+            // Para Mão de Obra, incluímos todos os registros válidos para somar M.O.
+            deveIncluir = true;
+        }
+
+        // Se o item for incluído, somamos os totais
+        if (deveIncluir) {
+            // Na Mão de Obra, o total é o VALOR MO. No restante, o total é o VALOR OS
+            if (categoriaNormalizada === 'maoobra') {
+                totalGeral += valorMO; // Total MO
+            } else if (categoriaNormalizada !== 'geral') {
+                totalGeral += valorOS; // Total da forma de pagamento (Valor OS)
+            }
+            
+            // Para o Relatório GERAL
+            if (categoriaNormalizada === 'geral') {
+                totalOS += valorOS;
+                totalMO += valorMO;
+                totalGeral = totalOS; // Total Geral da O.S. (Valor OS)
+            }
+        }
+
+        // Exclui O.S. Canceladas
+        if ((item.cliente || '').toUpperCase().includes('CANCELADA')) {
+            deveIncluir = false;
+        }
+        
+        // Aplica o filtro da tabela (Data, Unidade, Técnico, Busca) ao PDF
+        const unidadeFiltro = document.getElementById('unidade').value.toLowerCase().trim();
+        const tecnicoFiltro = document.getElementById('tecnicoFiltro').value.toLowerCase().trim();
+        const dataInicio = document.getElementById('dataInicio').value;
+        const dataFim = document.getElementById('dataFim').value;
+        const termoBusca = document.getElementById('busca').value.toLowerCase();
         const itemDate = item.data ? item.data.split('/').reverse().join('-') : '2000-01-01';
-        const itemTecnico = (item.tecnico || '').trim().toLowerCase(); 
-        const itemUnidade = (item.unidade || '').trim().toLowerCase();
+        const itemUnidade = (item.unidade || '').toString().toLowerCase().trim();
+        const itemTecnico = (item.tecnico || '').toString().toLowerCase().trim();
 
-        if(unidadeFiltro && itemUnidade !== unidadeFiltro) return false;
-        if(tecnicoFiltroPad && itemTecnico !== tecnicoFiltroPad) return false; 
-        
-        if(dataInicio && itemDate < dataInicio) return false;        
-        if(dataFim && itemDate > dataFim) return false;        
-        if((item.cliente||'').toUpperCase().includes('CANCELADA')) return false;        
-        
-        if(filtroPagamento === 'Mão de Obra') return parseFloat(item.valor_mo || 0) > 0;
-        if(filtroPagamento === 'Geral') return true;
-        if(filtroPagamento && (item.pagamento || '').trim() !== filtroPagamento) return false;
+        if (unidadeFiltro && itemUnidade !== unidadeFiltro) return false;
+        if (tecnicoFiltro && itemTecnico !== tecnicoFiltro) return false;
+        if (dataInicio && itemDate < dataInicio) return false;
+        if (dataFim && itemDate > dataFim) return false;
+        if (termoBusca && !((item.cliente||'').toLowerCase().includes(termoBusca) || (item.placa||'').toLowerCase().includes(termoBusca) || (item.os||'').toLowerCase().includes(termoBusca))) return false;
 
-        return true;
+        return deveIncluir;
     }).map(item => {
-        const valorOs = parseFloat(item.valor_os || 0).toFixed(2);
-        const valorMo = parseFloat(item.valor_mo || 0).toFixed(2);
-        
+        // Mapeamento dos dados para a tabela do PDF
+        const valorOS = parseFloat(item.valor_os || 0).toFixed(2);
+        const valorMO = parseFloat(item.valor_mo || 0).toFixed(2);
+
+        // Se for Mão de Obra, o Valor OS é 0, e o total é o Valor MO
+        if (categoriaNormalizada === 'maoobra') {
+            return [
+                item.os || '',
+                item.data || '',
+                item.cliente || '',
+                item.placa || '',
+                'R$ 0,00', // Força R$ 0,00 para OS
+                `R$ ${valorMO.replace('.', ',')}`,
+                item.pagamento || '',
+                item.tecnico || '',
+                item.unidade || ''
+            ];
+        }
+
+        // Para os demais
         return [
             item.os || '',
             item.data || '',
             item.cliente || '',
             item.placa || '',
-            `R$ ${valorOs}`,
-            `R$ ${valorMo}`,
+            `R$ ${valorOS.replace('.', ',')}`,
+            `R$ ${valorMO.replace('.', ',')}`,
             item.pagamento || '',
             item.tecnico || '',
-            item.os_tecnico || '',
             item.unidade || ''
         ];
     });
 
-    if(dadosTabela.length === 0) { alert('Nenhum dado para o filtro selecionado'); return; }
-
-    const headers = ['O.S','DATA','CLIENTE','PLACA','VALOR OS','VALOR MO','PAGAMENTO','TECNICO','OS TECNICO','UNIDADE'];
+    // 2. Definir o título do relatório e o nome do arquivo
+    let nomeArquivo = '';
+    switch (categoriaNormalizada) {
+        case 'geral': titulo = 'Relatório Geral de O.S.'; nomeArquivo = 'Relatorio_Geral.pdf'; break;
+        case 'faturado': titulo = 'Resumo: Faturadas'; nomeArquivo = 'Resumo_Faturadas.pdf'; break;
+        case 'emaberto': titulo = 'Resumo: Em Aberto'; nomeArquivo = 'Resumo_EmAberto.pdf'; break;
+        case 'pix': titulo = 'Resumo: PIX'; nomeArquivo = 'Resumo_PIX.pdf'; break;
+        case 'dinheiro': titulo = 'Resumo: Dinheiro'; nomeArquivo = 'Resumo_Dinheiro.pdf'; break;
+        case 'debito': titulo = 'Resumo: Débito'; nomeArquivo = 'Resumo_Debito.pdf'; break;
+        case 'credito': titulo = 'Resumo: Crédito'; nomeArquivo = 'Resumo_Credito.pdf'; break;
+        case 'maoobra': titulo = 'Resumo: Mão de Obra'; nomeArquivo = 'Resumo_MaoObra.pdf'; break;
+        default: titulo = 'Relatório de O.S.'; nomeArquivo = 'Relatorio_OS.pdf'; break;
+    }
     
-    // Títulos do PDF
-    doc.setFontSize(16);
-    doc.text('Relatório de Ordens de Serviço', margin, y);
-    y+= 8;
+    // Adicionar filtro de data ao título
+    const dataInicio = document.getElementById('dataInicio').value;
+    const dataFim = document.getElementById('dataFim').value;
+    if (dataInicio && dataFim) {
+        titulo += ` (${formatDate(dataInicio)} a ${formatDate(dataFim)})`;
+    } else if (dataInicio) {
+        titulo += ` (A partir de ${formatDate(dataInicio)})`;
+    } else if (dataFim) {
+        titulo += ` (Até ${formatDate(dataFim)})`;
+    }
 
-    const filtrosAplicados = [];
-    if(unidadeFiltroRaw) filtrosAplicados.push(`Unidade: ${unidadeFiltroRaw}`);
-    if(tecnicoFiltroRaw) filtrosAplicados.push(`Técnico: ${tecnicoFiltroRaw}`); 
-    if(dataInicio && dataFim) filtrosAplicados.push(`Período: ${formatDate(dataInicio)} a ${formatDate(dataFim)}`);
-    else if(dataInicio) filtrosAplicados.push(`A partir de: ${formatDate(dataInicio)}`);
-    else if(dataFim) filtrosAplicados.push(`Até: ${formatDate(dataFim)}`);
-    if(filtroPagamento) filtrosAplicados.push(`Filtro: ${filtroPagamento}`);
 
-    doc.setFontSize(10);
-    doc.setTextColor(100);
-    doc.text(`Filtros: ${filtrosAplicados.join(' | ') || 'Geral'}`, margin, y);
-    y+= 6;
-
-    // Tabela
-    doc.autoTable({
-        head: [headers],
-        body: dadosTabela,
-        startY: y,
-        theme: 'striped',
-        headStyles: { fillColor: [74, 144, 226] },
-        styles: { fontSize: 8, cellPadding: 2, overflow: 'linebreak' },
-        columnStyles: { 4: { halign: 'right' }, 5: { halign: 'right' }},
-    });
-
-    const finalY = doc.autoTable.previous.finalY;
-    doc.setFontSize(10);
-    doc.setTextColor(0);
-
-    // Calcular Totais (usa a mesma lógica de totalização da tabela)
-    let totalFPDF = 0, totalAbertoPDF = 0, totalPixPDF = 0, totalDinPDF = 0, totalDebPDF = 0, totalCredPDF = 0, totalMoPDF = 0, totalGeralPDF = 0;
+    // 3. Configuração do AutoTable
+    const head = [['O.S', 'DATA', 'CLIENTE', 'PLACA', 'VALOR OS', 'VALOR MO', 'PAGAMENTO', 'TECNICO', 'UNIDADE']];
+    const columnStyles = {
+        4: { halign: 'right' }, // VALOR OS
+        5: { halign: 'right' }  // VALOR MO
+    };
     
-    osData.filter(item => {
-        const itemDate = item.data ? item.data.split('/').reverse().join('-') : '2000-01-01';
-        const itemTecnico = (item.tecnico || '').trim().toLowerCase();
-        const itemUnidade = (item.unidade || '').trim().toLowerCase();
+    const body = dadosFiltrados;
 
-        if(unidadeFiltro && itemUnidade !== unidadeFiltro) return false;
-        if(tecnicoFiltroPad && itemTecnico !== tecnicoFiltroPad) return false; 
-        if(dataInicio && itemDate < dataInicio) return false;
-        if(dataFim && itemDate > dataFim) return false;
-        if((item.cliente||'').toUpperCase().includes('CANCELADA')) return false;
-        
-        return true;
-    }).forEach(item => {
-        const itemValorOS = parseFloat(item.valor_os || 0);
-        const itemValorMO = parseFloat(item.valor_mo || 0);
-        
-        const pagamento = (item.pagamento || '').toLowerCase().trim();
-
-        // Pagamentos (SÓ USA itemValorOS)
-        if(pagamento === 'faturado') totalFPDF += itemValorOS;
-        if(pagamento === 'em aberto') totalAbertoPDF += itemValorOS;
-        if(pagamento === 'pix') totalPixPDF += itemValorOS;
-        if(pagamento === 'dinheiro') totalDinPDF += itemValorOS;
-        if(pagamento === 'débito' || pagamento === 'debito') totalDebPDF += itemValorOS;
-        if(pagamento === 'crédito' || pagamento === 'credito') totalCredPDF += itemValorOS;
-        
-        // Mão de Obra (SÓ USA itemValorMO)
-        totalMoPDF += itemValorMO;
-        
-        // TOTAL GERAL (SÓ USA itemValorOS)
-        totalGeralPDF += itemValorOS;
-    });
-
-    doc.setFontSize(11);
-    doc.text(`--- RESUMO DE TOTAIS ---`, margin, finalY + 5);
-    doc.text(`Faturadas: R$ ${totalFaturadasFPDF.toFixed(2)}`, margin, finalY + 10);
-    doc.text(`Em Aberto: R$ ${totalAbertoPDF.toFixed(2)}`, margin, finalY + 15);
-    doc.text(`PIX: R$ ${totalPixPDF.toFixed(2)}`, margin, finalY + 20);
-    doc.text(`Dinheiro: R$ ${totalDinheiroPDF.toFixed(2)}`, 70, finalY + 10);
-    doc.text(`Débito: R$ ${totalDebitoPDF.toFixed(2)}`, 70, finalY + 15);
-    doc.text(`Crédito: R$ ${totalCreditoPDF.toFixed(2)}`, 70, finalY + 20);
-    doc.text(`Total Mão de Obra: R$ ${totalMoPDF.toFixed(2)}`, 140, finalY + 10);
+    // 4. Geração do PDF
     doc.setFontSize(14);
-    doc.text(`TOTAL GERAL (Valor OS): R$ ${totalGeralPDF.toFixed(2)}`, 140, finalY + 18);
+    doc.text(titulo, 14, 20);
 
-    doc.save(`Relatorio_OS_${filtroPagamento || 'Geral'}_${new Date().toLocaleDateString('pt-BR').replace(/\//g,'-')}.pdf`);
+    doc.autoTable({
+        head: head,
+        body: body,
+        startY: 25,
+        theme: 'striped',
+        headStyles: { fillColor: [74, 144, 226] }, // Cor do cabeçalho (igual ao tema do site)
+        columnStyles: columnStyles,
+        didParseCell: function(data) {
+            // Adiciona R$ aos valores
+            if (data.column.index === 4 || data.column.index === 5) {
+                // jspdf-autotable já faz o alinhamento via columnStyles, mas podemos garantir a formatação final aqui se necessário.
+            }
+        },
+        didDrawPage: function(data) {
+            // Rodapé com o total da categoria
+            doc.setFontSize(10);
+            let footerText = `Total de Registros: ${dadosFiltrados.length}`;
+            let totalValueFormatted = 'R$ 0,00';
+            
+            if (categoriaNormalizada === 'geral') {
+                footerText += ` | Total de Vendas (OS): R$ ${totalOS.toFixed(2).replace('.', ',')} | Total Mão de Obra: R$ ${totalMO.toFixed(2).replace('.', ',')}`;
+                totalValueFormatted = `R$ ${totalOS.toFixed(2).replace('.', ',')}`;
+            } else if (categoriaNormalizada === 'maoobra') {
+                footerText += ` | Total Mão de Obra: R$ ${totalGeral.toFixed(2).replace('.', ',')}`;
+                totalValueFormatted = `R$ ${totalGeral.toFixed(2).replace('.', ',')}`;
+            } else {
+                footerText += ` | Total ${titulo.replace('Resumo: ', '')}: R$ ${totalGeral.toFixed(2).replace('.', ',')}`;
+                totalValueFormatted = `R$ ${totalGeral.toFixed(2).replace('.', ',')}`;
+            }
+
+            doc.text(footerText, data.settings.margin.left, doc.internal.pageSize.height - 10);
+            
+            // Coloca o total grande no final da tabela (opcional)
+            doc.setFontSize(12);
+            doc.setFont('helvetica', 'bold');
+            doc.text(`TOTAL DA CATEGORIA: ${totalValueFormatted}`, 190, data.cursor.y + 10, { align: 'right' });
+        }
+    });
+
+    // 5. Salvar o PDF
+    doc.save(nomeArquivo);
 }
+
 </script>
 </body>
 </html>
-
