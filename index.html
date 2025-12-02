@@ -672,7 +672,7 @@ function finalizarImportacao(dados, numArquivos){
 }
 
 
-/* -------------------------   PDF rendering (COM CORREÇÃO DE DESLOCAMENTO DE COLUNAS)   ------------------------- */
+/* -------------------------   PDF rendering (COM CORREÇÃO FINAL DE MAPEO E DESLOCAMENTO)   ------------------------- */
 function imprimirPDF(filtroPagamento = 'Geral') {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF('l', 'mm', 'a4');
@@ -727,7 +727,6 @@ function imprimirPDF(filtroPagamento = 'Geral') {
             valorTotal: `R$ ${valorTotal.toFixed(2).replace('.', ',')}`,
             pagamento: item.pagamento || '', 
             tecnico: item.tecnico || '',
-            osTecnico: item.os_tecnico || '', 
             unidade: item.unidade || '',
             corFundo: cor
         };
@@ -764,12 +763,12 @@ function imprimirPDF(filtroPagamento = 'Geral') {
     const bodyData = dadosFiltrados.map(d => [
         d.os, 
         d.data, 
-        d.cliente, 
-        d.placa, 
+        d.cliente, // POSIÇÃO 2: Cliente
+        d.placa,   // POSIÇÃO 3: Placa
         d.valorOs, 
         d.valorMo, 
         d.valorTotal, 
-        d.pagamento, // 8ª COLUNA (Índice 7)
+        d.pagamento, // POSIÇÃO 7: Pagamento (Aqui estava o problema de deslocamento)
         d.tecnico, 
         d.unidade
     ]);
@@ -802,7 +801,8 @@ function imprimirPDF(filtroPagamento = 'Geral') {
             }
         },
         willDrawCell: (data) => {
-            // ESSENCIAL: Impede que o autoTable tente desenhar o texto na coluna 7
+            // ESSENCIAL: Impede que o autoTable tente desenhar o texto na coluna 7 (PAGAMENTO),
+            // pois estamos desenhando manualmente com a cor de fundo no didDrawCell.
             if (data.section === 'body' && data.column.index === 7) {
                 return false; 
             }
