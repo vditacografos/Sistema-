@@ -196,7 +196,7 @@ const paymentColors = {
   'Dinheiro': [255, 239, 173],  
   'Débito': [253, 222, 173],  
   'Crédito': [210, 180, 222],
-  'QR CODE PIX': [175, 223, 175] // Adicionando QR CODE PIX para garantir cor
+  'QR CODE PIX': [175, 223, 175] 
 };
 
 /* -------------------------   Helpers de Formatação e Parse   ------------------------- */
@@ -672,7 +672,7 @@ function finalizarImportacao(dados, numArquivos){
 }
 
 
-/* -------------------------   PDF rendering (FINALMENTE CORRIGIDO PARA EXIBIR TEXTO)   ------------------------- */
+/* -------------------------   PDF rendering (COM CORREÇÃO DE DESLOCAMENTO DE COLUNAS)   ------------------------- */
 function imprimirPDF(filtroPagamento = 'Geral') {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF('l', 'mm', 'a4');
@@ -717,16 +717,17 @@ function imprimirPDF(filtroPagamento = 'Geral') {
         return {
             os: item.os || '',
             data: item.data || '',
-            cliente: item.cliente || '',
-            placa: item.placa || '',
+            cliente: item.cliente || '', 
+            placa: item.placa || '',     
             valorOsFloat: valorOs, 
             valorMoFloat: valorMo, 
             valorTotalFloat: valorTotal,
             valorOs: `R$ ${valorOs.toFixed(2).replace('.', ',')}`,
             valorMo: `R$ ${valorMo.toFixed(2).replace('.', ',')}`,
             valorTotal: `R$ ${valorTotal.toFixed(2).replace('.', ',')}`,
-            pagamento: item.pagamento || '', // Manter o texto original do pagamento
+            pagamento: item.pagamento || '', 
             tecnico: item.tecnico || '',
+            osTecnico: item.os_tecnico || '', 
             unidade: item.unidade || '',
             corFundo: cor
         };
@@ -759,9 +760,18 @@ function imprimirPDF(filtroPagamento = 'Geral') {
     doc.text(`Total Geral: R$ ${totalGeral.toFixed(2).replace('.', ',')}`, margin + 100, y + 2);
     y += 5;
 
-    // Configuração da Tabela
+    // 3. Montagem dos Dados do Corpo da Tabela com TODAS as 10 colunas
     const bodyData = dadosFiltrados.map(d => [
-        d.os, d.data, d.cliente, d.placa, d.valorOs, d.valorMo, d.valorTotal, d.pagamento, d.tecnico, d.unidade
+        d.os, 
+        d.data, 
+        d.cliente, 
+        d.placa, 
+        d.valorOs, 
+        d.valorMo, 
+        d.valorTotal, 
+        d.pagamento, // 8ª COLUNA (Índice 7)
+        d.tecnico, 
+        d.unidade
     ]);
     
     doc.autoTable({
@@ -775,7 +785,7 @@ function imprimirPDF(filtroPagamento = 'Geral') {
             4: { halign: 'right' },
             5: { halign: 'right' },
             6: { halign: 'right' },
-            7: { cellWidth: 28 } // Garante espaço para o texto
+            7: { cellWidth: 28 } // Garante espaço para o texto de pagamento
         },
         didDrawCell: (data) => {
             if (data.section === 'body') {
@@ -785,16 +795,14 @@ function imprimirPDF(filtroPagamento = 'Geral') {
                     doc.setFillColor(cor[0], cor[1], cor[2]);
                     doc.rect(data.cell.x, data.cell.y, data.cell.width, data.cell.height, 'F');
                     
-                    // Desenha o texto do pagamento, forçando cor preta e posicionamento
+                    // Desenha o texto do pagamento manualmente
                     doc.setTextColor(0, 0, 0); 
-                    // Ajustamos a posição Y: data.cell.height / 2 (meio da célula) + 1.5 (ajuste fino)
                     doc.text(item.pagamento, data.cell.x + 2, data.cell.y + data.cell.height / 2 + 1.5, { align: 'left' });
                 }
             }
         },
         willDrawCell: (data) => {
-            // ESSENCIAL: Impede que o autoTable tente desenhar o texto na coluna 7,
-            // pois já faremos isso manualmente no didDrawCell
+            // ESSENCIAL: Impede que o autoTable tente desenhar o texto na coluna 7
             if (data.section === 'body' && data.column.index === 7) {
                 return false; 
             }
