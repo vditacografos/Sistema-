@@ -345,9 +345,10 @@ function atualizarTabelaTodas(){
     let totalF = 0, totalAberto = 0, totalPix = 0, totalDin = 0, totalDeb = 0, totalCred = 0, totalMo = 0, totalGeral = 0;
 
     const dadosFiltrados = osData.filter(item => {
-        const itemDate = item.data ? item.data.split('/').reverse().join('-') : '2000-01-01';
+        // Garantindo que valor_os e valor_mo sejam tratados como números antes do cálculo
         const itemValorOS = parseFloat(item.valor_os || 0);
         const itemValorMO = parseFloat(item.valor_mo || 0);
+        const itemDate = item.data ? item.data.split('/').reverse().join('-') : '2000-01-01';
         const itemPagamento = (item.pagamento || '').toString().toLowerCase().trim();
         const itemTecnico = (item.tecnico || '').toString().toLowerCase().trim();
         const itemUnidade = (item.unidade || '').toString().toLowerCase().trim();
@@ -445,7 +446,7 @@ async function limparDados(){
         alert('Erro ao apagar dados');
     }}
 
-/* --------------------------   Export / Import Excel (CORRIGIDO)   -------------------------- */
+/* --------------------------   Export / Import Excel   -------------------------- */
 function exportExcel(){
     const items = osData.map(it => ({
         'O S': it.os || '',
@@ -618,20 +619,23 @@ async function subirDadosExcel(dados){
     let sucesso = 0;
     try {
         dados.forEach(registroOriginal => {
-            // Cria um novo objeto, mapeando explicitamente os campos para evitar conflitos de tipo.
+            
+            // 🚨 LIMPEZA CRÍTICA: Mapeia o objeto, garantindo que TODOS os valores sejam strings ou o timestamp
+            // Esta rigorosa conversão de tipo corrige o erro 'Expected type fp'
             const registroParaSalvar = {
-                os: registroOriginal.os || '',
-                data: registroOriginal.data || '',
-                cliente: registroOriginal.cliente || '',
-                placa: registroOriginal.placa || '',
-                valor_os: registroOriginal.valor_os || '0.00',
-                valor_mo: registroOriginal.valor_mo || '0.00',
-                valor: registroOriginal.valor || '0.00',
-                pagamento: registroOriginal.pagamento || '',
-                tecnico: registroOriginal.tecnico || '',
-                os_tecnico: registroOriginal.os_tecnico || '',
-                unidade: registroOriginal.unidade || '',
-                // Adiciona o timestamp do servidor, garantindo o tipo correto.
+                os: String(registroOriginal.os || '').trim(),
+                data: String(registroOriginal.data || '').trim(),
+                cliente: String(registroOriginal.cliente || '').trim(),
+                placa: String(registroOriginal.placa || '').trim(),
+                // Valida e formata valores numéricos como strings limpas
+                valor_os: parseFloat(registroOriginal.valor_os || 0).toFixed(2),
+                valor_mo: parseFloat(registroOriginal.valor_mo || 0).toFixed(2),
+                valor: parseFloat(registroOriginal.valor || 0).toFixed(2),
+                pagamento: String(registroOriginal.pagamento || '').trim(),
+                tecnico: String(registroOriginal.tecnico || '').trim(),
+                os_tecnico: String(registroOriginal.os_tecnico || '').trim(),
+                unidade: String(registroOriginal.unidade || '').trim(),
+                // Adiciona o timestamp do servidor com o tipo correto
                 timestamp: firebase.firestore.FieldValue.serverTimestamp()
             };
 
