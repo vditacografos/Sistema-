@@ -74,7 +74,8 @@
                 <button onclick="abrirForm()">+ Nova O.S</button>
                 <button onclick="exportExcel()">Exportar Excel</button>
                 <button onclick="importExcel()">Importar Excel</button>
-                <button onclick="imprimirPDF('Geral')">Imprimir / Salvar PDF</button> <button onclick="limparDados()">Limpar dados</button>
+                <button onclick="imprimirPDF('Geral')">Imprimir / Salvar PDF</button>
+                <button onclick="limparDados()">Limpar dados</button>
             </div>
 
             <input type="file" id="inputExcel" accept=".xlsx,.csv" style="display:none" onchange="lerExcel(event)" multiple>
@@ -172,7 +173,7 @@
 
 <script>
 /* ===========================   Configuração Firebase / DB   =========================== */
-const { jsPDF } = window.jspdf; // Garante que jsPDF seja carregado corretamente
+const { jsPDF } = window.jspdf;
 
 // !!! ATENÇÃO: SUBSTITUA ESTAS CHAVES PELAS SUAS CHAVES REAIS DO FIREBASE !!!
 const firebaseConfig = {
@@ -188,7 +189,7 @@ const firebaseConfig = {
 const app = firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore(app);
 const osCollection = db.collection('ordens_servico');
-let osData = []; // cache local
+let osData = [];
 
 /* --------------------------   Utilities   -------------------------- */
 function formatDate(iso){
@@ -340,6 +341,7 @@ function atualizarTabelaTodas(){
     const tbody = document.querySelector('#tabelaTodas tbody');
     tbody.innerHTML = '';
 
+    // CORREÇÃO: GARANTIR QUE TODOS OS TOTAIS SÃO INICIALIZADOS COMO NÚMEROS (0)
     let totalF = 0, totalAberto = 0, totalPix = 0, totalDin = 0, totalDeb = 0, totalCred = 0, totalMo = 0, totalGeral = 0;
 
     const dadosFiltrados = osData.filter(item => {
@@ -632,9 +634,9 @@ function imprimirPDF(categoria) {
     const categoriaNormalizada = categoria.toLowerCase().trim();
 
     let titulo = 'Relatório de O.S. - ';
-    let totalOS = 0; // Total de Valor OS (Itens/Venda)
-    let totalMO = 0; // Total de Valor MO (Mão de Obra)
-    let totalDaCategoria = 0; // O valor que aparecerá no rodapé/título do PDF
+    let totalOS = 0;
+    let totalMO = 0;
+    let totalDaCategoria = 0;
 
     // 1. Capturar TODOS os filtros de TELA
     const unidadeFiltro = document.getElementById('unidade').value.toLowerCase().trim();
@@ -645,7 +647,6 @@ function imprimirPDF(categoria) {
 
     // 2. Filtrar os dados aplicando TODOS os filtros
     const dadosFiltrados = osData.filter(item => {
-        // Normaliza o pagamento do item do DB (sem acentos e espaços)
         const pagamentoClean = (item.pagamento || '').toLowerCase().trim().replace(/á|à|ã/g, 'a').replace(/é|è/g, 'e').replace(/í|ì/g, 'i').replace(/ó|ò|õ|ô/g, 'o').replace(/ú|ù/g, 'u').replace(/ /g, '').trim();
 
         const itemDate = item.data ? item.data.split('/').reverse().join('-') : '2000-01-01';
@@ -768,12 +769,10 @@ function imprimirPDF(categoria) {
     // 8. ADICIONA O TOTAL DA CATEGORIA APENAS UMA VEZ, APÓS O autoTable
     const finalY = doc.autoTable.previous.finalY || 25; 
 
-    // Garante que o total não fique sobreposto ao rodapé padrão (se houver)
     const totalValueFormatted = `R$ ${totalDaCategoria.toFixed(2).replace('.', ',')}`;
     doc.setFontSize(12);
     doc.setFont('helvetica', 'bold');
     
-    // Posiciona o total na última página, logo abaixo da tabela.
     doc.text(`TOTAL DA CATEGORIA: ${totalValueFormatted}`, 190, finalY + 10, { align: 'right' });
 
 
