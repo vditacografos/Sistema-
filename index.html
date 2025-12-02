@@ -154,6 +154,7 @@
                     <option value="Débito">Débito</option>
                     <option value="Em Aberto">Em Aberto</option>
                     <option value="Faturado">Faturado</option>
+                    <option value="QR CODE PIX">QR CODE PIX</option>
                 </select>
                 <select id="formUnidade">
                     <option value="">Selecione a Unidade</option>
@@ -671,7 +672,7 @@ function finalizarImportacao(dados, numArquivos){
 }
 
 
-/* -------------------------   PDF rendering (CORRIGIDO PARA O CÁLCULO DE TOTAIS)   ------------------------- */
+/* -------------------------   PDF rendering (FINALMENTE CORRIGIDO PARA EXIBIR TEXTO)   ------------------------- */
 function imprimirPDF(filtroPagamento = 'Geral') {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF('l', 'mm', 'a4');
@@ -699,7 +700,7 @@ function imprimirPDF(filtroPagamento = 'Geral') {
         if((item.cliente||'').toUpperCase().includes('CANCELADA')) return false;
         if(termoBusca && !((item.cliente||'').toLowerCase().includes(termoBusca) || (item.placa||'').toLowerCase().includes(termoBusca) || (item.os||'').toLowerCase().includes(termoBusca))) return false;
         
-        // Filtro de Pagamento Principal (Verifica se é PIX ou QRCODEPIX, se o filtro for PIX)
+        // Filtro de Pagamento Principal (Tratamento para PIX)
         if (filtroPagamentoClean !== 'geral' && filtroPagamentoClean !== 'maoobra') {
              if (filtroPagamentoClean === 'pix' && !itemPagamento.includes('pix')) return false;
              if (filtroPagamentoClean !== 'pix' && itemPagamento !== filtroPagamentoClean) return false;
@@ -718,13 +719,13 @@ function imprimirPDF(filtroPagamento = 'Geral') {
             data: item.data || '',
             cliente: item.cliente || '',
             placa: item.placa || '',
-            valorOsFloat: valorOs, // Adicionado para facilitar o cálculo
-            valorMoFloat: valorMo, // Adicionado para facilitar o cálculo
-            valorTotalFloat: valorTotal, // Adicionado para facilitar o cálculo
+            valorOsFloat: valorOs, 
+            valorMoFloat: valorMo, 
+            valorTotalFloat: valorTotal,
             valorOs: `R$ ${valorOs.toFixed(2).replace('.', ',')}`,
             valorMo: `R$ ${valorMo.toFixed(2).replace('.', ',')}`,
             valorTotal: `R$ ${valorTotal.toFixed(2).replace('.', ',')}`,
-            pagamento: item.pagamento || '',
+            pagamento: item.pagamento || '', // Manter o texto original do pagamento
             tecnico: item.tecnico || '',
             unidade: item.unidade || '',
             corFundo: cor
@@ -737,7 +738,7 @@ function imprimirPDF(filtroPagamento = 'Geral') {
         return true;
     });
 
-    // 2. Cálculo dos Totais CORRIGIDO: usando REDUCE nos dados filtrados
+    // 2. Cálculo dos Totais
     const totalOS = dadosFiltrados.reduce((acc, item) => acc + item.valorOsFloat, 0);
     const totalMO = dadosFiltrados.reduce((acc, item) => acc + item.valorMoFloat, 0);
     const totalGeral = dadosFiltrados.reduce((acc, item) => acc + item.valorTotalFloat, 0);
@@ -773,25 +774,27 @@ function imprimirPDF(filtroPagamento = 'Geral') {
         columnStyles: {
             4: { halign: 'right' },
             5: { halign: 'right' },
-            6: { halign: 'right' }
+            6: { halign: 'right' },
+            7: { cellWidth: 28 } // Garante espaço para o texto
         },
         didDrawCell: (data) => {
             if (data.section === 'body') {
                 const item = dadosFiltrados[data.row.index];
-                if (data.column.index === 7) { // Coluna Pagamento
-                    // Busca a cor usando o nome do pagamento real
+                if (data.column.index === 7) { // Coluna Pagamento (Índice 7)
                     const cor = paymentColors[item.pagamento] || [240, 240, 240]; 
                     doc.setFillColor(cor[0], cor[1], cor[2]);
                     doc.rect(data.cell.x, data.cell.y, data.cell.width, data.cell.height, 'F');
                     
-                    // Desenha o texto do pagamento manualmente, garantindo que apareça
-                    doc.setTextColor(0, 0, 0); // Cor preta para o texto
-                    doc.text(data.cell.text, data.cell.x + 2, data.cell.y + data.cell.height / 2 + 1.5, { align: 'left' });
+                    // Desenha o texto do pagamento, forçando cor preta e posicionamento
+                    doc.setTextColor(0, 0, 0); 
+                    // Ajustamos a posição Y: data.cell.height / 2 (meio da célula) + 1.5 (ajuste fino)
+                    doc.text(item.pagamento, data.cell.x + 2, data.cell.y + data.cell.height / 2 + 1.5, { align: 'left' });
                 }
             }
         },
         willDrawCell: (data) => {
-            // Previne que a jsPDF tente desenhar o texto padrão na coluna Pagamento
+            // ESSENCIAL: Impede que o autoTable tente desenhar o texto na coluna 7,
+            // pois já faremos isso manualmente no didDrawCell
             if (data.section === 'body' && data.column.index === 7) {
                 return false; 
             }
@@ -800,7 +803,6 @@ function imprimirPDF(filtroPagamento = 'Geral') {
 
     doc.save(`Relatorio_OS_${filtroPagamento}_${new Date().toLocaleDateString('pt-BR').replace(/\//g, '-')}.pdf`);
 }
-
 </script>
 </body>
 </html>
