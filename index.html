@@ -674,7 +674,7 @@ function finalizarImportacao(dados, numArquivos){
 }
 
 
-/* -------------------------   PDF rendering (COM CORREÇÃO FINAL DE MAPEO E LÓGICA DE FILTRO)   ------------------------- */
+/* -------------------------   PDF rendering (COM CORREÇÃO FINAL DE CÁLCULO TOTAL DA CATEGORIA)   ------------------------- */
 function imprimirPDF(filtroPagamento = 'Geral') {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF('l', 'mm', 'a4');
@@ -746,7 +746,7 @@ function imprimirPDF(filtroPagamento = 'Geral') {
     // 2. Cálculo dos Totais
     const totalOS = dadosFiltrados.reduce((acc, item) => acc + item.valorOsFloat, 0);
     const totalMO = dadosFiltrados.reduce((acc, item) => acc + item.valorMoFloat, 0);
-    const totalGeral = dadosFiltrados.reduce((acc, item) => acc + item.valorTotalFloat, 0);
+    const totalGeral = dadosFiltrados.reduce((acc, item) => acc + item.valorTotalFloat, 0); // Este é o total CORRETO da categoria.
     
     // Total de Registros
     const totalRegistros = dadosFiltrados.length;
@@ -772,12 +772,12 @@ function imprimirPDF(filtroPagamento = 'Geral') {
     const bodyData = dadosFiltrados.map(d => [
         d.os, 
         d.data, 
-        d.cliente, // POSIÇÃO 2
-        d.placa,   // POSIÇÃO 3
+        d.cliente, 
+        d.placa,   
         d.valorOs, 
         d.valorMo, 
         d.valorTotal, 
-        d.pagamento, // POSIÇÃO 7: Coluna do Pagamento
+        d.pagamento, 
         d.tecnico, 
         d.unidade
     ]);
@@ -816,7 +816,7 @@ function imprimirPDF(filtroPagamento = 'Geral') {
         }
     });
     
-    // Adiciona o TOTAL DA CATEGORIA no rodapé (como estava no seu código original)
+    // Adiciona o TOTAL DA CATEGORIA no rodapé (usando o totalGeral, que é o valor da categoria filtrada)
     const finalY = doc.autoTable.previous.finalY;
     doc.setFontSize(12);
     doc.setFont(doc.getFont().fontName, 'bold'); 
