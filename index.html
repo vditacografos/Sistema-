@@ -170,7 +170,7 @@
     </div>
 
 <script>
-/* =============================================   Configurações Firebase (mantive as suas)   ============================================= */
+/* =============================================   Configurações Firebase (mantidas)   ============================================= */
 const { jsPDF } = window.jspdf;
 const firebaseConfig = {
   apiKey: "AIzaSyC5up-MQFQNeH1ftI8KTMoXI5pY2D2jpgM",
@@ -187,7 +187,7 @@ const db = firebase.firestore(app);
 const osCollection = db.collection('ordens_servico');
 let osData = [];
 
-/* cores para pdf (mantive) */
+/* cores para pdf (mantidas) */
 const paymentColors = {  
   'Faturado': [173, 216, 230],  
   'Em Aberto': [255, 192, 203],  
@@ -197,55 +197,46 @@ const paymentColors = {
   'Crédito': [210, 180, 222]
 };
 
-/* -------------------------   Helper: formatDate (ISO->DD/MM/YYYY)   ------------------------- */
+/* -------------------------   Helpers de Formatação e Parse   ------------------------- */
 function formatDate(iso){
     if(!iso) return '01/01/2000';
     const parts = iso.split('-');
     if(parts.length !== 3) return iso;
     return `${parts[2]}/${parts[1]}/${parts[0]}`;}
 
-/* Helper: normalize header text */
 function normalizeHeader(s){
     return String(s || '').toUpperCase().replace(/\s+/g, ' ').trim();}
 
-/* Helper: parse date-like cells (various formats) -> returns YYYY-MM-DD */
 function parseDateCell(cell){
     if(!cell && cell !== 0) return null;
     if (cell instanceof Date) {
-        // Correção para TZ/Offset: usa UTC para garantir que a data não mude no fuso horário
         const y = cell.getUTCFullYear();
         const m = String(cell.getUTCMonth() + 1).padStart(2, '0');
         const d = String(cell.getUTCDate()).padStart(2, '0');
         return `${y}-${m}-${d}`;
     }
     const txt = String(cell).trim();
-    // yyyy-mm-dd
     if(/^\d{4}-\d{2}-\d{2}/.test(txt)) return txt.split('T')[0];
-    // dd/mm/yyyy
     if(/^\d{2}\/\d{2}\/\d{4}$/.test(txt)){
         const [d,m,y] = txt.split('/');
         return `${y}-${m}-${d}`;
     }
-    // try Date parse
     const dt = new Date(txt);
     if(!isNaN(dt)) return dt.toISOString().split('T')[0];
     return null;}
 
-/* Helper: parse money cell to Number (handles "1.234,56" and "1234.56") */
 function parseMoneyCell(cell){
     if(cell === null || cell === undefined || cell === '') return 0;
     let txt = String(cell).replace(/\s/g,'').replace(/\u00A0/g,'');
-    // Se for formato brasileiro: remove pontos e troca vírgula por ponto
     if(/^\d{1,3}(\.\d{3})+,\d{2}$/.test(txt) || (txt.indexOf(',')>-1 && txt.indexOf('.')>-1)){
         txt = txt.replace(/\./g,'').replace(',', '.');
     } else {
-        // substitui vírgula por ponto se for decimal
         txt = txt.replace(',', '.');
     }
     const val = parseFloat(txt);
     return isNaN(val) ? 0 : val;}
 
-/* -------------------------   Firestore listener (keeps osData up-to-date)   ------------------------- */
+/* -------------------------   Firestore listener e Tabela   ------------------------- */
 function setupFirestoreListener(){
     document.getElementById('loadingOverlay').style.display = 'flex';
     osCollection.onSnapshot(snapshot => {
@@ -262,7 +253,6 @@ function setupFirestoreListener(){
             }
         });
 
-        // ordenar por data (DD/MM/YYYY)
         osData.sort((a,b)=>{
             const pa = a.data ? a.data.split('/') : ['01','01','2000'];
             const pb = b.data ? b.data.split('/') : ['01','01','2000'];
@@ -292,18 +282,14 @@ function getTecnicosUnicos(){
     });
     if(current && Array.from(select.options).some(o=>o.value===current)) select.value = current;}
 
-/* Start listener now */
 setupFirestoreListener();
 
-/* -------------------------   Form open/close & save (com suporte a edição)   ------------------------- */
 function abrirForm(item=null){
     const modal = document.getElementById('formModal');
     const btnSalvar = document.getElementById('btnSalvar');
 
-    // Limpar e preencher
     document.getElementById('formOS').value = item ? (item.os || '') : '';
     if(item && item.data){
-        // Converte DD/MM/YYYY para YYYY-MM-DD para o input type="date"
         const parts = item.data.split('/');
         document.getElementById('formData').value = `${parts[2]}-${parts[1]}-${parts[0]}`;
     } else {
@@ -311,7 +297,6 @@ function abrirForm(item=null){
     }
     document.getElementById('formCliente').value = item ? (item.cliente || '') : '';
     document.getElementById('formPlaca').value = item ? (item.placa || '') : '';
-    // Garante que o valor seja float com 2 casas
     document.getElementById('formValorOS').value = item ? parseFloat(item.valor_os || 0).toFixed(2) : '';
     document.getElementById('formValorMO').value = item ? parseFloat(item.valor_mo || 0).toFixed(2) : '';
     document.getElementById('formPagamento').value = item ? (item.pagamento || '') : '';
@@ -330,7 +315,7 @@ function abrirForm(item=null){
 
 function fecharForm(){
     document.getElementById('formModal').style.display='none';
-    delete document.getElementById('formModal').dataset.editId; // Limpa o ID de edição ao fechar
+    delete document.getElementById('formModal').dataset.editId; 
 }
 
 async function salvarForm(){
@@ -355,7 +340,6 @@ async function salvarForm(){
 
     const dataFormatada = formatDate(dataInput);
     
-    // Objeto para salvar/atualizar
     const registro = {
         os,
         data: dataFormatada,
@@ -368,17 +352,15 @@ async function salvarForm(){
         tecnico,
         os_tecnico: osTecnico,
         unidade,
-        timestamp: firebase.firestore.FieldValue.serverTimestamp() // Mantém o timestamp original se estiver editando, mas a função serverTimestamp() só altera se for novo ou se o dado no Firestore não tiver sido setado.
+        timestamp: firebase.firestore.FieldValue.serverTimestamp()
     };
 
     try {
         if(editId){
-            // Atualizar
-            delete registro.timestamp; // Não atualiza o timestamp em um update para manter a ordem original
+            delete registro.timestamp;
             await osCollection.doc(editId).update(registro);
             alert('O.S. atualizada com sucesso!');
         } else {
-            // Criar novo
             await osCollection.add(registro);
             alert('O.S. salva com sucesso!');
         }
@@ -395,8 +377,6 @@ function abrirFormForEdit(id){
     abrirForm(item);
 }
 
-
-/* -------------------------   Atualizar tabela e totais (AGORA COM TOTAL GERAL E M.O.)   ------------------------- */
 function atualizarTabelaTodas(){
     const unidadeFiltroRaw = document.getElementById('unidade').value;
     const dataInicio = document.getElementById('dataInicio').value;
@@ -410,11 +390,9 @@ function atualizarTabelaTodas(){
     const tbody = document.querySelector('#tabelaTodas tbody');
     tbody.innerHTML = '';
 
-    // INICIALIZAÇÃO CORRETA: TODOS OS TOTAIS COMO NÚMEROS (0)
     let totalF = 0, totalAberto = 0, totalPix = 0, totalDin = 0, totalDeb = 0, totalCred = 0, totalMo = 0, totalGeral = 0;
 
     const dadosFiltrados = osData.filter(item => {
-        // Garantindo que valor_os e valor_mo sejam tratados como números antes do cálculo
         const itemValorOS = parseFloat(item.valor_os || 0);
         const itemValorMO = parseFloat(item.valor_mo || 0);
         const itemValorTotal = itemValorOS + itemValorMO;
@@ -424,7 +402,6 @@ function atualizarTabelaTodas(){
         const itemTecnico = (item.tecnico || '').toString().toLowerCase().trim();
         const itemUnidade = (item.unidade || '').toString().toLowerCase().trim();
 
-        // APLICAÇÃO DOS FILTROS DE TELA
         if(unidadeFiltro && itemUnidade !== unidadeFiltro.toLowerCase()) return false;
         if(tecnicoFiltro && itemTecnico !== tecnicoFiltro.toLowerCase()) return false;
         if(dataInicio && itemDate < dataInicio) return false;
@@ -432,7 +409,6 @@ function atualizarTabelaTodas(){
         if((item.cliente||'').toUpperCase().includes('CANCELADA')) return false;
         if(termoBusca && !((item.cliente||'').toLowerCase().includes(termoBusca) || (item.placa||'').toLowerCase().includes(termoBusca) || (item.os||'').toLowerCase().includes(termoBusca))) return false;
 
-        // CÁLCULO DOS TOTAIS
         if(itemPagamento === 'faturado') totalF += itemValorTotal;
         if(itemPagamento === 'emaberto') totalAberto += itemValorTotal;
         if(itemPagamento === 'pix') totalPix += itemValorTotal;
@@ -446,7 +422,6 @@ function atualizarTabelaTodas(){
         return true;
     });
 
-    // POPULAÇÃO DA TABELA
     dadosFiltrados.forEach(item => {
         const valorOs = parseFloat(item.valor_os || 0);
         const valorMo = parseFloat(item.valor_mo || 0);
@@ -468,7 +443,6 @@ function atualizarTabelaTodas(){
         tbody.appendChild(tr);
     });
 
-    // ATUALIZAR VISUALIZAÇÃO DOS TOTAIS
     document.getElementById('totalFaturadas').innerHTML = `FATURADAS<br>R$ ${Number(totalF).toFixed(2).replace('.', ',')}`;
     document.getElementById('totalAberto').innerHTML = `EM ABERTO<br>R$ ${Number(totalAberto).toFixed(2).replace('.', ',')}`;
     document.getElementById('totalPix').innerHTML = `PIX<br>R$ ${Number(totalPix).toFixed(2).replace('.', ',')}`;
@@ -539,13 +513,13 @@ function exportExcel(){
     XLSX.writeFile(wb, 'OS_FrenteCaixa_Export.xlsx');
 }
 
-/* -------------------------   Import Excel (mantida a lógica funcional do seu último código)   ------------------------- */
+/* -------------------------   Import Excel (lógica funcional mantida)   ------------------------- */
 function importExcel(){ document.getElementById('inputExcel').click(); }
 
 function lerExcel(event){
     const files = event.target.files;
     if(!files || files.length === 0){ event.target.value = null; return; }
-    document.getElementById('loadingOverlay').style.display = 'flex'; // Inicia loading
+    document.getElementById('loadingOverlay').style.display = 'flex';
 
     let arquivosProcessados = 0;
     let dadosCombinados = [];
@@ -561,7 +535,6 @@ function lerExcel(event){
         reader.onload = function(e){
             const data = e.target.result;
             try {
-                // Raw:true, cellDates:true -> mantém o tipo nativo do Excel, crucial para Datas e Números.
                 const workbook = XLSX.read(data, {type:'binary', raw:true, cellDates:true});
                 const first = workbook.Sheets[workbook.SheetNames[0]];
                 const sheet = XLSX.utils.sheet_to_json(first, {header:1, raw:true, defval:''});
@@ -571,11 +544,10 @@ function lerExcel(event){
 
                 for(let i=0;i<sheet.length;i++){
                     const rawRow = sheet[i];
-                    if(!rawRow || rawRow.length === 0) continue; // Pula linhas vazias
+                    if(!rawRow || rawRow.length === 0) continue;
                     
                     const normalizedRow = rawRow.map(c => normalizeHeader(c));
                     
-                    // detect header row
                     const hasData = normalizedRow.some(c => c === 'DATA');
                     const hasOS = normalizedRow.some(c => c === 'O S' || c === 'O.S' || c === 'OS');
                     const hasCliente = normalizedRow.some(c => c === 'CLIENTE');
@@ -595,19 +567,17 @@ function lerExcel(event){
                             else if(cellText === 'UNIDADE') headerMap.unidade = idx;
                         });
                         capturing = true;
-                        continue; // start capturing from next row
+                        continue;
                     }
                     
                     if(capturing){
                         const rowText = normalizedRow.join(' ');
-                        // detect summary or blank row -> stop capturing
                         if(rowText.includes('TOTAL') || rowText.includes('RESUMO') || rowText.includes('SAIDAS') || rowText.includes('INICIO DE CX')){
                             capturing = false;
                             continue;
                         }
                         
                         if(headerMap){
-                            // skip empty OS
                             const rawOS = rawRow[ headerMap.os ] || rawRow[0];
                             if(!rawOS || String(rawOS).trim()==='') continue;
 
@@ -626,7 +596,6 @@ function lerExcel(event){
                             const totalValor = (vOs + vMo);
 
                             const item = {
-                                // Tipagem estrita: String(value) em tudo que não é valor numérico.
                                 os: String(rawOS || '').trim(),
                                 data: formatDate(dateISO || '2000-01-01'),
                                 cliente: String(rawRow[ headerMap.cliente !== undefined ? headerMap.cliente : 2 ] || '').trim(),
@@ -643,14 +612,13 @@ function lerExcel(event){
                             dadosCombinados.push(item);
                         }
                     }
-                } // end for rows
+                }
             } catch(err){
                 console.error('Erro processar arquivo', file.name, err);
                 alert('Erro ao ler ' + file.name + ' - Verifique a estrutura das colunas.');
             } finally {
                 arquivosProcessados++;
                 if(arquivosProcessados === files.length){
-                    // Finaliza e envia
                     finalizarImportacao(dadosCombinados, files.length);
                 }
             }
@@ -662,7 +630,7 @@ function lerExcel(event){
 }
 
 function finalizarImportacao(dados, numArquivos){
-    document.getElementById('loadingOverlay').style.display = 'none'; // Desliga loading
+    document.getElementById('loadingOverlay').style.display = 'none';
 
     const novos = dados.filter(it => it.os && it.data && (it.cliente||'').toUpperCase().trim() !== 'CANCELADA');
     if(novos.length === 0){
@@ -671,10 +639,8 @@ function finalizarImportacao(dados, numArquivos){
         return;
     }
 
-    // Usando a lógica de batch set que estava funcionando no seu código:
     const batch = db.batch();
     novos.forEach(n => {
-        // 🚨 Garantia extra para o Firestore
         const registroLimpo = JSON.parse(JSON.stringify(n));
         const ref = osCollection.doc();
         batch.set(ref, registroLimpo);
@@ -690,8 +656,7 @@ function finalizarImportacao(dados, numArquivos){
 }
 
 
-/* -------------------------   PDF rendering (mantive o seu código principal, com cabeçalho e autoTable)   ------------------------- */
-// ... (seu código PDF)
+/* -------------------------   PDF rendering (CORRIGIDO PARA EXIBIR O PAGAMENTO)   ------------------------- */
 function imprimirPDF(filtroPagamento = 'Geral') {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF('l', 'mm', 'a4');
@@ -719,7 +684,6 @@ function imprimirPDF(filtroPagamento = 'Geral') {
         if((item.cliente||'').toUpperCase().includes('CANCELADA')) return false;
         if(termoBusca && !((item.cliente||'').toLowerCase().includes(termoBusca) || (item.placa||'').toLowerCase().includes(termoBusca) || (item.os||'').toLowerCase().includes(termoBusca))) return false;
         
-        // Filtro de pagamento
         if (filtroPagamentoClean !== 'geral' && filtroPagamentoClean !== 'maoobra' && itemPagamento !== filtroPagamentoClean) return false;
 
         return true;
@@ -732,7 +696,6 @@ function imprimirPDF(filtroPagamento = 'Geral') {
         totalMO += valorMo;
         totalGeral += valorTotal;
 
-        // Formatação para PDF
         const cor = paymentColors[item.pagamento] || [240, 240, 240]; 
 
         return {
@@ -749,7 +712,6 @@ function imprimirPDF(filtroPagamento = 'Geral') {
             corFundo: cor
         };
     }).filter(item => {
-        // Se o filtro é "Mão de Obra", filtra apenas registros que têm valor MO > 0
         if (filtroPagamento.toLowerCase() === 'maoobra') {
             return parseFloat(item.valorMo.replace('R$ ', '').replace(',', '.')) > 0.00;
         }
@@ -760,19 +722,16 @@ function imprimirPDF(filtroPagamento = 'Geral') {
         "O.S", "DATA", "CLIENTE", "PLACA", "VALOR OS", "VALOR MO", "TOTAL", "PAGAMENTO", "TECNICO", "UNIDADE"
     ];
     
-    // Configuração do Cabeçalho
     doc.setFontSize(14);
     doc.text(`Relatório de O.S - ${filtroPagamento.toUpperCase()}`, margin, y + 5);
     y += 10;
     
-    // Totais no Cabeçalho
     doc.setFontSize(10);
     doc.text(`Total O.S: R$ ${totalOS.toFixed(2).replace('.', ',')}`, margin, y + 2);
     doc.text(`Total M.O: R$ ${totalMO.toFixed(2).replace('.', ',')}`, margin + 50, y + 2);
     doc.text(`Total Geral: R$ ${totalGeral.toFixed(2).replace('.', ',')}`, margin + 100, y + 2);
     y += 5;
 
-    // Configuração da Tabela
     const bodyData = dadosFiltrados.map(d => [
         d.os, d.data, d.cliente, d.placa, d.valorOs, d.valorMo, d.valorTotal, d.pagamento, d.tecnico, d.unidade
     ]);
@@ -792,18 +751,19 @@ function imprimirPDF(filtroPagamento = 'Geral') {
         didDrawCell: (data) => {
             if (data.section === 'body') {
                 const item = dadosFiltrados[data.row.index];
-                if (data.column.index === 7) { // Coluna Pagamento
+                if (data.column.index === 7) {
                     doc.setFillColor(item.corFundo[0], item.corFundo[1], item.corFundo[2]);
                     doc.rect(data.cell.x, data.cell.y, data.cell.width, data.cell.height, 'F');
-                    doc.setTextColor(0);
+                    
+                    doc.setTextColor(0, 0, 0);
+                    // O texto é desenhado manualmente, garantindo visibilidade
                     doc.text(data.cell.text, data.cell.x + 2, data.cell.y + data.cell.height / 2 + 1.5, { align: 'left' });
-                    return false; 
                 }
             }
         },
         willDrawCell: (data) => {
+            // Previne que a jsPDF tente desenhar o texto padrão na coluna Pagamento, evitando sobreposição
             if (data.section === 'body' && data.column.index === 7) {
-                // Previne o texto padrão para desenharmos manualmente com a cor
                 return false; 
             }
         }
