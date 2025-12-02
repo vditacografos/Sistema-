@@ -777,7 +777,7 @@ function imprimirPDF(filtroPagamento = 'Geral') {
         d.valorOs, 
         d.valorMo, 
         d.valorTotal, 
-        d.pagamento, // O texto de pagamento ainda é passado, mas será desenhado manualmente
+        d.pagamento, 
         d.tecnico, 
         d.unidade
     ]);
@@ -793,7 +793,7 @@ function imprimirPDF(filtroPagamento = 'Geral') {
             4: { halign: 'right' },
             5: { halign: 'right' },
             6: { halign: 'right' },
-            7: { cellWidth: 28 } // Garante espaço para o texto de pagamento
+            7: { cellWidth: 28 } 
         },
         didDrawCell: (data) => {
             // CORREÇÃO CRUCIAL: Desenha o texto APÓS desenhar o fundo colorido
@@ -806,9 +806,8 @@ function imprimirPDF(filtroPagamento = 'Geral') {
                     doc.rect(data.cell.x, data.cell.y, data.cell.width, data.cell.height, 'F');
                     
                     // 2. Desenha o Texto do Pagamento
-                    doc.setTextColor(0, 0, 0); // Texto Preto
+                    doc.setTextColor(0, 0, 0); 
                     doc.setFontSize(8); 
-                    // Posição ajustada para centralizar verticalmente no bloco
                     const textY = data.cell.y + data.cell.height / 2 + doc.getFontSize() / 3; 
                     doc.text(item.pagamento, data.cell.x + 2, textY, { align: 'left' });
                 }
