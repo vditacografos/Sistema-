@@ -49,7 +49,7 @@
         @media(max-width:900px){
             .card { flex: 1 1 100%; margin-bottom: 5px; }
             .summary { display:block; }
-            .bottom-summary-row { display: block; }
+            .bottom-summary-row { display:block; }
             .bottom-summary-row .card { flex: 1 1 100%; }
             table th, table td { font-size:12px; }
             .buttons { gap:8px; }
@@ -177,7 +177,7 @@ const firebaseConfig = {
   authDomain: "vditacografosfrentecaixa.firebaseapp.com",
   databaseURL: "https://vditacografosfrentecaixa-default-rtdb.firebaseio.com",
   projectId: "vditacografosfrentecaixa",
-  storageBucket: "vditacografosfrentecaixa.firebasestorage.app",
+  storageBucket: "vditacografosfrentecaixa.appspot.com",
   messagingSenderId: "1008625665373",
   appId: "1:1008625665373:web:1f1870898ecb04b4b854b4",
   measurementId: "G-9SYYV1VLNY"
@@ -194,7 +194,8 @@ const paymentColors = {
   'PIX': [175, 223, 175],  
   'Dinheiro': [255, 239, 173],  
   'Débito': [253, 222, 173],  
-  'Crédito': [210, 180, 222]
+  'Crédito': [210, 180, 222],
+  'QR CODE PIX': [175, 223, 175] // Adicionando QR CODE PIX para garantir cor
 };
 
 /* -------------------------   Helpers de Formatação e Parse   ------------------------- */
@@ -256,9 +257,19 @@ function setupFirestoreListener(){
         osData.sort((a,b)=>{
             const pa = a.data ? a.data.split('/') : ['01','01','2000'];
             const pb = b.data ? b.data.split('/') : ['01','01','2000'];
-            const da = new Date(pa[2], pa[1]-1, pa[0]);
-            const db = new Date(pb[2], pb[1]-1, pb[0]);
-            return db - da;
+            // Tentativa de ordenação mais robusta por data (AAAAMMDD)
+            const dateA = pa[2] + pa[1] + pa[0];
+            const dateB = pb[2] + pb[1] + pb[0];
+            
+            if(dateA !== dateB) {
+                return dateB.localeCompare(dateA); // Ordena por data (mais recente primeiro)
+            }
+            
+            // Se as datas forem iguais, ordena por O.S (número maior primeiro)
+            const osA = parseInt(a.os) || 0;
+            const osB = parseInt(b.os) || 0;
+            return osB - osA;
+
         });
         getTecnicosUnicos();
         atualizarTabelaTodas();
@@ -398,10 +409,12 @@ function atualizarTabelaTodas(){
         const itemValorTotal = itemValorOS + itemValorMO;
         
         const itemDate = item.data ? item.data.split('/').reverse().join('-') : '2000-01-01';
-        const itemPagamento = (item.pagamento || '').toString().toLowerCase().trim().replace(/á/g, 'a').replace(/é/g, 'e').replace(/ó/g, 'o').replace(/ /g, '');
+        // Normaliza o pagamento para o cálculo do resumo (removendo espaços, acentos, etc.)
+        const itemPagamento = (item.pagamento || '').toString().toLowerCase().trim().replace(/á/g, 'a').replace(/é/g, 'e').replace(/ó/g, 'o').replace(/ /g, '').replace(/,/g,'');
         const itemTecnico = (item.tecnico || '').toString().toLowerCase().trim();
         const itemUnidade = (item.unidade || '').toString().toLowerCase().trim();
 
+        // Filtros da Tabela
         if(unidadeFiltro && itemUnidade !== unidadeFiltro.toLowerCase()) return false;
         if(tecnicoFiltro && itemTecnico !== tecnicoFiltro.toLowerCase()) return false;
         if(dataInicio && itemDate < dataInicio) return false;
@@ -409,9 +422,10 @@ function atualizarTabelaTodas(){
         if((item.cliente||'').toUpperCase().includes('CANCELADA')) return false;
         if(termoBusca && !((item.cliente||'').toLowerCase().includes(termoBusca) || (item.placa||'').toLowerCase().includes(termoBusca) || (item.os||'').toLowerCase().includes(termoBusca))) return false;
 
+        // Cálculo dos Totais do Resumo (sem filtro de pagamento)
         if(itemPagamento === 'faturado') totalF += itemValorTotal;
         if(itemPagamento === 'emaberto') totalAberto += itemValorTotal;
-        if(itemPagamento === 'pix') totalPix += itemValorTotal;
+        if(itemPagamento.includes('pix')) totalPix += itemValorTotal; // Inclui "QR CODE PIX"
         if(itemPagamento === 'dinheiro') totalDin += itemValorTotal;
         if(itemPagamento === 'debito') totalDeb += itemValorTotal;
         if(itemPagamento === 'credito') totalCred += itemValorTotal;
@@ -443,6 +457,7 @@ function atualizarTabelaTodas(){
         tbody.appendChild(tr);
     });
 
+    // Atualização dos cards de resumo
     document.getElementById('totalFaturadas').innerHTML = `FATURADAS<br>R$ ${Number(totalF).toFixed(2).replace('.', ',')}`;
     document.getElementById('totalAberto').innerHTML = `EM ABERTO<br>R$ ${Number(totalAberto).toFixed(2).replace('.', ',')}`;
     document.getElementById('totalPix').innerHTML = `PIX<br>R$ ${Number(totalPix).toFixed(2).replace('.', ',')}`;
@@ -656,16 +671,14 @@ function finalizarImportacao(dados, numArquivos){
 }
 
 
-/* -------------------------   PDF rendering (CORRIGIDO PARA EXIBIR O PAGAMENTO)   ------------------------- */
+/* -------------------------   PDF rendering (CORRIGIDO PARA O CÁLCULO DE TOTAIS)   ------------------------- */
 function imprimirPDF(filtroPagamento = 'Geral') {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF('l', 'mm', 'a4');
     const margin = 10;
     let y = margin;
-    let totalOS = 0;
-    let totalMO = 0;
-    let totalGeral = 0;
 
+    // 1. Filtragem e Mapeamento dos Dados
     const dadosFiltrados = osData.filter(item => {
         const itemDate = item.data ? item.data.split('/').reverse().join('-') : '2000-01-01';
         const unidade = document.getElementById('unidade').value;
@@ -674,9 +687,11 @@ function imprimirPDF(filtroPagamento = 'Geral') {
         const tecnicoFiltro = document.getElementById('tecnicoFiltro').value;
         const termoBusca = document.getElementById('busca').value.toLowerCase();
         
-        const itemPagamento = (item.pagamento || '').toString().toLowerCase().trim().replace(/á/g, 'a').replace(/é/g, 'e').replace(/ó/g, 'o').replace(/ /g, '');
-        const filtroPagamentoClean = filtroPagamento.toString().toLowerCase().trim().replace(/á/g, 'a').replace(/é/g, 'e').replace(/ó/g, 'o').replace(/ /g, '');
+        // Normalização do filtro
+        const itemPagamento = (item.pagamento || '').toString().toLowerCase().trim().replace(/á/g, 'a').replace(/é/g, 'e').replace(/ó/g, 'o').replace(/ /g, '').replace(/,/g,'');
+        const filtroPagamentoClean = filtroPagamento.toString().toLowerCase().trim().replace(/á/g, 'a').replace(/é/g, 'e').replace(/ó/g, 'o').replace(/ /g, '').replace(/,/g,'');
 
+        // Filtros da Tabela
         if(unidade && item.unidade !== unidade) return false;
         if(tecnicoFiltro && item.tecnico !== tecnicoFiltro) return false;
         if(dataInicio && itemDate < dataInicio) return false;
@@ -684,17 +699,17 @@ function imprimirPDF(filtroPagamento = 'Geral') {
         if((item.cliente||'').toUpperCase().includes('CANCELADA')) return false;
         if(termoBusca && !((item.cliente||'').toLowerCase().includes(termoBusca) || (item.placa||'').toLowerCase().includes(termoBusca) || (item.os||'').toLowerCase().includes(termoBusca))) return false;
         
-        if (filtroPagamentoClean !== 'geral' && filtroPagamentoClean !== 'maoobra' && itemPagamento !== filtroPagamentoClean) return false;
+        // Filtro de Pagamento Principal (Verifica se é PIX ou QRCODEPIX, se o filtro for PIX)
+        if (filtroPagamentoClean !== 'geral' && filtroPagamentoClean !== 'maoobra') {
+             if (filtroPagamentoClean === 'pix' && !itemPagamento.includes('pix')) return false;
+             if (filtroPagamentoClean !== 'pix' && itemPagamento !== filtroPagamentoClean) return false;
+        }
 
         return true;
     }).map(item => {
         const valorOs = parseFloat(item.valor_os || 0);
         const valorMo = parseFloat(item.valor_mo || 0);
         const valorTotal = valorOs + valorMo;
-
-        totalOS += valorOs;
-        totalMO += valorMo;
-        totalGeral += valorTotal;
 
         const cor = paymentColors[item.pagamento] || [240, 240, 240]; 
 
@@ -703,6 +718,9 @@ function imprimirPDF(filtroPagamento = 'Geral') {
             data: item.data || '',
             cliente: item.cliente || '',
             placa: item.placa || '',
+            valorOsFloat: valorOs, // Adicionado para facilitar o cálculo
+            valorMoFloat: valorMo, // Adicionado para facilitar o cálculo
+            valorTotalFloat: valorTotal, // Adicionado para facilitar o cálculo
             valorOs: `R$ ${valorOs.toFixed(2).replace('.', ',')}`,
             valorMo: `R$ ${valorMo.toFixed(2).replace('.', ',')}`,
             valorTotal: `R$ ${valorTotal.toFixed(2).replace('.', ',')}`,
@@ -712,26 +730,35 @@ function imprimirPDF(filtroPagamento = 'Geral') {
             corFundo: cor
         };
     }).filter(item => {
+        // Filtragem final para Mão de Obra
         if (filtroPagamento.toLowerCase() === 'maoobra') {
-            return parseFloat(item.valorMo.replace('R$ ', '').replace(',', '.')) > 0.00;
+            return item.valorMoFloat > 0.00;
         }
         return true;
     });
+
+    // 2. Cálculo dos Totais CORRIGIDO: usando REDUCE nos dados filtrados
+    const totalOS = dadosFiltrados.reduce((acc, item) => acc + item.valorOsFloat, 0);
+    const totalMO = dadosFiltrados.reduce((acc, item) => acc + item.valorMoFloat, 0);
+    const totalGeral = dadosFiltrados.reduce((acc, item) => acc + item.valorTotalFloat, 0);
 
     const headers = [
         "O.S", "DATA", "CLIENTE", "PLACA", "VALOR OS", "VALOR MO", "TOTAL", "PAGAMENTO", "TECNICO", "UNIDADE"
     ];
     
+    // Configuração do Cabeçalho
     doc.setFontSize(14);
     doc.text(`Relatório de O.S - ${filtroPagamento.toUpperCase()}`, margin, y + 5);
     y += 10;
     
+    // Totais no Cabeçalho
     doc.setFontSize(10);
     doc.text(`Total O.S: R$ ${totalOS.toFixed(2).replace('.', ',')}`, margin, y + 2);
     doc.text(`Total M.O: R$ ${totalMO.toFixed(2).replace('.', ',')}`, margin + 50, y + 2);
     doc.text(`Total Geral: R$ ${totalGeral.toFixed(2).replace('.', ',')}`, margin + 100, y + 2);
     y += 5;
 
+    // Configuração da Tabela
     const bodyData = dadosFiltrados.map(d => [
         d.os, d.data, d.cliente, d.placa, d.valorOs, d.valorMo, d.valorTotal, d.pagamento, d.tecnico, d.unidade
     ]);
@@ -751,18 +778,20 @@ function imprimirPDF(filtroPagamento = 'Geral') {
         didDrawCell: (data) => {
             if (data.section === 'body') {
                 const item = dadosFiltrados[data.row.index];
-                if (data.column.index === 7) {
-                    doc.setFillColor(item.corFundo[0], item.corFundo[1], item.corFundo[2]);
+                if (data.column.index === 7) { // Coluna Pagamento
+                    // Busca a cor usando o nome do pagamento real
+                    const cor = paymentColors[item.pagamento] || [240, 240, 240]; 
+                    doc.setFillColor(cor[0], cor[1], cor[2]);
                     doc.rect(data.cell.x, data.cell.y, data.cell.width, data.cell.height, 'F');
                     
-                    doc.setTextColor(0, 0, 0);
-                    // O texto é desenhado manualmente, garantindo visibilidade
+                    // Desenha o texto do pagamento manualmente, garantindo que apareça
+                    doc.setTextColor(0, 0, 0); // Cor preta para o texto
                     doc.text(data.cell.text, data.cell.x + 2, data.cell.y + data.cell.height / 2 + 1.5, { align: 'left' });
                 }
             }
         },
         willDrawCell: (data) => {
-            // Previne que a jsPDF tente desenhar o texto padrão na coluna Pagamento, evitando sobreposição
+            // Previne que a jsPDF tente desenhar o texto padrão na coluna Pagamento
             if (data.section === 'body' && data.column.index === 7) {
                 return false; 
             }
