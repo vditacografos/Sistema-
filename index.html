@@ -674,7 +674,7 @@ function finalizarImportacao(dados, numArquivos){
 }
 
 
-/* -------------------------   PDF rendering (COM CORREÇÃO FINAL DE CÁLCULO TOTAL DA CATEGORIA)   ------------------------- */
+/* -------------------------   PDF rendering (CORREÇÃO FINAL DO TEXTO PAGAMENTO)   ------------------------- */
 function imprimirPDF(filtroPagamento = 'Geral') {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF('l', 'mm', 'a4');
@@ -746,7 +746,7 @@ function imprimirPDF(filtroPagamento = 'Geral') {
     // 2. Cálculo dos Totais
     const totalOS = dadosFiltrados.reduce((acc, item) => acc + item.valorOsFloat, 0);
     const totalMO = dadosFiltrados.reduce((acc, item) => acc + item.valorMoFloat, 0);
-    const totalGeral = dadosFiltrados.reduce((acc, item) => acc + item.valorTotalFloat, 0); // Este é o total CORRETO da categoria.
+    const totalGeral = dadosFiltrados.reduce((acc, item) => acc + item.valorTotalFloat, 0); 
     
     // Total de Registros
     const totalRegistros = dadosFiltrados.length;
@@ -777,7 +777,7 @@ function imprimirPDF(filtroPagamento = 'Geral') {
         d.valorOs, 
         d.valorMo, 
         d.valorTotal, 
-        d.pagamento, 
+        d.pagamento, // O texto de pagamento ainda é passado, mas será desenhado manualmente
         d.tecnico, 
         d.unidade
     ]);
@@ -796,27 +796,33 @@ function imprimirPDF(filtroPagamento = 'Geral') {
             7: { cellWidth: 28 } // Garante espaço para o texto de pagamento
         },
         didDrawCell: (data) => {
+            // CORREÇÃO CRUCIAL: Desenha o texto APÓS desenhar o fundo colorido
             if (data.section === 'body') {
                 const item = dadosFiltrados[data.row.index];
                 if (data.column.index === 7) { // Coluna Pagamento (Índice 7)
                     const cor = paymentColors[item.pagamento] || [240, 240, 240]; 
+                    // 1. Desenha o Fundo Colorido
                     doc.setFillColor(cor[0], cor[1], cor[2]);
                     doc.rect(data.cell.x, data.cell.y, data.cell.width, data.cell.height, 'F');
                     
-                    doc.setTextColor(0, 0, 0); 
-                    doc.text(item.pagamento, data.cell.x + 2, data.cell.y + data.cell.height / 2 + 1.5, { align: 'left' });
+                    // 2. Desenha o Texto do Pagamento
+                    doc.setTextColor(0, 0, 0); // Texto Preto
+                    doc.setFontSize(8); 
+                    // Posição ajustada para centralizar verticalmente no bloco
+                    const textY = data.cell.y + data.cell.height / 2 + doc.getFontSize() / 3; 
+                    doc.text(item.pagamento, data.cell.x + 2, textY, { align: 'left' });
                 }
             }
         },
         willDrawCell: (data) => {
-            // Impede que o autoTable desenhe o texto na coluna 7
+            // Impedimos o autoTable de desenhar o TEXTO padão na coluna 7 (para desenharmos o nosso manualmente com cor)
             if (data.section === 'body' && data.column.index === 7) {
                 return false; 
             }
         }
     });
     
-    // Adiciona o TOTAL DA CATEGORIA no rodapé (usando o totalGeral, que é o valor da categoria filtrada)
+    // Adiciona o TOTAL DA CATEGORIA no rodapé (usando o totalGeral da categoria filtrada)
     const finalY = doc.autoTable.previous.finalY;
     doc.setFontSize(12);
     doc.setFont(doc.getFont().fontName, 'bold'); 
