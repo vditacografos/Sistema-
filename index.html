@@ -617,9 +617,26 @@ async function subirDadosExcel(dados){
     const batch = db.batch();
     let sucesso = 0;
     try {
-        dados.forEach(registro => {
+        dados.forEach(registroOriginal => {
+            // Cria um novo objeto, mapeando explicitamente os campos para evitar conflitos de tipo.
+            const registroParaSalvar = {
+                os: registroOriginal.os || '',
+                data: registroOriginal.data || '',
+                cliente: registroOriginal.cliente || '',
+                placa: registroOriginal.placa || '',
+                valor_os: registroOriginal.valor_os || '0.00',
+                valor_mo: registroOriginal.valor_mo || '0.00',
+                valor: registroOriginal.valor || '0.00',
+                pagamento: registroOriginal.pagamento || '',
+                tecnico: registroOriginal.tecnico || '',
+                os_tecnico: registroOriginal.os_tecnico || '',
+                unidade: registroOriginal.unidade || '',
+                // Adiciona o timestamp do servidor, garantindo o tipo correto.
+                timestamp: firebase.firestore.FieldValue.serverTimestamp()
+            };
+
             const docRef = osCollection.doc();
-            batch.set({...registro, timestamp: firebase.firestore.FieldValue.serverTimestamp()});
+            batch.set(registroParaSalvar);
             sucesso++;
         });
         await batch.commit();
