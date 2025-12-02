@@ -620,22 +620,26 @@ async function subirDadosExcel(dados){
     try {
         dados.forEach(registroOriginal => {
             
-            // 🚨 LIMPEZA CRÍTICA: Mapeia o objeto, garantindo que TODOS os valores sejam strings ou o timestamp
-            // Esta rigorosa conversão de tipo corrige o erro 'Expected type fp'
+            // GARANTIA DE VALORES NUMÉRICOS SEGUROS
+            const valorOS_clean = parseFloat(registroOriginal.valor_os || 0);
+            const valorMO_clean = parseFloat(registroOriginal.valor_mo || 0);
+            const valorTotal_clean = valorOS_clean + valorMO_clean;
+
+            // CRIAÇÃO DO OBJETO: Todos os campos, exceto timestamp, são explicitamente convertidos para String
             const registroParaSalvar = {
                 os: String(registroOriginal.os || '').trim(),
                 data: String(registroOriginal.data || '').trim(),
                 cliente: String(registroOriginal.cliente || '').trim(),
                 placa: String(registroOriginal.placa || '').trim(),
-                // Valida e formata valores numéricos como strings limpas
-                valor_os: parseFloat(registroOriginal.valor_os || 0).toFixed(2),
-                valor_mo: parseFloat(registroOriginal.valor_mo || 0).toFixed(2),
-                valor: parseFloat(registroOriginal.valor || 0).toFixed(2),
+                // FORMATANDO NÚMEROS COM SEGURANÇA MÁXIMA
+                valor_os: valorOS_clean.toFixed(2),
+                valor_mo: valorMO_clean.toFixed(2),
+                valor: valorTotal_clean.toFixed(2),
                 pagamento: String(registroOriginal.pagamento || '').trim(),
                 tecnico: String(registroOriginal.tecnico || '').trim(),
                 os_tecnico: String(registroOriginal.os_tecnico || '').trim(),
                 unidade: String(registroOriginal.unidade || '').trim(),
-                // Adiciona o timestamp do servidor com o tipo correto
+                // Adiciona o tipo especial do Firestore
                 timestamp: firebase.firestore.FieldValue.serverTimestamp()
             };
 
@@ -647,7 +651,8 @@ async function subirDadosExcel(dados){
         alert(`${sucesso} O.S. importadas com sucesso!`);
     } catch(e){
         console.error(e);
-        alert(`Erro ao importar dados. ${sucesso} O.S. foram importadas antes do erro.`);
+        // Exibe o erro específico para ajudar na depuração se continuar falhando
+        alert(`Erro ao importar dados. ${sucesso} O.S. foram importadas antes do erro. Detalhe: ${e.message}`);
     } finally {
         document.getElementById('loadingOverlay').style.display = 'none';
     }
