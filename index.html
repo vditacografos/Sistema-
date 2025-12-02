@@ -777,7 +777,7 @@ function imprimirPDF(filtroPagamento = 'Geral') {
         d.valorOs, 
         d.valorMo, 
         d.valorTotal, 
-        d.pagamento, 
+        d.pagamento, // O texto de pagamento ainda é passado
         d.tecnico, 
         d.unidade
     ]);
@@ -793,10 +793,9 @@ function imprimirPDF(filtroPagamento = 'Geral') {
             4: { halign: 'right' },
             5: { halign: 'right' },
             6: { halign: 'right' },
-            7: { cellWidth: 28 } 
+            7: { cellWidth: 28 } // Garante espaço para o texto de pagamento
         },
         didDrawCell: (data) => {
-            // CORREÇÃO CRUCIAL: Desenha o texto APÓS desenhar o fundo colorido
             if (data.section === 'body') {
                 const item = dadosFiltrados[data.row.index];
                 if (data.column.index === 7) { // Coluna Pagamento (Índice 7)
@@ -805,16 +804,18 @@ function imprimirPDF(filtroPagamento = 'Geral') {
                     doc.setFillColor(cor[0], cor[1], cor[2]);
                     doc.rect(data.cell.x, data.cell.y, data.cell.width, data.cell.height, 'F');
                     
-                    // 2. Desenha o Texto do Pagamento
+                    // 2. Desenha o Texto do Pagamento manualmente (esta linha é a correção principal)
                     doc.setTextColor(0, 0, 0); 
                     doc.setFontSize(8); 
+                    // Calcula a posição Y para alinhar o texto verticalmente no centro da célula
                     const textY = data.cell.y + data.cell.height / 2 + doc.getFontSize() / 3; 
                     doc.text(item.pagamento, data.cell.x + 2, textY, { align: 'left' });
                 }
             }
         },
         willDrawCell: (data) => {
-            // Impedimos o autoTable de desenhar o TEXTO padão na coluna 7 (para desenharmos o nosso manualmente com cor)
+            // Impedimos o autoTable de desenhar o TEXTO padão na coluna 7
+            // Isso permite que didDrawCell desenhe o fundo e o texto personalizado
             if (data.section === 'body' && data.column.index === 7) {
                 return false; 
             }
