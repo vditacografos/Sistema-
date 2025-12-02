@@ -327,7 +327,7 @@ async function salvarForm(){
         alert('Erro ao salvar na nuvem');
     }}
 
-/* --------------------------   Atualizar tabela e totais (CORRIGIDO)   -------------------------- */
+/* --------------------------   Atualizar tabela e totais   -------------------------- */
 function atualizarTabelaTodas(){
     const unidadeFiltroRaw = document.getElementById('unidade').value;
     const dataInicio = document.getElementById('dataInicio').value;
@@ -341,7 +341,7 @@ function atualizarTabelaTodas(){
     const tbody = document.querySelector('#tabelaTodas tbody');
     tbody.innerHTML = '';
 
-    // CORREÇÃO: GARANTINDO QUE TODOS OS TOTAIS SÃO INICIALIZADOS COMO NÚMEROS (0)
+    // INICIALIZAÇÃO CORRETA: TODOS OS TOTAIS COMO NÚMEROS (0)
     let totalF = 0, totalAberto = 0, totalPix = 0, totalDin = 0, totalDeb = 0, totalCred = 0, totalMo = 0, totalGeral = 0;
 
     const dadosFiltrados = osData.filter(item => {
@@ -445,7 +445,7 @@ async function limparDados(){
         alert('Erro ao apagar dados');
     }}
 
-/* --------------------------   Export / Import Excel (Sem alterações)   -------------------------- */
+/* --------------------------   Export / Import Excel (CORRIGIDO)   -------------------------- */
 function exportExcel(){
     const items = osData.map(it => ({
         'O S': it.os || '',
@@ -468,9 +468,11 @@ function importExcel(){ document.getElementById('inputExcel').click(); }
 
 function lerExcel(event){
     const files = event.target.files;
-    if(!files || files.length === 0){ event.target.value = null; return; }
-    let arquivosProcessados = 0;
-    let dadosCombinados = [];
+    if (!files || files.length === 0) { event.target.value = null; return; }
+
+    const filePromises = [];
+
+    // Funções auxiliares
     function normalizeHeader(cell){
         return String(cell||'').toUpperCase().replace(/\s+/g,' ').trim();
     }
@@ -496,107 +498,117 @@ function lerExcel(event){
         const val = parseFloat(txt);
         return isNaN(val) ? 0 : val;
     }
-    function processarArquivo(file){
-        const reader = new FileReader();
-        const fileName = file.name.toUpperCase();
-        let unidadeDetect = '';
-        if(fileName.includes('BARUERI')) unidadeDetect = 'Barueri';
-        if(fileName.includes('COTIA')) unidadeDetect = 'Cotia';
-        if(fileName.includes('EMBU')) unidadeDetect = 'Embu';
-        reader.onload = function(e){
-            const data = e.target.result;
-            try{
-                const workbook = XLSX.read(data, {type:'binary', raw:true, cellDates:true});
-                const first = workbook.Sheets[workbook.SheetNames[0]];
-                const sheet = XLSX.utils.sheet_to_json(first, {header:1, raw:true, defval:''});
-                let headerMap = null;
-                let capturing = false;
-                for(let i=0;i<sheet.length;i++){
-                    const rawRow = sheet[i] || [];
-                    const normalizedRow = rawRow.map(c => normalizeHeader(c));
-                    const hasData = normalizedRow.some(c => c === 'DATA');
-                    const hasOS = normalizedRow.some(c => c === 'O S' || c === 'O.S' || c === 'OS');
-                    const hasCliente = normalizedRow.some(c => c === 'CLIENTE');
-                    if(!headerMap && hasData && hasOS && hasCliente){
-                        headerMap = {};
-                        normalizedRow.forEach((cellText, idx) => {
-                            if(cellText === 'O S' || cellText === 'O.S' || cellText === 'OS') headerMap.os = idx;
-                            else if(cellText === 'DATA') headerMap.data = idx;
-                            else if(cellText === 'CLIENTE') headerMap.cliente = idx;
-                            else if(cellText === 'PLACA') headerMap.placa = idx;
-                            else if(cellText === 'VALOR OS' || cellText === 'VALOR_OS' || cellText === 'VALOR') headerMap.valor_os = idx;
-                            else if(cellText === 'VALOR MO' || cellText === 'VALOR_MO') headerMap.valor_mo = idx;
-                            else if(cellText === 'PAGAMENTO') headerMap.pagamento = idx;
-                            else if(cellText === 'TECNICO') headerMap.tecnico = idx;
-                            else if(cellText === 'OS TECNICO' || cellText === 'OS_TECNICO') headerMap.os_tecnico = idx;
-                            else if(cellText === 'UNIDADE') headerMap.unidade = idx;
-                        });
-                        capturing = true;
-                        continue;
-                    }
-                    if(capturing){
-                        const rowText = normalizedRow.join(' ');
-                        if(rowText.includes('TOTAL') || rowText.includes('RESUMO') || rowText.includes('SAIDAS') || rowText.includes('INICIO DE CX') || (!rawRow || rawRow.length===0)){
-                            capturing = false;
+
+    // Processamento de cada arquivo (usando Promise para paralelizar)
+    for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        filePromises.push(new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            const fileName = file.name.toUpperCase();
+            let unidadeDetect = '';
+            if(fileName.includes('BARUERI')) unidadeDetect = 'Barueri';
+            if(fileName.includes('COTIA')) unidadeDetect = 'Cotia';
+            if(fileName.includes('EMBU')) unidadeDetect = 'Embu';
+
+            reader.onload = function(e){
+                const data = e.target.result;
+                let dadosDoArquivo = [];
+                try{
+                    const workbook = XLSX.read(data, {type:'binary', raw:true, cellDates:true});
+                    const first = workbook.Sheets[workbook.SheetNames[0]];
+                    const sheet = XLSX.utils.sheet_to_json(first, {header:1, raw:true, defval:''});
+                    let headerMap = null;
+                    let capturing = false;
+
+                    for(let i=0;i<sheet.length;i++){
+                        const rawRow = sheet[i] || [];
+                        const normalizedRow = rawRow.map(c => normalizeHeader(c));
+                        const hasData = normalizedRow.some(c => c === 'DATA');
+                        const hasOS = normalizedRow.some(c => c === 'O S' || c === 'O.S' || c === 'OS');
+                        const hasCliente = normalizedRow.some(c => c === 'CLIENTE');
+
+                        if(!headerMap && hasData && hasOS && hasCliente){
+                            headerMap = {};
+                            normalizedRow.forEach((cellText, idx) => {
+                                if(cellText === 'O S' || cellText === 'O.S' || cellText === 'OS') headerMap.os = idx;
+                                else if(cellText === 'DATA') headerMap.data = idx;
+                                else if(cellText === 'CLIENTE') headerMap.cliente = idx;
+                                else if(cellText === 'PLACA') headerMap.placa = idx;
+                                else if(cellText === 'VALOR OS' || cellText === 'VALOR_OS' || cellText === 'VALOR') headerMap.valor_os = idx;
+                                else if(cellText === 'VALOR MO' || cellText === 'VALOR_MO') headerMap.valor_mo = idx;
+                                else if(cellText === 'PAGAMENTO') headerMap.pagamento = idx;
+                                else if(cellText === 'TECNICO') headerMap.tecnico = idx;
+                                else if(cellText === 'OS TECNICO' || cellText === 'OS_TECNICO') headerMap.os_tecnico = idx;
+                                else if(cellText === 'UNIDADE') headerMap.unidade = idx;
+                            });
+                            capturing = true;
                             continue;
                         }
-                        if(headerMap){
-                            const rawOS = rawRow[headerMap.os] || rawRow[0];
-                            if(!rawOS || String(rawOS).trim()==='') continue;
-                            let dataCell = headerMap.data !== undefined ? rawRow[headerMap.data] : rawRow[1];
-                            let dateISO = parseDateCell(dataCell) || null;
-                            if(!dateISO && String(dataCell).trim().length===10 && /^\d{2}\/\d{2}\/\d{4}$/.test(String(dataCell))) dateISO = parseDateCell(dataCell);
 
-                            const valorOsCell = headerMap.valor_os!==undefined ? rawRow[headerMap.valor_os] : rawRow[4];
-                            const valorMoCell = headerMap.valor_mo!==undefined ? rawRow[headerMap.valor_mo] : rawRow[5];
-                            const pagamentoCell = headerMap.pagamento!==undefined ? rawRow[headerMap.pagamento] : rawRow[6];
+                        if(capturing){
+                            const rowText = normalizedRow.join(' ');
+                            if(rowText.includes('TOTAL') || rowText.includes('RESUMO') || rowText.includes('SAIDAS') || rowText.includes('INICIO DE CX') || (!rawRow || rawRow.length===0)){
+                                capturing = false;
+                                continue;
+                            }
+                            if(headerMap){
+                                const rawOS = rawRow[headerMap.os] || rawRow[0];
+                                if(!rawOS || String(rawOS).trim()==='') continue;
+                                let dataCell = headerMap.data !== undefined ? rawRow[headerMap.data] : rawRow[1];
+                                let dateISO = parseDateCell(dataCell) || null;
+                                if(!dateISO && String(dataCell).trim().length===10 && /^\d{2}\/\d{2}\/\d{4}$/.test(String(dataCell))) dateISO = parseDateCell(dataCell);
 
-                            const valorOS = parseMoneyCell(valorOsCell);
-                            const valorMO = parseMoneyCell(valorMoCell);
-                            
-                            dadosCombinados.push({
-                                os: String(rawOS).trim() || '',
-                                data: dateISO ? formatDate(dateISO) : '',
-                                cliente: String(headerMap.cliente !== undefined ? rawRow[headerMap.cliente] : rawRow[2] || '').trim(),
-                                placa: String(headerMap.placa !== undefined ? rawRow[headerMap.placa] : rawRow[3] || '').trim(),
-                                valor_os: valorOS.toFixed(2),
-                                valor_mo: valorMO.toFixed(2),
-                                valor: (valorOS + valorMO).toFixed(2),
-                                pagamento: String(pagamentoCell || '').trim(),
-                                tecnico: String(headerMap.tecnico !== undefined ? rawRow[headerMap.tecnico] : rawRow[7] || '').trim(),
-                                os_tecnico: String(headerMap.os_tecnico !== undefined ? rawRow[headerMap.os_tecnico] : rawRow[8] || '').trim(),
-                                unidade: String(headerMap.unidade !== undefined ? rawRow[headerMap.unidade] : unidadeDetect || '').trim(),
-                            });
+                                const valorOsCell = headerMap.valor_os!==undefined ? rawRow[headerMap.valor_os] : rawRow[4];
+                                const valorMoCell = headerMap.valor_mo!==undefined ? rawRow[headerMap.valor_mo] : rawRow[5];
+                                const pagamentoCell = headerMap.pagamento!==undefined ? rawRow[headerMap.pagamento] : rawRow[6];
+
+                                const valorOS = parseMoneyCell(valorOsCell);
+                                const valorMO = parseMoneyCell(valorMoCell);
+                                
+                                dadosDoArquivo.push({
+                                    os: String(rawOS).trim() || '',
+                                    data: dateISO ? formatDate(dateISO) : '',
+                                    cliente: String(headerMap.cliente !== undefined ? rawRow[headerMap.cliente] : rawRow[2] || '').trim(),
+                                    placa: String(headerMap.placa !== undefined ? rawRow[headerMap.placa] : rawRow[3] || '').trim(),
+                                    valor_os: valorOS.toFixed(2),
+                                    valor_mo: valorMO.toFixed(2),
+                                    valor: (valorOS + valorMO).toFixed(2),
+                                    pagamento: String(pagamentoCell || '').trim(),
+                                    tecnico: String(headerMap.tecnico !== undefined ? rawRow[headerMap.tecnico] : rawRow[7] || '').trim(),
+                                    os_tecnico: String(headerMap.os_tecnico !== undefined ? rawRow[headerMap.os_tecnico] : rawRow[8] || '').trim(),
+                                    unidade: String(headerMap.unidade !== undefined ? rawRow[headerMap.unidade] : unidadeDetect || '').trim(),
+                                });
+                            }
                         }
                     }
+                    resolve(dadosDoArquivo);
+
+                } catch(error){
+                    console.error("Erro ao processar arquivo Excel:", error);
+                    alert(`Erro ao processar o arquivo ${file.name}.`);
+                    resolve([]); 
                 }
-            } catch(error){
-                console.error("Erro ao processar arquivo Excel:", error);
-                alert(`Erro ao processar o arquivo ${file.name}.`);
-            } finally {
-                arquivosProcessados++;
-                if(arquivosProcessados === files.length){
-                    if(dadosCombinados.length > 0){
-                        subirDadosExcel(dadosCombinados);
-                    } else {
-                        alert('Nenhuma O.S. válida encontrada nos arquivos.');
-                    }
-                    event.target.value = null;
-                }
-            }
-        };
-        reader.onerror = function(e){
-            console.error("Erro na leitura do arquivo:", e);
-            alert(`Erro ao ler o arquivo ${file.name}.`);
-            arquivosProcessados++;
-            if(arquivosProcessados === files.length) event.target.value = null;
-        };
-        reader.readAsBinaryString(file);
+            };
+
+            reader.onerror = function(e){
+                console.error("Erro na leitura do arquivo:", e);
+                alert(`Erro ao ler o arquivo ${file.name}.`);
+                resolve([]); 
+            };
+            reader.readAsBinaryString(file);
+        }));
     }
 
-    for (let i = 0; i < files.length; i++) {
-        processarArquivo(files[i]);
-    }
+    // Espera todos os arquivos serem processados e sobe os dados combinados
+    Promise.all(filePromises).then(results => {
+        const dadosCombinados = results.flat();
+        if(dadosCombinados.length > 0){
+            subirDadosExcel(dadosCombinados);
+        } else {
+            alert('Nenhuma O.S. válida encontrada nos arquivos.');
+        }
+        event.target.value = null;
+    });
 }
 
 async function subirDadosExcel(dados){
