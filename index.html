@@ -5,8 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>VDI Tacógrafos — Frente de Caixa</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://unpkg.com/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
@@ -25,7 +26,7 @@
         th { background:#4a90e2; color:white; }
         tr:nth-child(even) { background:#f9f9f9; }
         tr:hover { background:#dce6f1; }
-        .summary { display:flex; gap:15px; flex-wrap:wrap; margin-bottom:10px; } /* Ajustado margin-bottom */
+        .summary { display:flex; gap:15px; flex-wrap:wrap; margin-bottom:10px; }
         .card { flex:1 1 150px; padding:15px; border-radius:10px; color:white; font-weight:600; text-align:center; box-shadow:0 2px 6px rgba(0,0,0,0.1); cursor:pointer; transition:0.2s; }
         .card:hover { opacity:0.9; transform:scale(1.02); }
         .faturadas { background: linear-gradient(45deg,#2d9cdb,#1b7ecf); }
@@ -160,13 +161,13 @@
 </div>
 <script>
 /* =============================================   Configurações Firebase (mantive as suas)   ============================================= */
-const { jsPDF } = window.jspdf;
+const { jsPDF } = window.jspdf; // Inicializa a biblioteca PDF
 const firebaseConfig = {
   apiKey: "AIzaSyC5up-MQFQNeH1ftI8KTMoXI5pY2D2jpgM",
   authDomain: "vditacografosfrentecaixa.firebaseapp.com",
   databaseURL: "https://vditacografosfrentecaixa-default-rtdb.firebaseio.com",
   projectId: "vditacografosfrentecaixa",
-  storageBucket: "vditacografosfrentecaixa.firebasestorage.app",
+  storageBucket: "vditacografosfrentecaixa.appspot.com",
   messagingSenderId: "1008625665373",
   appId: "1:1008625665373:web:1f1870898ecb04b4b854b4",
   measurementId: "G-9SYYV1VLNY"
@@ -658,6 +659,13 @@ function lerExcel(event){
 
 /* -------------------------   PDF rendering (ADICIONADO FILTRO M.O. e GERAL)   ------------------------- */
 function imprimirPDF(filtroPagamento = null) {
+    // Tenta inicializar novamente (medida de segurança)
+    if (typeof jsPDF === 'undefined') {
+        console.error("jsPDF não está definido. Verifique as tags <script> no <head>.");
+        alert("Erro: A função de impressão de PDF não foi carregada. Tente recarregar a página e verifique sua conexão com a internet.");
+        return;
+    }
+    
     const doc = new jsPDF('l', 'mm', 'a4');
     const margin = 10;
     let y = margin;
@@ -692,12 +700,12 @@ function imprimirPDF(filtroPagamento = null) {
             
             if (filtroP === 'geral' || filtroP === 'maoobra') {
                 // Para Total Geral e Mão de Obra: excluir 'Em Aberto' ou 'Faturado'
+                // Estes relatórios devem mostrar apenas o que FOI PAGO
                 if (itemPagamento.includes('em aberto') || itemPagamento.includes('faturado')) {
                     return false;
                 }
             } else {
                 // Filtros normais por pagamento (PIX, Dinheiro, etc.)
-                // Mantém a lógica para agrupar PIX e QR CODE PIX
                 if (filtroP === 'pix' || filtroP === 'qr code pix') {
                     if (!itemPagamento.includes('pix')) return false;
                 } else if (itemPagamento !== filtroP) {
@@ -741,7 +749,7 @@ function imprimirPDF(filtroPagamento = null) {
 
     let reportTitle = filtroPagamento || 'COMPLETO';
     if (filtroPagamento && filtroPagamento.toUpperCase() === 'MAOOBRA') reportTitle = 'MÃO DE OBRA';
-    if (filtroPagamento && filtroPagamento.toUpperCase() === 'GERAL') reportTitle = 'TOTAL GERAL';
+    if (filtroPagamento && filtroPagamento.toUpperCase() === 'GERAL') reportTitle = 'TOTAL GERAL RECEBIDO';
     
     addHeader(doc, 1, 1, reportTitle);
 
@@ -756,7 +764,6 @@ function imprimirPDF(filtroPagamento = null) {
             4: { halign: 'right' }, // VLR OS
             5: { halign: 'right' }, // VLR MO
             6: { halign: 'right', fontStyle: 'bold' }, // VLR TOTAL
-            // 7: { cellWidth: 15 } // PAGAMENTO - Mantido sem largura fixa para usar o autotable
         },
         headStyles: { fillColor: [74, 144, 226], textColor: 255 },
         didParseCell: function(data) {
@@ -804,7 +811,6 @@ function imprimirPDF(filtroPagamento = null) {
         }
     });
 
-    const finalY = doc.autoTable.previous.finalY || 10;
     const today = new Date().toLocaleDateString('pt-BR').replace(/\//g, '-');
     let filename = `Relatorio_VDI_${reportTitle}_${today}.pdf`;
 
