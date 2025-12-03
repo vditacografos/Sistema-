@@ -36,11 +36,12 @@
         .dinheiro { background: linear-gradient(45deg,#f1c40f,#d4ac0d); color:#222; }
         .debito { background: linear-gradient(45deg,#f39c12,#d68910); color:#222; }
         .credito { background: linear-gradient(45deg,#9b59b6,#8e44ad); }
-        /* NOVOS ESTILOS */
-        .maoobra { background: linear-gradient(45deg,#6c5ce7,#4b32b8); flex: 1 1 45%; }
-        .totalgeral { background: linear-gradient(45deg,#222222,#555555); flex: 1 1 45%; }
-        .bottom-summary-row { display: flex; gap: 15px; flex-wrap: wrap; margin-bottom: 20px;}
-        /* FIM NOVOS ESTILOS */
+        
+        /* ESTILOS MÍNIMOS PARA MÃO DE OBRA */
+        .maoobra { background: linear-gradient(45deg,#6c5ce7,#4b32b8); flex:1 1 150px; }
+        .bottom-summary-row { display: flex; gap: 15px; flex-wrap: wrap; margin-top: 15px; }
+        /* FIM ESTILOS MÍNIMOS */
+
         .edit, .delete { border:none; padding:5px 10px; border-radius:6px; color:white; cursor:pointer; margin-right:5px; font-size:12px; }
         .edit { background:#27ae60; }
         .delete { background:#e74c3c; }
@@ -52,7 +53,7 @@
         @media(max-width:900px){ 
             table th, table td { font-size:12px; } 
             .card { flex: 1 1 100%; font-size:13px; } 
-            .maoobra, .totalgeral { flex: 1 1 100%; }
+            .maoobra { flex: 1 1 100%; }
         }
         #headerLogo { max-height: 75px; width: auto; display: block; margin: 0 auto 5px auto; }
         #headerTitle { margin: 0; font-size: 20px; font-weight: 600; text-align:center; }
@@ -124,8 +125,7 @@
             <div class="card credito" id="totalCredito" onclick="imprimirPDF('Crédito')">CRÉDITO<br>R$ 0,00</div>
         </div>
         <div class="bottom-summary-row">
-            <div class="card maoobra" id="totalMo" onclick="imprimirPDF('MaoObra')">MÃO DE OBRA<br>R$ ${totalMo.toFixed(2).replace('.', ',')}</div>
-            <div class="card totalgeral" id="totalGeral" onclick="imprimirPDF('Geral')">TOTAL GERAL<br>R$ ${totalGeral.toFixed(2).replace('.', ',')}</div>
+            <div class="card maoobra" id="totalMo" onclick="imprimirPDF('MaoObra')">MÃO DE OBRA<br>R$ 0,00</div> 
         </div>
         </div>
     <div id="formModal" class="modal">
@@ -389,7 +389,7 @@ async function apagarOS(id){
     }
 }
 
-/* -------------------------   Atualizar tabela e totais (AGORA COM TOTAL GERAL E M.O.)   ------------------------- */
+/* -------------------------   Atualizar tabela e totais (Adicionando M.O. aqui)   ------------------------- */
 function atualizarTabelaTodas(){
     const unidade = document.getElementById('unidade').value;
     const dataInicio = document.getElementById('dataInicio').value;
@@ -400,9 +400,8 @@ function atualizarTabelaTodas(){
     tbody.innerHTML = '';
 
     let totalF = 0, totalAberto = 0, totalPix = 0, totalDin = 0, totalDeb = 0, totalCred = 0;
-    // NOVOS TOTAIS
-    let totalMo = 0, totalGeral = 0;
-
+    let totalMo = 0; // <<-- Variável Mão de Obra
+    
     const dadosFiltrados = osData.filter(item => {
         const itemDate = item.data ? item.data.split('/').reverse().join('-') : '2000-01-01';
         
@@ -423,14 +422,12 @@ function atualizarTabelaTodas(){
         if(itemPagamento === 'faturado') totalF += itemValorTotal;
         if(itemPagamento === 'em aberto') totalAberto += itemValorTotal;
         if(itemPagamento.includes('pix')) totalPix += itemValorTotal; // inclui QR CODE PIX
-        if(itemPagamento === 'dinheiro') totalDin += itemValorTotal;
+        if(itemPagamento.includes('dinheiro')) totalDin += itemValorTotal; 
         if(itemPagamento.includes('débito') || itemPagamento.includes('debito')) totalDeb += itemValorTotal;
         if(itemPagamento.includes('crédito') || itemPagamento.includes('credito')) totalCred += itemValorTotal;
         
-        // NOVOS TOTAIS ACUMULADOS
-        totalMo += itemValorMO;
-        // Total Geral deve ser a soma de TUDO (incluindo em aberto/faturado, se for o total bruto do dia)
-        totalGeral += itemValorTotal; 
+        // NOVO ACÚMULO MÃO DE OBRA
+        totalMo += itemValorMO; 
         
         return true;
     });
@@ -463,9 +460,8 @@ function atualizarTabelaTodas(){
     document.getElementById('totalDebito').innerHTML=`DÉBITO<br>R$ ${totalDeb.toFixed(2).replace('.', ',')}`;
     document.getElementById('totalCredito').innerHTML=`CRÉDITO<br>R$ ${totalCred.toFixed(2).replace('.', ',')}`;
     
-    // ATUALIZAÇÃO DOS NOVOS CARDS
+    // ATUALIZAÇÃO DO NOVO CARD
     document.getElementById('totalMo').innerHTML=`MÃO DE OBRA<br>R$ ${totalMo.toFixed(2).replace('.', ',')}`;
-    document.getElementById('totalGeral').innerHTML=`TOTAL GERAL<br>R$ ${totalGeral.toFixed(2).replace('.', ',')}`;
 }
 
 /* limpar filtros, filtrar, buscar, limparDados (mantidos) */
@@ -489,7 +485,8 @@ async function limparDados(){
         await batch.commit();
         alert('Dados apagados');
     } catch(e){
-        console.error(e); alert('Erro ao apagar dados');
+        console.error(e);
+        alert('Erro ao apagar dados');
     } finally {
         document.getElementById('loadingOverlay').style.display = 'none';
     }
@@ -655,12 +652,11 @@ function lerExcel(event){
 }
 
 
-/* -------------------------   PDF rendering (VERSÃO CORRIGIDA UNIVERSAL - Traz os dados)   ------------------------- */
+/* -------------------------   PDF rendering (AGORA COM FILTRO MAOOBRA)   ------------------------- */
 function imprimirPDF(filtroPagamento = null) {
-    // Tenta inicializar novamente (medida de segurança)
     if (typeof jsPDF === 'undefined') {
-        console.error("jsPDF não está definido. Verifique as tags <script> no <head>.");
-        alert("Erro: A função de impressão de PDF não foi carregada. Tente recarregar a página e verifique sua conexão com a internet.");
+        console.error("jsPDF não está definido.");
+        alert("Erro: A função de impressão de PDF não foi carregada.");
         return;
     }
     
@@ -678,9 +674,6 @@ function imprimirPDF(filtroPagamento = null) {
     let totalGeralNoPDF = 0;
     let totalMONoPDF = 0;
     
-    // Normaliza o filtro do botão para comparação
-    const filtroP = filtroPagamento ? filtroPagamento.toLowerCase().trim() : null;
-
     const dadosTabela = osData.filter(item => {
         const itemDate = item.data ? item.data.split('/').reverse().join('-') : '2000-01-01';
         // Normaliza o pagamento do ITEM da lista para comparação
@@ -697,23 +690,25 @@ function imprimirPDF(filtroPagamento = null) {
 
         
         // =========================================================
-        // ✅ FILTRAGEM UNIVERSAL (GARANTE QUE TODOS OS BOTÕES FUNCIONAM)
+        // ✅ FILTRAGEM DE PAGAMENTO (AGORA COM MAOOBRA)
         // =========================================================
+        const filtroP = filtroPagamento ? filtroPagamento.toLowerCase().trim() : null;
+
         if (filtroP) {
             
-            if (filtroP === 'geral' || filtroP === 'maoobra') {
-                // Total Geral Recebido e Mão de Obra: EXCLUIR "em aberto" e "faturado" (queremos só o que entrou no caixa)
+            if (filtroP === 'maoobra') {
+                // Para Mão de Obra: EXCLUIR "em aberto" e "faturado" (foca no que entrou no caixa)
                 if (itemPagamento.includes('em aberto') || itemPagamento.includes('faturado')) {
                     return false;
                 }
             } else if (filtroP === 'pix') {
-                 // Filtra tanto 'pix' quanto 'qr code pix'
+                 // Trata PIX e QR CODE PIX
                  if (!itemPagamento.includes('pix')) return false;
             } else if (filtroP === 'débito' || filtroP === 'debito') {
-                // Filtra 'débito' e 'debito'
+                // Trata débito com/sem acento
                 if (!(itemPagamento.includes('débito') || itemPagamento.includes('debito'))) return false;
             } else if (filtroP === 'crédito' || filtroP === 'credito') {
-                // Filtra 'crédito' e 'credito'
+                // Trata crédito com/sem acento
                 if (!(itemPagamento.includes('crédito') || itemPagamento.includes('credito'))) return false;
             } else {
                 // Outros filtros: "dinheiro", "em aberto", "faturado"
@@ -726,7 +721,7 @@ function imprimirPDF(filtroPagamento = null) {
         
         // Acumula os totais para o relatório final
         totalGeralNoPDF += itemValorTotal;
-        totalMONoPDF += parseFloat(item.valor_mo || 0);
+        totalMONoPDF += parseFloat(item.valor_mo || 0); 
         
         // Formata os dados para a tabela do PDF
         return [
@@ -744,7 +739,7 @@ function imprimirPDF(filtroPagamento = null) {
     }).map(row => row.slice(0, 10)); 
 
 
-    // CABEÇALHO DO PDF 
+    // CABEÇALHO DO PDF
     function addHeader(doc, pageNumber, totalPages, title) {
         doc.setFontSize(16);
         doc.setFont('helvetica', 'bold');
@@ -759,9 +754,8 @@ function imprimirPDF(filtroPagamento = null) {
 
     let reportTitle = filtroPagamento || 'COMPLETO';
     if (filtroPagamento && filtroPagamento.toUpperCase() === 'MAOOBRA') reportTitle = 'MÃO DE OBRA';
-    if (filtroPagamento && filtroPagamento.toUpperCase() === 'GERAL') reportTitle = 'TOTAL GERAL RECEBIDO';
     
-    // Calcula o número real de páginas para o cabeçalho
+    // Cálculo de páginas
     const initialY = y;
     let totalPages = 1;
     doc.autoTable({
@@ -771,14 +765,11 @@ function imprimirPDF(filtroPagamento = null) {
         theme: 'striped',
         styles: { fontSize: 8, cellPadding: 1, overflow: 'ellipsize', halign: 'left' },
         didDrawPage: (data) => {
-            // Conta as páginas
             totalPages = data.pageNumber;
         },
-        // Configurações ignoradas no primeiro cálculo (apenas para contar páginas)
-        // Usamos didDrawPage no segundo autoTable (real) para adicionar cabeçalho correto
     });
     
-    // Reseta o doc e gera a tabela final com o cabeçalho correto em cada página
+    // Reset para renderização final com cabeçalhos
     doc.deletePage(1); 
     doc.addPage('a4', 'l');
     
@@ -795,7 +786,6 @@ function imprimirPDF(filtroPagamento = null) {
         },
         headStyles: { fillColor: [74, 144, 226], textColor: 255 },
         didDrawPage: function(data) {
-            // Adiciona cabeçalho em todas as páginas, usando a contagem correta
             addHeader(doc, data.pageNumber, totalPages, reportTitle);
         },
         didParseCell: function(data) {
