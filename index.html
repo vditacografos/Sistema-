@@ -12,6 +12,7 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+
     <style>
         /* Estilos CSS (Baseado no seu código) */
         body { font-family: 'Poppins', sans-serif; margin:0; padding:0; background:#f4f6f9; }
@@ -69,7 +70,7 @@
             <button onclick="abrirForm()">+ Nova O.S</button>
             <button onclick="exportExcel()">Exportar Excel</button>
             <button onclick="importExcel()">Importar Excel</button>
-            <button onclick="imprimirPDF()">Imprimir / Salvar PDF</button>
+            <button onclick="imprimirPDF()">Imprimir / Salvar PDF</button> 
             <button onclick="limparDados()">Limpar dados</button>
         </div>
         <input type="file" id="inputExcel" accept=".xlsx,.csv" style="display:none" onchange="lerExcel(event)" multiple>
@@ -123,8 +124,8 @@
             <div class="card credito" id="totalCredito" onclick="imprimirPDF('Crédito')">CRÉDITO<br>R$ 0,00</div>
         </div>
         <div class="bottom-summary-row">
-            <div class="card maoobra" id="totalMo" onclick="imprimirPDF('MaoObra')">MÃO DE OBRA<br>R$ 0,00</div>
-            <div class="card totalgeral" id="totalGeral" onclick="imprimirPDF('Geral')">TOTAL GERAL<br>R$ 0,00</div>
+            <div class="card maoobra" id="totalMo" onclick="imprimirPDF('MaoObra')">MÃO DE OBRA<br>R$ ${totalMo.toFixed(2).replace('.', ',')}</div>
+            <div class="card totalgeral" id="totalGeral" onclick="imprimirPDF('Geral')">TOTAL GERAL<br>R$ ${totalGeral.toFixed(2).replace('.', ',')}</div>
         </div>
         </div>
     <div id="formModal" class="modal">
@@ -160,7 +161,7 @@
     </div>
 </div>
 <script>
-/* =============================================   Configurações Firebase (mantive as suas)   ============================================= */
+/* =============================================   Configurações Firebase   ============================================= */
 const { jsPDF } = window.jspdf; // Inicializa a biblioteca PDF
 const firebaseConfig = {
   apiKey: "AIzaSyC5up-MQFQNeH1ftI8KTMoXI5pY2D2jpgM",
@@ -177,7 +178,7 @@ const db = firebase.firestore(app);
 const osCollection = db.collection('ordens_servico');
 let osData = [];
 
-/* cores para pdf (mantive) */
+/* cores para pdf */
 const paymentColors = {  
   'Faturado': [173, 216, 230],  
   'Em Aberto': [255, 192, 203],  
@@ -188,18 +189,16 @@ const paymentColors = {
   'QR CODE PIX': [175, 223, 175]
 };
 
-/* -------------------------   Helper: formatDate (ISO->DD/MM/YYYY)   ------------------------- */
+/* -------------------------   Helpers (Funções Auxiliares)   ------------------------- */
 function formatDate(iso){
     if(!iso) return '01/01/2000';
     const parts = iso.split('-');
     if(parts.length !== 3) return iso;
     return `${parts[2]}/${parts[1]}/${parts[0]}`;}
 
-/* Helper: normalize header text */
 function normalizeHeader(s){
     return String(s || '').toUpperCase().replace(/\s+/g, ' ').trim();}
 
-/* Helper: parse date-like cells (various formats) -> returns YYYY-MM-DD */
 function parseDateCell(cell){
     if(!cell && cell !== 0) return null;
     if (cell instanceof Date) {
@@ -218,7 +217,6 @@ function parseDateCell(cell){
     if(!isNaN(dt)) return dt.toISOString().split('T')[0];
     return null;}
 
-/* Helper: parse money cell to Number (handles "1.234,56" and "1234.56") */
 function parseMoneyCell(cell){
     if(cell === null || cell === undefined || cell === '') return 0;
     let txt = String(cell).replace(/\s/g,'').replace(/\u00A0/g,'');
@@ -230,7 +228,7 @@ function parseMoneyCell(cell){
     const val = parseFloat(txt);
     return isNaN(val) ? 0 : val;}
 
-/* -------------------------   Firestore listener (keeps osData up-to-date)   ------------------------- */
+/* -------------------------   Firestore listener (mantém os dados atualizados)   ------------------------- */
 function setupFirestoreListener(){
     document.getElementById('loadingOverlay').style.display = 'flex';
     osCollection.onSnapshot(snapshot => {
@@ -246,7 +244,7 @@ function setupFirestoreListener(){
                 osData = osData.filter(i => i.id !== docData.id);
             }
         });
-        // ordenar por data (DD/MM/YYYY)
+        // ordenar por data 
         osData.sort((a,b)=>{
             const pa = a.data ? a.data.split('/') : ['01','01','2000'];
             const pb = b.data ? b.data.split('/') : ['01','01','2000'];
@@ -281,7 +279,7 @@ function getTecnicosUnicos(){
 /* Start listener now */
 setupFirestoreListener();
 
-/* -------------------------   Form open/close & save   ------------------------- */
+/* -------------------------   Form open/close & save (Mantidos)   ------------------------- */
 function abrirForm(item=null){
     const modal = document.getElementById('formModal');
     const btnSalvar = document.getElementById('btnSalvar');
@@ -426,12 +424,13 @@ function atualizarTabelaTodas(){
         if(itemPagamento === 'em aberto') totalAberto += itemValorTotal;
         if(itemPagamento.includes('pix')) totalPix += itemValorTotal; // inclui QR CODE PIX
         if(itemPagamento === 'dinheiro') totalDin += itemValorTotal;
-        if(itemPagamento === 'débito' || itemPagamento === 'debito') totalDeb += itemValorTotal;
-        if(itemPagamento === 'crédito' || itemPagamento === 'credito') totalCred += itemValorTotal;
+        if(itemPagamento.includes('débito') || itemPagamento.includes('debito')) totalDeb += itemValorTotal;
+        if(itemPagamento.includes('crédito') || itemPagamento.includes('credito')) totalCred += itemValorTotal;
         
         // NOVOS TOTAIS ACUMULADOS
         totalMo += itemValorMO;
-        totalGeral += itemValorTotal;
+        // Total Geral deve ser a soma de TUDO (incluindo em aberto/faturado, se for o total bruto do dia)
+        totalGeral += itemValorTotal; 
         
         return true;
     });
@@ -496,7 +495,7 @@ async function limparDados(){
     }
 }
 
-/* -------------------------   Export Excel (mantido)   ------------------------- */
+/* -------------------------   Export / Import Excel (Mantidos)   ------------------------- */
 function exportExcel(){
     const items = osData.map(it => ({
         'O S': it.os || '',
@@ -516,7 +515,6 @@ function exportExcel(){
     XLSX.writeFile(wb, 'OS_FrenteCaixa_Export.xlsx');
 }
 
-/* -------------------------   Import Excel (mantido)   ------------------------- */
 function importExcel(){ document.getElementById('inputExcel').click(); }
 function lerExcel(event){
     const files = event.target.files;
@@ -657,7 +655,7 @@ function lerExcel(event){
 }
 
 
-/* -------------------------   PDF rendering (ADICIONADO FILTRO M.O. e GERAL)   ------------------------- */
+/* -------------------------   PDF rendering (VERSÃO CORRIGIDA UNIVERSAL - Traz os dados)   ------------------------- */
 function imprimirPDF(filtroPagamento = null) {
     // Tenta inicializar novamente (medida de segurança)
     if (typeof jsPDF === 'undefined') {
@@ -670,19 +668,22 @@ function imprimirPDF(filtroPagamento = null) {
     const margin = 10;
     let y = margin;
     
-    // FILTRAGEM DOS DADOS: Usamos os filtros de data, unidade e técnico da tela
+    // FILTROS DA TELA
     const unidade = document.getElementById('unidade').value;
     const dataInicio = document.getElementById('dataInicio').value;
     const dataFim = document.getElementById('dataFim').value;
     const tecnicoFiltro = document.getElementById('tecnicoFiltro').value;
     const termoBusca = document.getElementById('busca').value.toLowerCase();
     
-    // Calcula totais no PDF
     let totalGeralNoPDF = 0;
     let totalMONoPDF = 0;
     
+    // Normaliza o filtro do botão para comparação
+    const filtroP = filtroPagamento ? filtroPagamento.toLowerCase().trim() : null;
+
     const dadosTabela = osData.filter(item => {
         const itemDate = item.data ? item.data.split('/').reverse().join('-') : '2000-01-01';
+        // Normaliza o pagamento do ITEM da lista para comparação
         const itemPagamento = (item.pagamento || '').toString().toLowerCase().trim();
         const itemValorTotal = parseFloat(item.valor || (parseFloat(item.valor_os||0) + parseFloat(item.valor_mo||0)));
 
@@ -694,25 +695,34 @@ function imprimirPDF(filtroPagamento = null) {
         if((item.cliente||'').toUpperCase().includes('CANCELADA')) return false;
         if(termoBusca && !((item.cliente||'').toLowerCase().includes(termoBusca) || (item.placa||'').toLowerCase().includes(termoBusca) || (item.os||'').toLowerCase().includes(termoBusca))) return false;
 
-        // Aplica filtro do botão de resumo
-        if (filtroPagamento) {
-            const filtroP = filtroPagamento.toLowerCase().trim();
+        
+        // =========================================================
+        // ✅ FILTRAGEM UNIVERSAL (GARANTE QUE TODOS OS BOTÕES FUNCIONAM)
+        // =========================================================
+        if (filtroP) {
             
             if (filtroP === 'geral' || filtroP === 'maoobra') {
-                // Para Total Geral e Mão de Obra: excluir 'Em Aberto' ou 'Faturado'
-                // Estes relatórios devem mostrar apenas o que FOI PAGO
+                // Total Geral Recebido e Mão de Obra: EXCLUIR "em aberto" e "faturado" (queremos só o que entrou no caixa)
                 if (itemPagamento.includes('em aberto') || itemPagamento.includes('faturado')) {
                     return false;
                 }
+            } else if (filtroP === 'pix') {
+                 // Filtra tanto 'pix' quanto 'qr code pix'
+                 if (!itemPagamento.includes('pix')) return false;
+            } else if (filtroP === 'débito' || filtroP === 'debito') {
+                // Filtra 'débito' e 'debito'
+                if (!(itemPagamento.includes('débito') || itemPagamento.includes('debito'))) return false;
+            } else if (filtroP === 'crédito' || filtroP === 'credito') {
+                // Filtra 'crédito' e 'credito'
+                if (!(itemPagamento.includes('crédito') || itemPagamento.includes('credito'))) return false;
             } else {
-                // Filtros normais por pagamento (PIX, Dinheiro, etc.)
-                if (filtroP === 'pix' || filtroP === 'qr code pix') {
-                    if (!itemPagamento.includes('pix')) return false;
-                } else if (itemPagamento !== filtroP) {
+                // Outros filtros: "dinheiro", "em aberto", "faturado"
+                if (itemPagamento !== filtroP) {
                     return false;
                 }
             }
         }
+        // =========================================================
         
         // Acumula os totais para o relatório final
         totalGeralNoPDF += itemValorTotal;
@@ -731,10 +741,10 @@ function imprimirPDF(filtroPagamento = null) {
             item.tecnico || '',
             item.unidade || ''
         ];
-    }).map(row => row.slice(0, 10)); // Mapeia para o formato final e corta colunas extras (se houver)
+    }).map(row => row.slice(0, 10)); 
 
 
-    // CABEÇALHO DO PDF (Função mantida)
+    // CABEÇALHO DO PDF 
     function addHeader(doc, pageNumber, totalPages, title) {
         doc.setFontSize(16);
         doc.setFont('helvetica', 'bold');
@@ -751,11 +761,29 @@ function imprimirPDF(filtroPagamento = null) {
     if (filtroPagamento && filtroPagamento.toUpperCase() === 'MAOOBRA') reportTitle = 'MÃO DE OBRA';
     if (filtroPagamento && filtroPagamento.toUpperCase() === 'GERAL') reportTitle = 'TOTAL GERAL RECEBIDO';
     
-    addHeader(doc, 1, 1, reportTitle);
-
-    // CONFIGURAÇÃO DA TABELA
+    // Calcula o número real de páginas para o cabeçalho
+    const initialY = y;
+    let totalPages = 1;
     doc.autoTable({
-        startY: y,
+        startY: initialY,
+        head: [['O.S', 'DATA', 'CLIENTE', 'PLACA', 'VLR OS', 'VLR MO', 'VLR TOTAL', 'PAGAMENTO', 'TECNICO', 'UNIDADE']],
+        body: dadosTabela,
+        theme: 'striped',
+        styles: { fontSize: 8, cellPadding: 1, overflow: 'ellipsize', halign: 'left' },
+        didDrawPage: (data) => {
+            // Conta as páginas
+            totalPages = data.pageNumber;
+        },
+        // Configurações ignoradas no primeiro cálculo (apenas para contar páginas)
+        // Usamos didDrawPage no segundo autoTable (real) para adicionar cabeçalho correto
+    });
+    
+    // Reseta o doc e gera a tabela final com o cabeçalho correto em cada página
+    doc.deletePage(1); 
+    doc.addPage('a4', 'l');
+    
+    doc.autoTable({
+        startY: 30, // Começa abaixo do cabeçalho
         head: [['O.S', 'DATA', 'CLIENTE', 'PLACA', 'VLR OS', 'VLR MO', 'VLR TOTAL', 'PAGAMENTO', 'TECNICO', 'UNIDADE']],
         body: dadosTabela,
         theme: 'striped',
@@ -766,6 +794,10 @@ function imprimirPDF(filtroPagamento = null) {
             6: { halign: 'right', fontStyle: 'bold' }, // VLR TOTAL
         },
         headStyles: { fillColor: [74, 144, 226], textColor: 255 },
+        didDrawPage: function(data) {
+            // Adiciona cabeçalho em todas as páginas, usando a contagem correta
+            addHeader(doc, data.pageNumber, totalPages, reportTitle);
+        },
         didParseCell: function(data) {
             // Se for a coluna PAGAMENTO, aplica cor de fundo
             if (data.column.index === 7 && data.section === 'body') {
@@ -773,17 +805,10 @@ function imprimirPDF(filtroPagamento = null) {
                 const cor = paymentColors[pagamento.trim()];
                 if (cor) {
                     data.cell.styles.fillColor = cor;
-                    // Forçar o texto a ser preto se o fundo for amarelo (Dinheiro/Débito)
                     if (pagamento.trim() === 'Dinheiro' || pagamento.trim() === 'Débito') {
                         data.cell.styles.textColor = 0;
                     }
                 }
-            }
-        },
-        didDrawPage: function(data) {
-            // Adiciona cabeçalho em todas as páginas
-            if (data.pageNumber > 1) {
-                addHeader(doc, data.pageNumber, doc.internal.pages.length - 1, reportTitle);
             }
         },
         // Rodapé com Totais
