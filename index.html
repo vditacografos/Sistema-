@@ -34,7 +34,7 @@
         .dinheiro { background: linear-gradient(45deg,#f1c40f,#d4ac0d); }
         .debito { background: linear-gradient(45deg,#f39c12,#d68910); }
         .credito { background: linear-gradient(45deg,#9b59b6,#8e44ad); }
-        .maodeobra { background: linear-gradient(45deg, #7b1fa2, #4a148c); } /* Novo estilo para Mão de Obra */
+        .maodeobra { background: linear-gradient(45deg, #7b1fa2, #4a148c); } /* NOVO ESTILO */
         .edit, .delete { border:none; padding:5px 10px; border-radius:6px; color:white; cursor:pointer; margin-right:5px; font-size:12px; }
         .edit { background:#27ae60; }
         .delete { background:#e74c3c; }
@@ -103,15 +103,19 @@
             </thead>
             <tbody></tbody>
         </table>
+        
         <h3>Resumo — Controle de Caixa Diário</h3>
         <div class="summary">
-            <div class="card maodeobra" id="totalMO">MÃO DE OBRA<br>R$ 0,00</div> <div class="card faturadas" id="totalFaturadas" onclick="imprimirPDF('Faturado')">FATURADAS<br>R$ 0,00</div>
+            <div class="card maodeobra" id="totalMO" onclick="imprimirPDF('MaoDeObra')">MÃO DE OBRA<br>R$ 0,00</div> 
+            
+            <div class="card faturadas" id="totalFaturadas" onclick="imprimirPDF('Faturado')">FATURADAS<br>R$ 0,00</div>
             <div class="card emaberto" id="totalAberto" onclick="imprimirPDF('Em Aberto')">EM ABERTO<br>R$ 0,00</div>
             <div class="card pix" id="totalPix" onclick="imprimirPDF('PIX')">PIX<br>R$ 0,00</div>
             <div class="card dinheiro" id="totalDinheiro" onclick="imprimirPDF('Dinheiro')">DINHEIRO<br>R$ 0,00</div>
             <div class="card debito" id="totalDebito" onclick="imprimirPDF('Débito')">DÉBITO<br>R$ 0,00</div>
             <div class="card credito" id="totalCredito" onclick="imprimirPDF('Crédito')">CRÉDITO<br>R$ 0,00</div>
         </div>
+
     </div>
     <div id="formModal" class="modal">
         <div class="modal-content">
@@ -121,8 +125,7 @@
             <input type="text" id="formCliente" placeholder="Cliente">
             <input type="text" id="formPlaca" placeholder="Placa">
             <input type="number" id="formValorOS" placeholder="Valor OS (R$)" step="0.01">
-            <input type="number" id="formValorMO" placeholder="Valor MO (R$)" step="0.01">
-            <select id="formPagamento">
+            <input type="number" id="formValorMO" placeholder="Valor MO (R$)" step="0.01"> <select id="formPagamento">
                 <option value="">Selecione pagamento</option>
                 <option value="PIX">PIX</option>
                 <option value="Dinheiro">Dinheiro</option>
@@ -257,7 +260,7 @@ function getTecnicosUnicos(){
 /* Start listener now */
 setupFirestoreListener();
 
-/* -------------------------   Form open/close & save (Corrigido para Edição)   ------------------------- */
+/* -------------------------   Form open/close & save (Corrigido para Mão de Obra)   ------------------------- */
 function abrirForm(item=null){
     const modal = document.getElementById('formModal');
     const btnSalvar = document.getElementById('btnSalvar');
@@ -273,7 +276,7 @@ function abrirForm(item=null){
     document.getElementById('formCliente').value = item ? (item.cliente || '') : '';
     document.getElementById('formPlaca').value = item ? (item.placa || '') : '';
     document.getElementById('formValorOS').value = item ? (parseFloat(item.valor_os || 0).toFixed(2)) : '';
-    document.getElementById('formValorMO').value = item ? (parseFloat(item.valor_mo || 0).toFixed(2)) : '';
+    document.getElementById('formValorMO').value = item ? (parseFloat(item.valor_mo || 0).toFixed(2)) : ''; // Valor MO
     document.getElementById('formPagamento').value = item ? (item.pagamento || '') : '';
     document.getElementById('formUnidade').value = item ? (item.unidade || '') : '';
     document.getElementById('formTecnico').value = item ? (item.tecnico || '') : '';
@@ -305,7 +308,7 @@ async function salvarForm(){
     const cliente = document.getElementById('formCliente').value.trim();
     const placa = document.getElementById('formPlaca').value.trim();
     const valorOS = parseFloat(document.getElementById('formValorOS').value || 0);
-    const valorMO = parseFloat(document.getElementById('formValorMO').value || 0);
+    const valorMO = parseFloat(document.getElementById('formValorMO').value || 0); // Valor MO
     const pagamento = document.getElementById('formPagamento').value;
     const tecnico = document.getElementById('formTecnico').value.trim();
     const unidade = document.getElementById('formUnidade').value;
@@ -324,7 +327,7 @@ async function salvarForm(){
         cliente,
         placa,
         valor_os: valorOS.toFixed(2),
-        valor_mo: valorMO.toFixed(2),
+        valor_mo: valorMO.toFixed(2), // Salva o valor da Mão de Obra
         valor: (valorOS + valorMO).toFixed(2), // VALOR TOTAL
         pagamento,
         tecnico,
@@ -430,10 +433,8 @@ function atualizarTabelaTodas(){
         tbody.appendChild(tr);
     });
 
-    // Update do NOVO CARD MO
+    // Update dos cards
     document.getElementById('totalMO').innerHTML=`MÃO DE OBRA<br>R$ ${totalMO.toFixed(2).replace('.', ',')}`;
-
-    // Updates dos cards originais
     document.getElementById('totalFaturadas').innerHTML=`FATURADAS<br>R$ ${totalF.toFixed(2).replace('.', ',')}`;
     document.getElementById('totalAberto').innerHTML=`EM ABERTO<br>R$ ${totalAberto.toFixed(2).replace('.', ',')}`;
     document.getElementById('totalPix').innerHTML=`PIX<br>R$ ${totalPix.toFixed(2).replace('.', ',')}`;
@@ -471,7 +472,7 @@ async function limparDados(){
     }
 }
 
-/* -------------------------   Export Excel (seu original)   ------------------------- */
+/* -------------------------   Export Excel (seu original - Com Valor MO)   ------------------------- */
 function exportExcel(){
     const items = osData.map(it => ({
         'O S': it.os || '',
@@ -479,7 +480,7 @@ function exportExcel(){
         'CLIENTE': it.cliente || '',
         'PLACA': it.placa || '',
         'VALOR OS': parseFloat(it.valor_os || 0), 
-        'VALOR MO': parseFloat(it.valor_mo || 0), 
+        'VALOR MO': parseFloat(it.valor_mo || 0), // Incluído
         'PAGAMENTO': it.pagamento || '',
         'TECNICO': it.tecnico || '',
         'OS TECNICO': it.os_tecnico || '',
@@ -491,7 +492,7 @@ function exportExcel(){
     XLSX.writeFile(wb, 'OS_FrenteCaixa_Export.xlsx');
 }
 
-/* -------------------------   Import Excel (seu original)   ------------------------- */
+/* -------------------------   Import Excel (seu original - Com Valor MO)   ------------------------- */
 function importExcel(){ document.getElementById('inputExcel').click(); }
 function lerExcel(event){
     const files = event.target.files;
@@ -631,14 +632,13 @@ function lerExcel(event){
     Array.from(files).forEach(processarArquivo);
 }
 
-/* -------------------------   PDF rendering (Seu original)   ------------------------- */
+/* -------------------------   PDF rendering (Final - MÃO DE OBRA como filtro)   ------------------------- */
 function imprimirPDF(filtroPagamento = null) {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF('l', 'mm', 'a4');
     const margin = 10;
-    let y = margin;
     
-    // FILTROS DA TELA
+    // FILTROS DA TELA (já aplicados na tabela antes da impressão)
     const unidade = document.getElementById('unidade').value;
     const dataInicio = document.getElementById('dataInicio').value;
     const dataFim = document.getElementById('dataFim').value;
@@ -649,46 +649,54 @@ function imprimirPDF(filtroPagamento = null) {
     let totalOSNoPDF = 0;
     let totalMONoPDF = 0;
     
-    const dadosTabela = osData.filter(item => {
+    const dadosParaTabela = []; // Array para armazenar os dados formatados
+    
+    osData.forEach(item => {
         const itemDate = item.data ? item.data.split('/').reverse().join('-') : '2000-01-01';
         const itemPagamento = (item.pagamento || '').toString().toLowerCase().trim();
         
         const itemValorTotal = parseFloat(item.valor || 0);
         const itemValorOS = parseFloat(item.valor_os || 0);
-        const itemValorMO = parseFloat(item.valor_mo || 0);
+        const itemValorMO = parseFloat(item.valor_mo || 0); 
 
-        // Aplica filtros de tela (Unidade, Data, Técnico, Busca, Cancelada)
-        if(unidade && item.unidade !== unidade) return false;
-        if(tecnicoFiltro && item.tecnico !== tecnicoFiltro) return false;
-        if(dataInicio && itemDate < dataInicio) return false;
-        if(dataFim && itemDate > dataFim) return false;
-        if((item.cliente||'').toUpperCase().includes('CANCELADA')) return false;
-        if(termoBusca && !((item.cliente||'').toLowerCase().includes(termoBusca) || (item.placa||'').toLowerCase().includes(termoBusca) || (item.os||'').toLowerCase().includes(termoBusca))) return false;
+        // 1. Aplica filtros da interface
+        if(unidade && item.unidade !== unidade) return;
+        if(tecnicoFiltro && item.tecnico !== tecnicoFiltro) return;
+        if(dataInicio && itemDate < dataInicio) return;
+        if(dataFim && itemDate > dataFim) return;
+        if((item.cliente||'').toUpperCase().includes('CANCELADA')) return;
+        if(termoBusca && !((item.cliente||'').toLowerCase().includes(termoBusca) || (item.placa||'').toLowerCase().includes(termoBusca) || (item.os||'').toLowerCase().includes(termoBusca))) return;
 
-        // FILTRAGEM DE PAGAMENTO
+        // 2. Aplica filtro de PAGAMENTO (do clique no card)
         const filtroP = filtroPagamento ? filtroPagamento.toLowerCase().trim() : null;
-
         if (filtroP) {
-            if (filtroP === 'pix') {
-                 if (!itemPagamento.includes('pix')) return false;
-            } 
+            
+            // NOVO FILTRO: Clicou em "Mão de Obra"
+            if (filtroP === 'maodeobra') {
+                if (itemValorMO <= 0) return; // Filtra SÓ O.S. com Mão de Obra
+            }
+            // FILTROS EXISTENTES: Tipos de Pagamento
             else if (filtroP === 'débito' || filtroP === 'debito') {
-                if (!(itemPagamento.includes('débito') || itemPagamento.includes('debito'))) return false;
+                if (!(itemPagamento.includes('débito') || itemPagamento.includes('debito'))) return;
             } 
             else if (filtroP === 'crédito' || filtroP === 'credito') {
-                if (!(itemPagamento.includes('crédito') || itemPagamento.includes('credito'))) return false;
+                if (!(itemPagamento.includes('crédito') || itemPagamento.includes('credito'))) return;
             } 
+            else if (filtroP === 'pix') {
+                if (!itemPagamento.includes('pix')) return;
+            }
             else if (itemPagamento !== filtroP) {
-                return false;
+                return;
             }
         }
         
+        // Acumula Totais
         totalGeralNoPDF += itemValorTotal;
         totalOSNoPDF += itemValorOS;
         totalMONoPDF += itemValorMO;
         
-        // Formata os dados para a tabela do PDF
-        return [
+        // Formata e adiciona à tabela
+        dadosParaTabela.push([
             item.os || '',
             item.data || '',
             item.cliente || '',
@@ -699,10 +707,11 @@ function imprimirPDF(filtroPagamento = null) {
             item.pagamento || '',
             item.tecnico || '',
             item.unidade || ''
-        ];
-    }).map(row => row.slice(0, 10)); // 10 colunas
+        ]);
+    });
 
-    // CABEÇALHO DO PDF
+    // --- Lógica de Geração do PDF (Inalterada) ---
+    let totalPages = 1;
     function addHeader(doc, pageNumber, totalPages, title) {
         doc.setFontSize(16);
         doc.setFont('helvetica', 'bold');
@@ -712,18 +721,15 @@ function imprimirPDF(filtroPagamento = null) {
         doc.text(`Período: ${dataInicio ? formatDate(dataInicio) : 'Início'} a ${dataFim ? formatDate(dataFim) : 'Fim'}`, 148.5, 20, { align: 'center' });
         doc.text(`Unidade: ${unidade || 'Todas'} | Técnico: ${tecnicoFiltro || 'Todos'}`, 148.5, 25, { align: 'center' });
         doc.text(`Página ${pageNumber} de ${totalPages}`, doc.internal.pageSize.width - margin, 15, { align: 'right' });
-        y = 30;
     }
 
     let reportTitle = filtroPagamento || 'COMPLETO';
     
-    // Cálculo de páginas (para saber totalPages)
-    const initialY = y;
-    let totalPages = 1;
+    // Passagem 1: calcular total de páginas
     doc.autoTable({
-        startY: initialY,
+        startY: 30,
         head: [['O.S', 'DATA', 'CLIENTE', 'PLACA', 'VALOR OS', 'VALOR MO', 'VALOR (TOTAL)', 'PAGAMENTO', 'TECNICO', 'UNIDADE']],
-        body: dadosTabela,
+        body: dadosParaTabela,
         theme: 'striped',
         styles: { fontSize: 8, cellPadding: 1, overflow: 'ellipsize', halign: 'left' },
         didDrawPage: (data) => {
@@ -731,14 +737,14 @@ function imprimirPDF(filtroPagamento = null) {
         },
     });
     
-    // Reset para renderização final com cabeçalhos
+    // Passagem 2: renderização final com cabeçalhos e rodapé
     doc.deletePage(1); 
     doc.addPage('a4', 'l');
     
     doc.autoTable({
-        startY: 30, // Começa abaixo do cabeçalho
+        startY: 30, 
         head: [['O.S', 'DATA', 'CLIENTE', 'PLACA', 'VALOR OS', 'VALOR MO', 'VALOR (TOTAL)', 'PAGAMENTO', 'TECNICO', 'UNIDADE']],
-        body: dadosTabela,
+        body: dadosParaTabela,
         theme: 'striped',
         styles: { fontSize: 8, cellPadding: 1, overflow: 'ellipsize', halign: 'left' },
         columnStyles: {
@@ -751,9 +757,16 @@ function imprimirPDF(filtroPagamento = null) {
             addHeader(doc, data.pageNumber, totalPages, reportTitle);
         },
         didParseCell: function(data) {
-            // Se for a coluna PAGAMENTO, aplica cor de fundo
             if (data.column.index === 7 && data.section === 'body') {
                 const pagamento = data.cell.text[0] || '';
+                const paymentColors = {  
+                    'Faturado': [173, 216, 230],  
+                    'Em Aberto': [255, 192, 203],  
+                    'PIX': [175, 223, 175],  
+                    'Dinheiro': [255, 239, 173],  
+                    'Débito': [253, 222, 173],  
+                    'Crédito': [210, 180, 222]
+                };
                 const cor = paymentColors[pagamento.trim()];
                 if (cor) {
                     data.cell.styles.fillColor = cor;
@@ -765,23 +778,13 @@ function imprimirPDF(filtroPagamento = null) {
         },
         // Rodapé com Totais
         foot: [
-            ['', '', '', '', 'Total OS:', 'Total MO:', 'Total Geral:', '', '', '']
+            ['', '', '', '', 'Total OS:', 'R$ ' + totalOSNoPDF.toFixed(2).replace('.', ','), 'Total MO:', 'R$ ' + totalMONoPDF.toFixed(2).replace('.', ','), 'Total Geral:', 'R$ ' + totalGeralNoPDF.toFixed(2).replace('.', ',')]
         ],
-        footStyles: { fillColor: [50, 50, 50], textColor: 255, fontStyle: 'bold', fontSize: 10, halign: 'left' },
+        footStyles: { fillColor: [50, 50, 50], textColor: 255, fontStyle: 'bold', fontSize: 10, halign: 'center' },
         didDrawCell: function(data) {
-            if (data.section === 'foot' && data.row.index === 0) {
-                // Total OS (index 4)
-                if (data.column.index === 4) {
-                    doc.text(`R$ ${totalOSNoPDF.toFixed(2).replace('.', ',')}`, data.cell.x + data.cell.width - 2, data.cell.y + data.cell.height / 2, { align: 'right', valign: 'middle' });
-                }
-                // Total MO (index 5)
-                if (data.column.index === 5) {
-                    doc.text(`R$ ${totalMONoPDF.toFixed(2).replace('.', ',')}`, data.cell.x + data.cell.width - 2, data.cell.y + data.cell.height / 2, { align: 'right', valign: 'middle' });
-                }
-                // Total Geral (index 6)
-                if (data.column.index === 6) {
-                    doc.text(`R$ ${totalGeralNoPDF.toFixed(2).replace('.', ',')}`, data.cell.x + data.cell.width - 2, data.cell.y + data.cell.height / 2, { align: 'right', valign: 'middle' });
-                }
+            const valueCols = [5, 7, 9]; 
+            if (data.section === 'foot' && data.row.index === 0 && valueCols.includes(data.column.index)) {
+                 data.cell.styles.halign = 'right';
             }
         }
     });
