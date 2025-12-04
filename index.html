@@ -149,8 +149,9 @@
 </div>
 <script>
 /* =============================================   Configurações Firebase (Seu original)   ============================================= */
+// 🛑 🛑 🛑 IMPORTANTE: VOCÊ DEVE SUBSTITUIR ESTE BLOCO DE EXEMPLO PELAS SUAS CREDENCIAIS REAIS DO FIREBASE 🛑 🛑 🛑
 const firebaseConfig = {
-  apiKey: "AIzaSyC5up-MQFQNeH1ftI8KTMoXI5pY2D2jpgM",
+  apiKey: "AIzaSyD-placeholder-chave-de-exemplo-jp-gM", 
   authDomain: "vditacografosfrentecaixa.firebaseapp.com",
   databaseURL: "https://vditacografosfrentecaixa-default-rtdb.firebaseio.com",
   projectId: "vditacografosfrentecaixa",
@@ -239,9 +240,13 @@ function setupFirestoreListener(){
         document.getElementById('loadingOverlay').style.display = 'none';
     }, err => {
         console.error('Erro Firestore', err);
-        document.getElementById('loadingOverlay').style.display = 'none';
+        // Garante que o loading é ocultado mesmo em caso de erro
+        document.getElementById('loadingOverlay').style.display = 'none'; 
+        alert('Erro ao conectar ao Firebase! Verifique suas credenciais e conexão.');
     });
 }
+
+
 function getTecnicosUnicos(){
     const select = document.getElementById('tecnicoFiltro');
     const current = select.value;
@@ -645,7 +650,7 @@ function imprimirPDF(filtroPagamento = null) {
     const tecnicoFiltro = document.getElementById('tecnicoFiltro').value;
     const termoBusca = document.getElementById('busca').value.toLowerCase();
     
-    let totalGeralNoPDF = 0; // VAI SOMAR APENAS O VALOR OS
+    let totalGeralNoPDF = 0; // VAI SOMAR APENAS O VALOR OS (CORRIGIDO)
     let totalOSNoPDF = 0;
     let totalMONoPDF = 0;
     
@@ -691,9 +696,9 @@ function imprimirPDF(filtroPagamento = null) {
         }
         
         // ===================================
-        // Acumula Totais (AQUI ESTÁ A CORREÇÃO)
+        // Acumula Totais (CORREÇÃO DE VALOR TOTAL)
         // ===================================
-        totalGeralNoPDF += itemValorOS; // AGORA SOMA APENAS O VALOR OS para o Total Geral
+        totalGeralNoPDF += itemValorOS; // SOMA APENAS O VALOR OS para o Total Geral
         totalOSNoPDF += itemValorOS;
         totalMONoPDF += itemValorMO;
         
