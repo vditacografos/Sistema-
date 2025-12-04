@@ -148,18 +148,20 @@
     </div>
 </div>
 <script>
-/* =============================================   Configurações Firebase (Seu original)   ============================================= */
-// 🛑 🛑 🛑 IMPORTANTE: VOCÊ DEVE SUBSTITUIR ESTE BLOCO DE EXEMPLO PELAS SUAS CREDENCIAIS REAIS DO FIREBASE 🛑 🛑 🛑
+/* =============================================   Configurações Firebase (Versão 8)   ============================================= */
+// 🛑 🛑 🛑 IMPORTANTE: VERIFIQUE SUA CHAVE API REAL. ESTE VALOR FOI OBTIDO DAS SUAS MENSAGENS ANTERIORES. 🛑 🛑 🛑
 const firebaseConfig = {
-  apiKey: "AIzaSyD-placeholder-chave-de-exemplo-jp-gM", 
+  apiKey: "AIzaSyC5up-MQFQNeH1ftI8KTMoXI5pY2D2jpgM", 
   authDomain: "vditacografosfrentecaixa.firebaseapp.com",
   databaseURL: "https://vditacografosfrentecaixa-default-rtdb.firebaseio.com",
   projectId: "vditacografosfrentecaixa",
-  storageBucket: "vditacografosfrentecaorage.app",
+  storageBucket: "vditacografosfrentecaixa.firebasestorage.app", // Corrigido
   messagingSenderId: "1008625665373",
   appId: "1:1008625665373:web:1f1870898ecb04b4b854b4",
   measurementId: "G-9SYYV1VLNY"
 };
+
+// Inicialização dos serviços (Versão 8)
 const app = firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore(app);
 const osCollection = db.collection('ordens_servico');
@@ -212,7 +214,7 @@ function parseMoneyCell(cell){
     return isNaN(val) ? 0 : val;
 }
 
-/* -------------------------   Firestore listener (seu original)   ------------------------- */
+/* -------------------------   Firestore listener (Corrigido para erro)   ------------------------- */
 function setupFirestoreListener(){
     document.getElementById('loadingOverlay').style.display = 'flex';
     osCollection.onSnapshot(snapshot => {
@@ -240,9 +242,9 @@ function setupFirestoreListener(){
         document.getElementById('loadingOverlay').style.display = 'none';
     }, err => {
         console.error('Erro Firestore', err);
-        // Garante que o loading é ocultado mesmo em caso de erro
+        // Garante que o loading é ocultado em caso de falha de conexão ou permissão
         document.getElementById('loadingOverlay').style.display = 'none'; 
-        alert('Erro ao conectar ao Firebase! Verifique suas credenciais e conexão.');
+        alert('Erro ao conectar ao Firebase/Firestore. Verifique sua chave API e Regras de Segurança.');
     });
 }
 
@@ -477,7 +479,7 @@ async function limparDados(){
     }
 }
 
-/* -------------------------   Export Excel (seu original - Com Valor MO)   ------------------------- */
+/* -------------------------   Export Excel (Com Valor MO)   ------------------------- */
 function exportExcel(){
     const items = osData.map(it => ({
         'O S': it.os || '',
@@ -497,7 +499,7 @@ function exportExcel(){
     XLSX.writeFile(wb, 'OS_FrenteCaixa_Export.xlsx');
 }
 
-/* -------------------------   Import Excel (seu original - Com Valor MO)   ------------------------- */
+/* -------------------------   Import Excel (Com Valor MO)   ------------------------- */
 function importExcel(){ document.getElementById('inputExcel').click(); }
 function lerExcel(event){
     const files = event.target.files;
