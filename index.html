@@ -440,7 +440,7 @@ function atualizarTabelaTodas(){
     document.getElementById('totalPix').innerHTML=`PIX<br>R$ ${totalPix.toFixed(2).replace('.', ',')}`;
     document.getElementById('totalDinheiro').innerHTML=`DINHEIRO<br>R$ ${totalDin.toFixed(2).replace('.', ',')}`;
     document.getElementById('totalDebito').innerHTML=`DÉBITO<br>R$ ${totalDeb.toFixed(2).replace('.', ',')}`;
-    document.getElementById('totalCredito').innerHTML=`CRÉDITO<br>R$ ${totalCred.toFixed(2).replace('.', ',')}`;
+    document.getElementById('totalCredito').innerHTML=`CRÉDITO<br>R$ ${totalCredito.toFixed(2).replace('.', ',')}`;
 }
 
 /* Funções de filtro e busca (inalteradas, funcionam chamando atualizarTabelaTodas) */
@@ -632,7 +632,7 @@ function lerExcel(event){
     Array.from(files).forEach(processarArquivo);
 }
 
-/* -------------------------   PDF rendering (Final - MÃO DE OBRA como filtro)   ------------------------- */
+/* -------------------------   PDF rendering (FINAL - CORREÇÃO TOTAL GERAL)   ------------------------- */
 function imprimirPDF(filtroPagamento = null) {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF('l', 'mm', 'a4');
@@ -645,11 +645,11 @@ function imprimirPDF(filtroPagamento = null) {
     const tecnicoFiltro = document.getElementById('tecnicoFiltro').value;
     const termoBusca = document.getElementById('busca').value.toLowerCase();
     
-    let totalGeralNoPDF = 0;
+    let totalGeralNoPDF = 0; // VAI SOMAR APENAS O VALOR OS
     let totalOSNoPDF = 0;
     let totalMONoPDF = 0;
     
-    const dadosParaTabela = []; // Array para armazenar os dados formatados
+    const dadosParaTabela = []; 
     
     osData.forEach(item => {
         const itemDate = item.data ? item.data.split('/').reverse().join('-') : '2000-01-01';
@@ -690,8 +690,10 @@ function imprimirPDF(filtroPagamento = null) {
             }
         }
         
-        // Acumula Totais
-        totalGeralNoPDF += itemValorTotal;
+        // ===================================
+        // Acumula Totais (AQUI ESTÁ A CORREÇÃO)
+        // ===================================
+        totalGeralNoPDF += itemValorOS; // AGORA SOMA APENAS O VALOR OS para o Total Geral
         totalOSNoPDF += itemValorOS;
         totalMONoPDF += itemValorMO;
         
@@ -750,7 +752,7 @@ function imprimirPDF(filtroPagamento = null) {
         columnStyles: {
             4: { halign: 'right' }, // VALOR OS
             5: { halign: 'right' }, // VALOR MO
-            6: { halign: 'right', fontStyle: 'bold' }, // VALOR TOTAL
+            6: { halign: 'right', fontStyle: 'bold' }, // VALOR TOTAL (na tabela)
         },
         headStyles: { fillColor: [74, 144, 226], textColor: 255 },
         didDrawPage: function(data) {
