@@ -149,7 +149,7 @@
 </div>
 <script>
 /* =============================================   Configurações Firebase (Versão 8)   ============================================= */
-// 🛑 🛑 🛑 IMPORTANTE: VERIFIQUE SUA CHAVE API REAL. ESTE VALOR FOI OBTIDO DAS SUAS MENSAGENS ANTERIORES. 🛑 🛑 🛑
+// 🛑 🛑 🛑 IMPORTANTE: VERIFIQUE SE ESTA CHAVE API É REAL E VÁLIDA PARA SEU PROJETO! 🛑 🛑 🛑
 const firebaseConfig = {
   apiKey: "AIzaSyC5up-MQFQNeH1ftI8KTMoXI5pY2D2jpgM", 
   authDomain: "vditacografosfrentecaixa.firebaseapp.com",
@@ -379,7 +379,7 @@ async function apagarOS(id){
     }
 }
 
-/* -------------------------   Atualizar tabela e totais (AGORA COM TOTAL MO)   ------------------------- */
+/* -------------------------   Atualizar tabela e totais (AGORA COM CORREÇÃO DE TYPERROR)   ------------------------- */
 function atualizarTabelaTodas(){
     const unidade = document.getElementById('unidade').value;
     const dataInicio = document.getElementById('dataInicio').value;
@@ -440,14 +440,14 @@ function atualizarTabelaTodas(){
         tbody.appendChild(tr);
     });
 
-    // Update dos cards
+    // Update dos cards - CORRIGIDO O TYPERROR: TotalCredito (ID) agora usa a variável de soma totalCred.
     document.getElementById('totalMO').innerHTML=`MÃO DE OBRA<br>R$ ${totalMO.toFixed(2).replace('.', ',')}`;
     document.getElementById('totalFaturadas').innerHTML=`FATURADAS<br>R$ ${totalF.toFixed(2).replace('.', ',')}`;
     document.getElementById('totalAberto').innerHTML=`EM ABERTO<br>R$ ${totalAberto.toFixed(2).replace('.', ',')}`;
     document.getElementById('totalPix').innerHTML=`PIX<br>R$ ${totalPix.toFixed(2).replace('.', ',')}`;
     document.getElementById('totalDinheiro').innerHTML=`DINHEIRO<br>R$ ${totalDin.toFixed(2).replace('.', ',')}`;
     document.getElementById('totalDebito').innerHTML=`DÉBITO<br>R$ ${totalDeb.toFixed(2).replace('.', ',')}`;
-    document.getElementById('totalCredito').innerHTML=`CRÉDITO<br>R$ ${totalCredito.toFixed(2).replace('.', ',')}`;
+    document.getElementById('totalCredito').innerHTML=`CRÉDITO<br>R$ ${totalCred.toFixed(2).replace('.', ',')}`; // <<< CORREÇÃO APLICADA!
 }
 
 /* Funções de filtro e busca (inalteradas, funcionam chamando atualizarTabelaTodas) */
