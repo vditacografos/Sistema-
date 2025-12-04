@@ -34,10 +34,11 @@
         .dinheiro { background: linear-gradient(45deg,#f1c40f,#d4ac0d); }
         .debito { background: linear-gradient(45deg,#f39c12,#d68910); }
         .credito { background: linear-gradient(45deg,#9b59b6,#8e44ad); }
-        .maodeobra { background: linear-gradient(45deg, #7b1fa2, #4a148c); } /* NOVO ESTILO */
+        .maodeobra { background: linear-gradient(45deg, #7b1fa2, #4a148c); } 
         .edit, .delete { border:none; padding:5px 10px; border-radius:6px; color:white; cursor:pointer; margin-right:5px; font-size:12px; }
         .edit { background:#27ae60; }
         .delete { background:#e74c3c; }
+        /* Estilo para Modais e Login */
         .modal { display:none; position:fixed; z-index:1000; left:0; top:0; width:100%; height:100%; overflow:auto; background:rgba(0,0,0,0.4); justify-content:center; align-items:center; }
         .modal-content { background:white; padding:20px; border-radius:10px; width:95%; max-width:480px; box-shadow:0 5px 15px rgba(0,0,0,0.3); }
         .modal-content h2 { color:#4a90e2; margin-top:0; }
@@ -50,10 +51,22 @@
 </head>
 <body>
 <div id="loadingOverlay" style="display:none;">Conectando à Nuvem...</div>
-<div id="appContent" style="display:block;">
+
+<div id="loginModal" class="modal" style="display: flex;">
+    <div class="modal-content">
+        <h2>Acesso VDI - Frente de Caixa</h2>
+        <p>Por favor, utilize suas credenciais de usuário.</p>
+        <input type="email" id="loginEmail" placeholder="Email do Usuário">
+        <input type="password" id="loginPassword" placeholder="Senha do Usuário">
+        <button onclick="handleLogin()">Entrar</button>
+    </div>
+</div>
+
+<div id="appContent" style="display:none;">
     <header>
         <img src="logo.png" alt="Logo VDI Tacógrafos" id="headerLogo">
         <h1 id="headerTitle">VDI TACÓGRAFOS — Frente de Caixa (Barueri · Cotia · Embu)</h1>
+        <button onclick="handleLogout()" style="position: absolute; top: 20px; right: 20px; background: #c0392b;">Sair</button>
     </header>
     <div class="container">
         <div class="buttons">
@@ -107,7 +120,6 @@
         <h3>Resumo — Controle de Caixa Diário</h3>
         <div class="summary">
             <div class="card maodeobra" id="totalMO" onclick="imprimirPDF('MaoDeObra')">MÃO DE OBRA<br>R$ 0,00</div> 
-            
             <div class="card faturadas" id="totalFaturadas" onclick="imprimirPDF('Faturado')">FATURADAS<br>R$ 0,00</div>
             <div class="card emaberto" id="totalAberto" onclick="imprimirPDF('Em Aberto')">EM ABERTO<br>R$ 0,00</div>
             <div class="card pix" id="totalPix" onclick="imprimirPDF('PIX')">PIX<br>R$ 0,00</div>
@@ -125,7 +137,8 @@
             <input type="text" id="formCliente" placeholder="Cliente">
             <input type="text" id="formPlaca" placeholder="Placa">
             <input type="number" id="formValorOS" placeholder="Valor OS (R$)" step="0.01">
-            <input type="number" id="formValorMO" placeholder="Valor MO (R$)" step="0.01"> <select id="formPagamento">
+            <input type="number" id="formValorMO" placeholder="Valor MO (R$)" step="0.01"> 
+            <select id="formPagamento">
                 <option value="">Selecione pagamento</option>
                 <option value="PIX">PIX</option>
                 <option value="Dinheiro">Dinheiro</option>
@@ -155,7 +168,7 @@ const firebaseConfig = {
   authDomain: "vditacografosfrentecaixa.firebaseapp.com",
   databaseURL: "https://vditacografosfrentecaixa-default-rtdb.firebaseio.com",
   projectId: "vditacografosfrentecaixa",
-  storageBucket: "vditacografosfrentecaixa.firebasestorage.app", // Corrigido
+  storageBucket: "vditacografosfrentecaixa.firebasestorage.app", 
   messagingSenderId: "1008625665373",
   appId: "1:1008625665373:web:1f1870898ecb04b4b854b4",
   measurementId: "G-9SYYV1VLNY"
@@ -164,8 +177,10 @@ const firebaseConfig = {
 // Inicialização dos serviços (Versão 8)
 const app = firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore(app);
+const auth = firebase.auth(); // Inicializa o Auth
 const osCollection = db.collection('ordens_servico');
 let osData = [];
+window.firestoreListenerStarted = false; // Flag para garantir que o listener só inicie uma vez
 
 /* cores para pdf (seu original) */
 const paymentColors = {  
@@ -214,7 +229,57 @@ function parseMoneyCell(cell){
     return isNaN(val) ? 0 : val;
 }
 
-/* -------------------------   Firestore listener (Corrigido para erro)   ------------------------- */
+/* -------------------------   Funções Firebase AUTH (Novo)   ------------------------- */
+
+async function handleLogin() {
+    const email = document.getElementById('loginEmail').value;
+    const password = document.getElementById('loginPassword').value;
+
+    if (!email || !password) {
+        alert('Preencha email e senha.');
+        return;
+    }
+
+    try {
+        document.getElementById('loadingOverlay').style.display = 'flex';
+        await auth.signInWithEmailAndPassword(email, password);
+        // onAuthStateChanged irá lidar com o restante
+    } catch (error) {
+        document.getElementById('loadingOverlay').style.display = 'none';
+        alert(`Erro de Login: Verifique suas credenciais. (${error.message})`);
+    }
+}
+
+function handleLogout() {
+    if (confirm('Deseja sair do sistema?')) {
+        auth.signOut();
+    }
+}
+
+function checkAuthState() {
+    auth.onAuthStateChanged(user => {
+        if (user) {
+            // USUÁRIO LOGADO: Mostra o app e carrega os dados
+            document.getElementById('loginModal').style.display = 'none';
+            document.getElementById('appContent').style.display = 'block';
+            
+            if (!window.firestoreListenerStarted) {
+                setupFirestoreListener();
+                window.firestoreListenerStarted = true;
+            } else {
+                 document.getElementById('loadingOverlay').style.display = 'none';
+            }
+        } else {
+            // USUÁRIO DESLOGADO: Mostra a tela de login
+            document.getElementById('appContent').style.display = 'none';
+            document.getElementById('loginModal').style.display = 'flex';
+            document.getElementById('loadingOverlay').style.display = 'none';
+        }
+    });
+}
+
+
+/* -------------------------   Firestore listener (Adaptado para rodar após login)   ------------------------- */
 function setupFirestoreListener(){
     document.getElementById('loadingOverlay').style.display = 'flex';
     osCollection.onSnapshot(snapshot => {
@@ -242,9 +307,8 @@ function setupFirestoreListener(){
         document.getElementById('loadingOverlay').style.display = 'none';
     }, err => {
         console.error('Erro Firestore', err);
-        // Garante que o loading é ocultado em caso de falha de conexão ou permissão
         document.getElementById('loadingOverlay').style.display = 'none'; 
-        alert('Erro ao conectar ao Firebase/Firestore. Verifique sua chave API e Regras de Segurança.');
+        alert('Erro ao carregar dados do Firebase. Verifique sua chave API e Regras de Segurança.');
     });
 }
 
@@ -265,9 +329,10 @@ function getTecnicosUnicos(){
 
 
 /* Start listener now */
-setupFirestoreListener();
+checkAuthState(); // Substituído a chamada direta ao listener pela verificação de Auth
 
-/* -------------------------   Form open/close & save (Corrigido para Mão de Obra)   ------------------------- */
+
+/* -------------------------   Form open/close & save (corrigido para MO)   ------------------------- */
 function abrirForm(item=null){
     const modal = document.getElementById('formModal');
     const btnSalvar = document.getElementById('btnSalvar');
@@ -283,7 +348,7 @@ function abrirForm(item=null){
     document.getElementById('formCliente').value = item ? (item.cliente || '') : '';
     document.getElementById('formPlaca').value = item ? (item.placa || '') : '';
     document.getElementById('formValorOS').value = item ? (parseFloat(item.valor_os || 0).toFixed(2)) : '';
-    document.getElementById('formValorMO').value = item ? (parseFloat(item.valor_mo || 0).toFixed(2)) : ''; // Valor MO
+    document.getElementById('formValorMO').value = item ? (parseFloat(item.valor_mo || 0).toFixed(2)) : ''; 
     document.getElementById('formPagamento').value = item ? (item.pagamento || '') : '';
     document.getElementById('formUnidade').value = item ? (item.unidade || '') : '';
     document.getElementById('formTecnico').value = item ? (item.tecnico || '') : '';
@@ -315,7 +380,7 @@ async function salvarForm(){
     const cliente = document.getElementById('formCliente').value.trim();
     const placa = document.getElementById('formPlaca').value.trim();
     const valorOS = parseFloat(document.getElementById('formValorOS').value || 0);
-    const valorMO = parseFloat(document.getElementById('formValorMO').value || 0); // Valor MO
+    const valorMO = parseFloat(document.getElementById('formValorMO').value || 0); 
     const pagamento = document.getElementById('formPagamento').value;
     const tecnico = document.getElementById('formTecnico').value.trim();
     const unidade = document.getElementById('formUnidade').value;
@@ -334,7 +399,7 @@ async function salvarForm(){
         cliente,
         placa,
         valor_os: valorOS.toFixed(2),
-        valor_mo: valorMO.toFixed(2), // Salva o valor da Mão de Obra
+        valor_mo: valorMO.toFixed(2), 
         valor: (valorOS + valorMO).toFixed(2), // VALOR TOTAL
         pagamento,
         tecnico,
@@ -379,7 +444,7 @@ async function apagarOS(id){
     }
 }
 
-/* -------------------------   Atualizar tabela e totais (AGORA COM CORREÇÃO DE TYPERROR)   ------------------------- */
+/* -------------------------   Atualizar tabela e totais   ------------------------- */
 function atualizarTabelaTodas(){
     const unidade = document.getElementById('unidade').value;
     const dataInicio = document.getElementById('dataInicio').value;
@@ -390,12 +455,12 @@ function atualizarTabelaTodas(){
     tbody.innerHTML = '';
 
     let totalF = 0, totalAberto = 0, totalPix = 0, totalDin = 0, totalDeb = 0, totalCred = 0;
-    let totalMO = 0; // <-- NOVO TOTAL DE MÃO DE OBRA
+    let totalMO = 0; 
     
     const dadosFiltrados = osData.filter(item => {
         const itemDate = item.data ? item.data.split('/').reverse().join('-') : '2000-01-01';
         const itemValor = parseFloat(item.valor) || (parseFloat(item.valor_os||0) + parseFloat(item.valor_mo||0));
-        const itemValorMO = parseFloat(item.valor_mo || 0); // <-- Valor MO
+        const itemValorMO = parseFloat(item.valor_mo || 0); 
         const itemPagamento = item.pagamento ? item.pagamento.toString().toLowerCase().trim() : '';
 
         if(unidade && item.unidade !== unidade) return false;
@@ -405,10 +470,8 @@ function atualizarTabelaTodas(){
         if((item.cliente||'').toUpperCase().includes('CANCELADA')) return false;
         if(termoBusca && !((item.cliente||'').toLowerCase().includes(termoBusca) || (item.placa||'').toLowerCase().includes(termoBusca) || (item.os||'').toLowerCase().includes(termoBusca))) return false;
 
-        // Acumula total de Mão de Obra
         totalMO += itemValorMO;
         
-        // acumula por pagamento (usando o valor total da OS)
         if(itemPagamento === 'faturado') totalF += itemValor;
         if(itemPagamento === 'em aberto') totalAberto += itemValor;
         if(itemPagamento.includes('pix')) totalPix += itemValor; 
@@ -440,14 +503,13 @@ function atualizarTabelaTodas(){
         tbody.appendChild(tr);
     });
 
-    // Update dos cards - CORRIGIDO O TYPERROR: TotalCredito (ID) agora usa a variável de soma totalCred.
     document.getElementById('totalMO').innerHTML=`MÃO DE OBRA<br>R$ ${totalMO.toFixed(2).replace('.', ',')}`;
     document.getElementById('totalFaturadas').innerHTML=`FATURADAS<br>R$ ${totalF.toFixed(2).replace('.', ',')}`;
     document.getElementById('totalAberto').innerHTML=`EM ABERTO<br>R$ ${totalAberto.toFixed(2).replace('.', ',')}`;
     document.getElementById('totalPix').innerHTML=`PIX<br>R$ ${totalPix.toFixed(2).replace('.', ',')}`;
     document.getElementById('totalDinheiro').innerHTML=`DINHEIRO<br>R$ ${totalDin.toFixed(2).replace('.', ',')}`;
     document.getElementById('totalDebito').innerHTML=`DÉBITO<br>R$ ${totalDeb.toFixed(2).replace('.', ',')}`;
-    document.getElementById('totalCredito').innerHTML=`CRÉDITO<br>R$ ${totalCred.toFixed(2).replace('.', ',')}`; // <<< CORREÇÃO APLICADA!
+    document.getElementById('totalCredito').innerHTML=`CRÉDITO<br>R$ ${totalCred.toFixed(2).replace('.', ',')}`;
 }
 
 /* Funções de filtro e busca (inalteradas, funcionam chamando atualizarTabelaTodas) */
@@ -487,7 +549,7 @@ function exportExcel(){
         'CLIENTE': it.cliente || '',
         'PLACA': it.placa || '',
         'VALOR OS': parseFloat(it.valor_os || 0), 
-        'VALOR MO': parseFloat(it.valor_mo || 0), // Incluído
+        'VALOR MO': parseFloat(it.valor_mo || 0), 
         'PAGAMENTO': it.pagamento || '',
         'TECNICO': it.tecnico || '',
         'OS TECNICO': it.os_tecnico || '',
@@ -645,14 +707,13 @@ function imprimirPDF(filtroPagamento = null) {
     const doc = new jsPDF('l', 'mm', 'a4');
     const margin = 10;
     
-    // FILTROS DA TELA (já aplicados na tabela antes da impressão)
     const unidade = document.getElementById('unidade').value;
     const dataInicio = document.getElementById('dataInicio').value;
     const dataFim = document.getElementById('dataFim').value;
     const tecnicoFiltro = document.getElementById('tecnicoFiltro').value;
     const termoBusca = document.getElementById('busca').value.toLowerCase();
     
-    let totalGeralNoPDF = 0; // VAI SOMAR APENAS O VALOR OS (CORRIGIDO)
+    let totalGeralNoPDF = 0; 
     let totalOSNoPDF = 0;
     let totalMONoPDF = 0;
     
@@ -678,11 +739,9 @@ function imprimirPDF(filtroPagamento = null) {
         const filtroP = filtroPagamento ? filtroPagamento.toLowerCase().trim() : null;
         if (filtroP) {
             
-            // NOVO FILTRO: Clicou em "Mão de Obra"
             if (filtroP === 'maodeobra') {
-                if (itemValorMO <= 0) return; // Filtra SÓ O.S. com Mão de Obra
+                if (itemValorMO <= 0) return; 
             }
-            // FILTROS EXISTENTES: Tipos de Pagamento
             else if (filtroP === 'débito' || filtroP === 'debito') {
                 if (!(itemPagamento.includes('débito') || itemPagamento.includes('debito'))) return;
             } 
@@ -697,10 +756,8 @@ function imprimirPDF(filtroPagamento = null) {
             }
         }
         
-        // ===================================
         // Acumula Totais (CORREÇÃO DE VALOR TOTAL)
-        // ===================================
-        totalGeralNoPDF += itemValorOS; // SOMA APENAS O VALOR OS para o Total Geral
+        totalGeralNoPDF += itemValorOS; 
         totalOSNoPDF += itemValorOS;
         totalMONoPDF += itemValorMO;
         
@@ -719,7 +776,6 @@ function imprimirPDF(filtroPagamento = null) {
         ]);
     });
 
-    // --- Lógica de Geração do PDF (Inalterada) ---
     let totalPages = 1;
     function addHeader(doc, pageNumber, totalPages, title) {
         doc.setFontSize(16);
@@ -757,9 +813,9 @@ function imprimirPDF(filtroPagamento = null) {
         theme: 'striped',
         styles: { fontSize: 8, cellPadding: 1, overflow: 'ellipsize', halign: 'left' },
         columnStyles: {
-            4: { halign: 'right' }, // VALOR OS
-            5: { halign: 'right' }, // VALOR MO
-            6: { halign: 'right', fontStyle: 'bold' }, // VALOR TOTAL (na tabela)
+            4: { halign: 'right' }, 
+            5: { halign: 'right' }, 
+            6: { halign: 'right', fontStyle: 'bold' }, 
         },
         headStyles: { fillColor: [74, 144, 226], textColor: 255 },
         didDrawPage: function(data) {
