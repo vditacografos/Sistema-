@@ -193,19 +193,20 @@ const paymentColors = {
     'Crédito': [210, 180, 222]
 };
 
-/* -------------------------   Helpers (Reforço na conversão numérica)   ------------------------- */
+/* -------------------------   Helpers de Data e Valor   ------------------------- */
 
-/**
- * Converte strings de moeda ou valores numéricos em float, tratando vírgulas, pontos e 'R$'.
- * @param {string|number} value 
- * @returns {number} O valor numérico ou 0 se for inválido.
- */
+// Função de conversão de string para float mais segura
 function getNumericValue(value) {
     if (typeof value === 'number') return value;
     if (typeof value === 'string') {
         let cleanValue = value.replace('R$', '').trim();
-        // Troca o separador de milhar por nada e a vírgula decimal por ponto
-        cleanValue = cleanValue.replace(/\./g, '').replace(',', '.');
+        // Permite converter valores como "1000.50" (ponto decimal) ou "1000,50" (vírgula decimal)
+        // Se houver pontos (milhar) e vírgula (decimal), remove o ponto e troca a vírgula.
+        if (cleanValue.indexOf(',') > -1 && cleanValue.indexOf('.') > -1) {
+             cleanValue = cleanValue.replace(/\./g, '').replace(',', '.');
+        } else {
+             cleanValue = cleanValue.replace(',', '.');
+        }
         const num = parseFloat(cleanValue);
         return isNaN(num) ? 0 : num;
     }
@@ -245,7 +246,7 @@ function parseMoneyCell(cell){
     const val = parseFloat(txt);
     return isNaN(val) ? 0 : val;}
 
-/* -------------------------   Funções Firebase AUTH (Novo)   ------------------------- */
+/* -------------------------   Funções Firebase AUTH   ------------------------- */
 async function handleLogin() {
     const email = document.getElementById('loginEmail').value;
     const password = document.getElementById('loginPassword').value;
@@ -258,7 +259,6 @@ async function handleLogin() {
     try {
         document.getElementById('loadingOverlay').style.display = 'flex';
         await auth.signInWithEmailAndPassword(email, password);
-        // onAuthStateChanged irá lidar com o restante
     } catch (error) {
         document.getElementById('loadingOverlay').style.display = 'none';
         alert(`Erro de Login: Verifique suas credenciais. (${error.message})`);
@@ -272,7 +272,6 @@ function handleLogout() {
 function checkAuthState() {
     auth.onAuthStateChanged(user => {
         if (user) {
-            // USUÁRIO LOGADO: Mostra o app e carrega os dados
             document.getElementById('loginModal').style.display = 'none';
             document.getElementById('appContent').style.display = 'block';
 
@@ -283,14 +282,13 @@ function checkAuthState() {
                  document.getElementById('loadingOverlay').style.display = 'none';
             }
         } else {
-            // USUÁRIO DESLOGADO: Mostra a tela de login
             document.getElementById('appContent').style.display = 'none';
             document.getElementById('loginModal').style.display = 'flex';
             document.getElementById('loadingOverlay').style.display = 'none';
         }
     });}
 
-/* -------------------------   Firestore listener (Adaptado para rodar após login)   ------------------------- */function setupFirestoreListener(){
+/* -------------------------   Firestore listener   ------------------------- */function setupFirestoreListener(){
     document.getElementById('loadingOverlay').style.display = 'flex';
     osCollection.onSnapshot(snapshot => {
         const changes = snapshot.docChanges();
@@ -334,9 +332,9 @@ function getTecnicosUnicos(){
     });
     if(current && Array.from(select.options).some(o=>o.value===current)) select.value = current;}
 
-/* Start listener now */checkAuthState(); // Substituído a chamada direta ao listener pela verificação de Auth
+/* Start listener now */checkAuthState();
 
-/* -------------------------   Form open/close & save (corrigido para MO)   ------------------------- */function abrirForm(item=null){
+/* -------------------------   Form open/close & save   ------------------------- */function abrirForm(item=null){
     const modal = document.getElementById('formModal');
     const btnSalvar = document.getElementById('btnSalvar');
 
@@ -442,7 +440,7 @@ async function salvarForm(){
         alert('Erro ao apagar');
     }}
 
-/* -------------------------   Atualizar tabela e totais   ------------------------- */
+/* -------------------------   Atualizar tabela e totais (Corrigida)   ------------------------- */
 function atualizarTabelaTodas(){
     const unidade = document.getElementById('unidade').value;
     const dataInicio = document.getElementById('dataInicio').value;
@@ -458,11 +456,12 @@ function atualizarTabelaTodas(){
     const dadosFiltrados = osData.filter(item => {
         const itemDate = item.data ? item.data.split('/').reverse().join('-') : '2000-01-01';
         
-        // ** AJUSTE PARA ROBUSTEZ: GARANTINDO VALORES NUMÉRICOS **
+        // ** USO DO VALOR NUMÉRICO (Correção para robustez na leitura) **
         const valorOs = getNumericValue(item.valor_os || 0);
         const valorMo = getNumericValue(item.valor_mo || 0);
-        const itemValor = getNumericValue(item.valor || (valorOs + valorMo)); // Valor TOTAL da OS
-        const itemValorMO = valorMo; // Valor APENAS da Mão de Obra
+        // O valor total deve ser o valor calculado (se não tiver o campo 'valor') OU o campo 'valor'
+        const itemValor = getNumericValue(item.valor || (valorOs + valorMo)); 
+        const itemValorMO = valorMo; 
         
         const itemPagamento = item.pagamento ? item.pagamento.toString().toLowerCase().trim() : '';
 
@@ -517,7 +516,7 @@ function atualizarTabelaTodas(){
     document.getElementById('totalDebito').innerHTML=`DÉBITO<br>R$ ${totalDeb.toFixed(2).replace('.', ',')}`;
     document.getElementById('totalCredito').innerHTML=`CRÉDITO<br>R$ ${totalCred.toFixed(2).replace('.', ',')}`;}
 
-/* Funções de filtro e busca (inalteradas, funcionam chamando atualizarTabelaTodas) */function limparFiltros(){
+/* Funções de filtro e busca */function limparFiltros(){
     document.getElementById('unidade').value = '';
     document.getElementById('tecnicoFiltro').value = '';
     document.getElementById('dataInicio').value = '';
@@ -542,7 +541,7 @@ function buscar(){ atualizarTabelaTodas(); }
         document.getElementById('loadingOverlay').style.display = 'none';
     }}
 
-/* -------------------------   Export Excel (Com Valor MO)   ------------------------- */function exportExcel(){
+/* -------------------------   Export Excel   ------------------------- */function exportExcel(){
     const items = osData.map(it => ({
         'O S': it.os || '',
         'DATA': it.data || '',
@@ -560,7 +559,7 @@ function buscar(){ atualizarTabelaTodas(); }
     XLSX.utils.book_append_sheet(wb, ws, 'O.S');
     XLSX.writeFile(wb, 'OS_FrenteCaixa_Export.xlsx');}
 
-/* -------------------------   Import Excel (Com Valor MO)   ------------------------- */function importExcel(){ document.getElementById('inputExcel').click(); }
+/* -------------------------   Import Excel   ------------------------- */function importExcel(){ document.getElementById('inputExcel').click(); }
 function lerExcel(event){
     const files = event.target.files;
     if(!files || files.length === 0){ event.target.value = null; return; }
@@ -689,9 +688,195 @@ async function subirDados(dados){
     }
 }
 
-// Implementação simples da impressão PDF para fins de compilação
+/* -------------------------   Impressão PDF (Restaurada)   ------------------------- */
+
 function imprimirPDF(tipoRelatorio = 'Todas'){
-    alert(`A função de impressão PDF para o relatório "${tipoRelatorio}" seria executada aqui. (A biblioteca jsPDF e autoTable estão carregadas.)`);
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF('l', 'mm', 'a4'); // Paisagem (landscape)
+    const dataInicio = document.getElementById('dataInicio').value;
+    const dataFim = document.getElementById('dataFim').value;
+    const unidade = document.getElementById('unidade').value || 'Todas';
+    const tecnico = document.getElementById('tecnicoFiltro').value || 'Todos';
+    
+    // Filtra os dados novamente com base nos filtros atuais
+    let dadosFiltrados;
+    let titulo;
+
+    if (tipoRelatorio === 'Todas') {
+        // Re-usa a lógica de filtro da tabela principal para garantir consistência
+        dadosFiltrados = osData.filter(item => {
+            const itemDate = item.data ? item.data.split('/').reverse().join('-') : '2000-01-01';
+            const termoBusca = document.getElementById('busca').value.toLowerCase();
+
+            if(unidade && item.unidade !== unidade) return false;
+            if(tecnico && item.tecnico !== tecnico) return false;
+            if(dataInicio && itemDate < dataInicio) return false;
+            if(dataFim && itemDate > dataFim) return false;
+            if((item.cliente||'').toUpperCase().includes('CANCELADA')) return false;
+            if(termoBusca && !((item.cliente||'').toLowerCase().includes(termoBusca) || (item.placa||'').toLowerCase().includes(termoBusca) || (item.os||'').toLowerCase().includes(termoBusca))) return false;
+            
+            return true;
+        });
+        titulo = 'VDI TACOGRAFOS - RELATÓRIO GERAL';
+    } else if (tipoRelatorio === 'MaoDeObra') {
+        dadosFiltrados = osData.filter(item => {
+            const itemDate = item.data ? item.data.split('/').reverse().join('-') : '2000-01-01';
+            // Filtro de datas/unidade/técnico deve ser o mesmo, mas o conteúdo é focado em MO
+            if(unidade && item.unidade !== unidade) return false;
+            if(tecnico && item.tecnico !== tecnico) return false;
+            if(dataInicio && itemDate < dataInicio) return false;
+            if(dataFim && itemDate > dataFim) return false;
+            if((item.cliente||'').toUpperCase().includes('CANCELADA')) return false;
+
+            return getNumericValue(item.valor_mo) > 0;
+        });
+        titulo = 'VDI TACOGRAFOS - RELATÓRIO MÃO DE OBRA';
+    } else {
+        // Relatórios por Forma de Pagamento
+        dadosFiltrados = osData.filter(item => {
+            const itemDate = item.data ? item.data.split('/').reverse().join('-') : '2000-01-01';
+            const itemPagamento = item.pagamento ? item.pagamento.toString().trim().toLowerCase() : '';
+            const filtroPagamento = tipoRelatorio.toLowerCase();
+            
+            if(unidade && item.unidade !== unidade) return false;
+            if(tecnico && item.tecnico !== tecnico) return false;
+            if(dataInicio && itemDate < dataInicio) return false;
+            if(dataFim && itemDate > dataFim) return false;
+            if((item.cliente||'').toUpperCase().includes('CANCELADA')) return false;
+
+            // PIX deve incluir 'pix'
+            if (filtroPagamento.includes('pix')) {
+                return itemPagamento.includes('pix');
+            }
+            // Débito deve incluir 'débito' ou 'debito'
+            if (filtroPagamento.includes('débito')) {
+                return itemPagamento.includes('debito') || itemPagamento.includes('débito');
+            }
+            // Crédito deve incluir 'crédito' ou 'credito'
+            if (filtroPagamento.includes('crédito')) {
+                return itemPagamento.includes('credito') || itemPagamento.includes('crédito');
+            }
+            
+            return itemPagamento === filtroPagamento;
+        });
+        titulo = `VDI TACOGRAFOS - RELATÓRIO ${tipoRelatorio.toUpperCase()}`;
+    }
+
+    if (dadosFiltrados.length === 0) {
+        alert('Nenhuma O.S encontrada para os filtros selecionados.');
+        return;
+    }
+
+    const isMOReport = tipoRelatorio === 'MaoDeObra';
+    
+    let totalOS = 0;
+    let totalMO = 0;
+    let totalGeral = 0;
+
+    const bodyData = dadosFiltrados.map(item => {
+        const vOs = getNumericValue(item.valor_os || 0);
+        const vMo = getNumericValue(item.valor_mo || 0);
+        const vTotal = getNumericValue(item.valor || (vOs + vMo));
+        
+        totalOS += vOs;
+        totalMO += vMo;
+        // Total Geral usa o VALOR TOTAL da OS, a menos que seja o relatório de MO
+        totalGeral += isMOReport ? vMo : vTotal; 
+
+        const row = [
+            item.os || '',
+            item.data || '',
+            item.cliente || '',
+            item.placa || '',
+            `R$ ${vOs.toFixed(2).replace('.', ',')}`,
+            `R$ ${vMo.toFixed(2).replace('.', ',')}`,
+            `R$ ${vTotal.toFixed(2).replace('.', ',')}`,
+            item.pagamento || '',
+            item.tecnico || '',
+            item.unidade || ''
+        ];
+        
+        // Remove a coluna VALOR OS, VALOR MO e VALOR TOTAL dependendo do tipo
+        if (isMOReport) {
+            // Relatório MO: O VALOR TOTAL deve ser o VALOR MO (Simplificação visual)
+            row[6] = `R$ ${vMo.toFixed(2).replace('.', ',')}`; // Usa Valor MO na coluna Total
+            return [row[0], row[1], row[2], row[3], row[5], row[6], row[7], row[8], row[9]]; // OS, Data, Cliente, Placa, VALOR MO, VALOR (TOTAL), Pagamento, Tecnico, Unidade
+        } else {
+             // Relatórios Pagamento ou Geral: MO fica na coluna VALOR MO, e a soma é o VALOR (TOTAL)
+            return row; // Todas as colunas
+        }
+    });
+
+    // Configuração do cabeçalho
+    let headers;
+    if (isMOReport) {
+        headers = [['O.S', 'DATA', 'CLIENTE', 'PLACA', 'VALOR MO', 'VALOR (TOTAL)', 'PAGAMENTO', 'TECNICO', 'UNIDADE']];
+    } else {
+        headers = [['O.S', 'DATA', 'CLIENTE', 'PLACA', 'VALOR OS', 'VALOR MO', 'VALOR (TOTAL)', 'PAGAMENTO', 'TECNICO', 'UNIDADE']];
+    }
+
+    // Título e filtros
+    doc.setFontSize(14);
+    doc.text(titulo, 148, 15, null, null, 'center');
+    doc.setFontSize(10);
+    doc.text(`Período: ${dataInicio || 'Início'} a ${dataFim || 'Fim'} | Unidade: ${unidade} | Técnico: ${tecnico}`, 148, 22, null, null, 'center');
+
+    // Tabela com autoTable
+    doc.autoTable({
+        head: headers,
+        body: bodyData,
+        startY: 28,
+        theme: 'striped',
+        styles: { fontSize: 8, cellPadding: 1, halign: 'left' },
+        headStyles: { fillColor: [74, 144, 226], textColor: 255, fontStyle: 'bold' },
+        columnStyles: {
+            // Estilos para alinhar valores à direita
+            4: { halign: 'right' }, // VALOR OS / VALOR MO
+            5: { halign: 'right' }, // VALOR MO / VALOR (TOTAL)
+            6: { halign: 'right' }, // VALOR (TOTAL)
+        },
+        didDrawPage: function(data) {
+            // Footer para numeração de página
+            doc.setFontSize(8);
+            doc.text("Página " + data.pageNumber, data.settings.margin.left, doc.internal.pageSize.height - 5);
+        }
+    });
+
+    let finalY = doc.autoTable.previous.finalY || 35;
+    
+    // Total Geral
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    
+    // MO Report
+    if (isMOReport) {
+        doc.setFillColor(123, 31, 191); // Cor roxa escura para MO
+        doc.rect(doc.internal.pageSize.width - 70, finalY + 2, 65, 8, 'F');
+        doc.setTextColor(255);
+        doc.text(`Total Mão de Obra: R$ ${totalMO.toFixed(2).replace('.', ',')}`, doc.internal.pageSize.width - 68, finalY + 7);
+    } 
+    // Outros Relatórios (Geral, Crédito, etc.)
+    else {
+        // Coluna Total OS
+        doc.setFillColor(74, 144, 226);
+        doc.rect(doc.internal.pageSize.width - 155, finalY + 2, 40, 8, 'F');
+        doc.setTextColor(255);
+        doc.text(`Total OS: R$ ${totalOS.toFixed(2).replace('.', ',')}`, doc.internal.pageSize.width - 153, finalY + 7);
+        
+        // Coluna Total MO
+        doc.setFillColor(123, 31, 191);
+        doc.rect(doc.internal.pageSize.width - 110, finalY + 2, 40, 8, 'F');
+        doc.setTextColor(255);
+        doc.text(`Total MO: R$ ${totalMO.toFixed(2).replace('.', ',')}`, doc.internal.pageSize.width - 108, finalY + 7);
+        
+        // Coluna Total Geral
+        doc.setFillColor(0, 0, 0); // Preto para Total Geral
+        doc.rect(doc.internal.pageSize.width - 65, finalY + 2, 60, 8, 'F');
+        doc.setTextColor(255);
+        doc.text(`Total Geral: R$ ${totalGeral.toFixed(2).replace('.', ',')}`, doc.internal.pageSize.width - 63, finalY + 7);
+    }
+    
+    doc.save(`${titulo.replace(/\s/g, '_')}_${dataInicio || 'all'}_${dataFim || 'all'}.pdf`);
 }
 
 </script>
