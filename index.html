@@ -34,8 +34,8 @@
         .dinheiro { background: linear-gradient(45deg,#f1c40f,#d4ac0d); }
         .debito { background: linear-gradient(45deg,#f39c12,#d68910); }
         .credito { background: linear-gradient(45deg,#9b59b6,#8e44ad); }
-        .maodeobra { background: linear-gradient(45deg, #7b1fa2, #4a148c); }
-         .edit, .delete { border:none; padding:5px 10px; border-radius:6px; color:white; cursor:pointer; margin-right:5px; font-size:12px; }
+        .maodeobra { background: linear-gradient(45deg, #7b1fa2, #4a148c); } 
+        .edit, .delete { border:none; padding:5px 10px; border-radius:6px; color:white; cursor:pointer; margin-right:5px; font-size:12px; }
         .edit { background:#27ae60; }
         .delete { background:#e74c3c; }
         /* Estilo para Modais e Login */
@@ -50,7 +50,6 @@
     </style>
 </head>
 <body>
-
 <div id="loadingOverlay" style="display:none;">Conectando à Nuvem...</div>
 
 <div id="loginModal" class="modal" style="display: flex;">
@@ -117,17 +116,18 @@
             </thead>
             <tbody></tbody>
         </table>
-
+        
         <h3>Resumo — Controle de Caixa Diário</h3>
         <div class="summary">
-            <div class="card maodeobra" id="totalMO" onclick="imprimirPDF('MaoDeObra')">MÃO DE OBRA<br>R$ 0,00</div>
-             <div class="card faturadas" id="totalFaturadas" onclick="imprimirPDF('Faturado')">FATURADAS<br>R$ 0,00</div>
+            <div class="card maodeobra" id="totalMO" onclick="imprimirPDF('MaoDeObra')">MÃO DE OBRA<br>R$ 0,00</div> 
+            <div class="card faturadas" id="totalFaturadas" onclick="imprimirPDF('Faturado')">FATURADAS<br>R$ 0,00</div>
             <div class="card emaberto" id="totalAberto" onclick="imprimirPDF('Em Aberto')">EM ABERTO<br>R$ 0,00</div>
             <div class="card pix" id="totalPix" onclick="imprimirPDF('PIX')">PIX<br>R$ 0,00</div>
             <div class="card dinheiro" id="totalDinheiro" onclick="imprimirPDF('Dinheiro')">DINHEIRO<br>R$ 0,00</div>
             <div class="card debito" id="totalDebito" onclick="imprimirPDF('Débito')">DÉBITO<br>R$ 0,00</div>
             <div class="card credito" id="totalCredito" onclick="imprimirPDF('Crédito')">CRÉDITO<br>R$ 0,00</div>
         </div>
+
     </div>
     <div id="formModal" class="modal">
         <div class="modal-content">
@@ -137,8 +137,8 @@
             <input type="text" id="formCliente" placeholder="Cliente">
             <input type="text" id="formPlaca" placeholder="Placa">
             <input type="number" id="formValorOS" placeholder="Valor OS (R$)" step="0.01">
-            <input type="number" id="formValorMO" placeholder="Valor MO (R$)" step="0.01">
-             <select id="formPagamento">
+            <input type="number" id="formValorMO" placeholder="Valor MO (R$)" step="0.01"> 
+            <select id="formPagamento">
                 <option value="">Selecione pagamento</option>
                 <option value="PIX">PIX</option>
                 <option value="Dinheiro">Dinheiro</option>
@@ -160,16 +160,15 @@
         </div>
     </div>
 </div>
-
 <script>
 /* =============================================   Configurações Firebase (Versão 8)   ============================================= */
 // 🛑 🛑 🛑 IMPORTANTE: VERIFIQUE SE ESTA CHAVE API É REAL E VÁLIDA PARA SEU PROJETO! 🛑 🛑 🛑
 const firebaseConfig = {
-  apiKey: "AIzaSyC5up-MQFQNeH1ftI8KTMoXI5pY2D2jpgM",
+  apiKey: "AIzaSyC5up-MQFQNeH1ftI8KTMoXI5pY2D2jpgM", 
   authDomain: "vditacografosfrentecaixa.firebaseapp.com",
   databaseURL: "https://vditacografosfrentecaixa-default-rtdb.firebaseio.com",
   projectId: "vditacografosfrentecaixa",
-  storageBucket: "vditacografosfrentecaixa.firebasestorage.app",
+  storageBucket: "vditacografosfrentecaixa.firebasestorage.app", 
   messagingSenderId: "1008625665373",
   appId: "1:1008625665373:web:1f1870898ecb04b4b854b4",
   measurementId: "G-9SYYV1VLNY"
@@ -184,43 +183,25 @@ let osData = [];
 window.firestoreListenerStarted = false; // Flag para garantir que o listener só inicie uma vez
 
 /* cores para pdf (seu original) */
-const paymentColors = {
-    'Faturado': [173, 216, 230],
-    'Em Aberto': [255, 192, 203],
-    'PIX': [175, 223, 175],
-    'Dinheiro': [255, 239, 173],
-    'Débito': [253, 222, 173],
-    'Crédito': [210, 180, 222]
+const paymentColors = {  
+  'Faturado': [173, 216, 230],  
+  'Em Aberto': [255, 192, 203],  
+  'PIX': [175, 223, 175],  
+  'Dinheiro': [255, 239, 173],  
+  'Débito': [253, 222, 173],  
+  'Crédito': [210, 180, 222]
 };
 
-/* -------------------------   Helpers de Data e Valor   ------------------------- */
-
-// Função de conversão de string para float mais segura
-function getNumericValue(value) {
-    if (typeof value === 'number') return value;
-    if (typeof value === 'string') {
-        let cleanValue = value.replace('R$', '').trim();
-        // Permite converter valores como "1000.50" (ponto decimal) ou "1000,50" (vírgula decimal)
-        // Se houver pontos (milhar) e vírgula (decimal), remove o ponto e troca a vírgula.
-        if (cleanValue.indexOf(',') > -1 && cleanValue.indexOf('.') > -1) {
-             cleanValue = cleanValue.replace(/\./g, '').replace(',', '.');
-        } else {
-             cleanValue = cleanValue.replace(',', '.');
-        }
-        const num = parseFloat(cleanValue);
-        return isNaN(num) ? 0 : num;
-    }
-    return 0;
-}
-
-
+/* -------------------------   Helpers (seu original)   ------------------------- */
 function formatDate(iso){
     if(!iso) return '01/01/2000';
     const parts = iso.split('-');
     if(parts.length !== 3) return iso;
-    return `${parts[2]}/${parts[1]}/${parts[0]}`;}
+    return `${parts[2]}/${parts[1]}/${parts[0]}`;
+}
 function normalizeHeader(s){
-    return String(s || '').toUpperCase().replace(/\s+/g, ' ').trim();}
+    return String(s || '').toUpperCase().replace(/\s+/g, ' ').trim();
+}
 function parseDateCell(cell){
     if(!cell && cell !== 0) return null;
     if (cell instanceof Date) {
@@ -234,7 +215,8 @@ function parseDateCell(cell){
     }
     const dt = new Date(txt);
     if(!isNaN(dt)) return dt.toISOString().split('T')[0];
-    return null;}
+    return null;
+}
 function parseMoneyCell(cell){
     if(cell === null || cell === undefined || cell === '') return 0;
     let txt = String(cell).replace(/\s/g,'').replace(/\u00A0/g,'');
@@ -244,9 +226,11 @@ function parseMoneyCell(cell){
         txt = txt.replace(',', '.');
     }
     const val = parseFloat(txt);
-    return isNaN(val) ? 0 : val;}
+    return isNaN(val) ? 0 : val;
+}
 
-/* -------------------------   Funções Firebase AUTH   ------------------------- */
+/* -------------------------   Funções Firebase AUTH (Novo)   ------------------------- */
+
 async function handleLogin() {
     const email = document.getElementById('loginEmail').value;
     const password = document.getElementById('loginPassword').value;
@@ -259,22 +243,26 @@ async function handleLogin() {
     try {
         document.getElementById('loadingOverlay').style.display = 'flex';
         await auth.signInWithEmailAndPassword(email, password);
+        // onAuthStateChanged irá lidar com o restante
     } catch (error) {
         document.getElementById('loadingOverlay').style.display = 'none';
         alert(`Erro de Login: Verifique suas credenciais. (${error.message})`);
-    }}
+    }
+}
 
 function handleLogout() {
     if (confirm('Deseja sair do sistema?')) {
         auth.signOut();
-    }}
+    }
+}
 
 function checkAuthState() {
     auth.onAuthStateChanged(user => {
         if (user) {
+            // USUÁRIO LOGADO: Mostra o app e carrega os dados
             document.getElementById('loginModal').style.display = 'none';
             document.getElementById('appContent').style.display = 'block';
-
+            
             if (!window.firestoreListenerStarted) {
                 setupFirestoreListener();
                 window.firestoreListenerStarted = true;
@@ -282,13 +270,17 @@ function checkAuthState() {
                  document.getElementById('loadingOverlay').style.display = 'none';
             }
         } else {
+            // USUÁRIO DESLOGADO: Mostra a tela de login
             document.getElementById('appContent').style.display = 'none';
             document.getElementById('loginModal').style.display = 'flex';
             document.getElementById('loadingOverlay').style.display = 'none';
         }
-    });}
+    });
+}
 
-/* -------------------------   Firestore listener   ------------------------- */function setupFirestoreListener(){
+
+/* -------------------------   Firestore listener (Adaptado para rodar após login)   ------------------------- */
+function setupFirestoreListener(){
     document.getElementById('loadingOverlay').style.display = 'flex';
     osCollection.onSnapshot(snapshot => {
         const changes = snapshot.docChanges();
@@ -310,14 +302,16 @@ function checkAuthState() {
             const db = new Date(pb[2], pb[1]-1, pb[0]);
             return db - da;
         });
-        getTecnicosUnicos();
+        getTecnicosUnicos(); 
         atualizarTabelaTodas();
         document.getElementById('loadingOverlay').style.display = 'none';
     }, err => {
         console.error('Erro Firestore', err);
-        document.getElementById('loadingOverlay').style.display = 'none';
+        document.getElementById('loadingOverlay').style.display = 'none'; 
         alert('Erro ao carregar dados do Firebase. Verifique sua chave API e Regras de Segurança.');
-    });}
+    });
+}
+
 
 function getTecnicosUnicos(){
     const select = document.getElementById('tecnicoFiltro');
@@ -330,11 +324,16 @@ function getTecnicosUnicos(){
         opt.textContent = t;
         select.appendChild(opt);
     });
-    if(current && Array.from(select.options).some(o=>o.value===current)) select.value = current;}
+    if(current && Array.from(select.options).some(o=>o.value===current)) select.value = current;
+}
 
-/* Start listener now */checkAuthState();
 
-/* -------------------------   Form open/close & save   ------------------------- */function abrirForm(item=null){
+/* Start listener now */
+checkAuthState(); // Substituído a chamada direta ao listener pela verificação de Auth
+
+
+/* -------------------------   Form open/close & save (corrigido para MO)   ------------------------- */
+function abrirForm(item=null){
     const modal = document.getElementById('formModal');
     const btnSalvar = document.getElementById('btnSalvar');
 
@@ -348,9 +347,8 @@ function getTecnicosUnicos(){
     }
     document.getElementById('formCliente').value = item ? (item.cliente || '') : '';
     document.getElementById('formPlaca').value = item ? (item.placa || '') : '';
-    // Usando getNumericValue para ler o valor formatado do Firestore
-    document.getElementById('formValorOS').value = item ? (getNumericValue(item.valor_os || 0).toFixed(2)) : '';
-    document.getElementById('formValorMO').value = item ? (getNumericValue(item.valor_mo || 0).toFixed(2)) : '';
+    document.getElementById('formValorOS').value = item ? (parseFloat(item.valor_os || 0).toFixed(2)) : '';
+    document.getElementById('formValorMO').value = item ? (parseFloat(item.valor_mo || 0).toFixed(2)) : ''; 
     document.getElementById('formPagamento').value = item ? (item.pagamento || '') : '';
     document.getElementById('formUnidade').value = item ? (item.unidade || '') : '';
     document.getElementById('formTecnico').value = item ? (item.tecnico || '') : '';
@@ -359,29 +357,30 @@ function getTecnicosUnicos(){
     if(item && item.id) {
         modal.dataset.editId = item.id;
         btnSalvar.textContent = 'Atualizar O.S';
-        document.getElementById('formOS').disabled = true;
-     } else {
+        document.getElementById('formOS').disabled = true; 
+    } else {
         delete modal.dataset.editId;
         btnSalvar.textContent = 'Salvar O.S';
         document.getElementById('formOS').disabled = false;
     }
-    modal.style.display = 'flex';}
+    modal.style.display = 'flex';
+}
 
 function fecharForm(){
     document.getElementById('formModal').style.display='none';
-    delete document.getElementById('formModal').dataset.editId;}
+    delete document.getElementById('formModal').dataset.editId;
+}
 
 async function salvarForm(){
     const modal = document.getElementById('formModal');
-    const editId = modal.dataset.editId || null;
+    const editId = modal.dataset.editId || null; 
 
     const os = document.getElementById('formOS').value.trim();
     const dataInput = document.getElementById('formData').value;
     const cliente = document.getElementById('formCliente').value.trim();
     const placa = document.getElementById('formPlaca').value.trim();
-    // Conversão para float a partir dos inputs
     const valorOS = parseFloat(document.getElementById('formValorOS').value || 0);
-    const valorMO = parseFloat(document.getElementById('formValorMO').value || 0);
+    const valorMO = parseFloat(document.getElementById('formValorMO').value || 0); 
     const pagamento = document.getElementById('formPagamento').value;
     const tecnico = document.getElementById('formTecnico').value.trim();
     const unidade = document.getElementById('formUnidade').value;
@@ -399,9 +398,9 @@ async function salvarForm(){
         data: dataFormatada,
         cliente,
         placa,
-        valor_os: valorOS.toFixed(2), // VALOR OS (apenas serviços/peças)
-        valor_mo: valorMO.toFixed(2), // VALOR MO (apenas mão de obra)
-        valor: (valorOS + valorMO).toFixed(2), // VALOR TOTAL (para os relatórios de pagamento)
+        valor_os: valorOS.toFixed(2),
+        valor_mo: valorMO.toFixed(2), 
+        valor: (valorOS + valorMO).toFixed(2), // VALOR TOTAL
         pagamento,
         tecnico,
         os_tecnico: osTecnico,
@@ -422,15 +421,19 @@ async function salvarForm(){
     } catch(e){
         console.error(e);
         alert('Erro ao salvar na nuvem');
-    }}
+    }
+}
 
-/* helper to open modal in edit mode (seu original) */function abrirFormForEdit(id){
+/* helper to open modal in edit mode (seu original) */
+function abrirFormForEdit(id){
     const item = osData.find(d=>d.id===id);
     if(!item) { alert('Registro não encontrado'); return; }
     abrirForm(item);
-    document.getElementById('formModal').dataset.editId = id;}
+    document.getElementById('formModal').dataset.editId = id;
+}
 
-/* apagar (seu original) */async function apagarOS(id){
+/* apagar (seu original) */
+async function apagarOS(id){
     if(!confirm('Deseja apagar esta O.S? Esta ação é irreversível.')) return;
     try {
         await osCollection.doc(id).delete();
@@ -438,9 +441,10 @@ async function salvarForm(){
     } catch(e){
         console.error(e);
         alert('Erro ao apagar');
-    }}
+    }
+}
 
-/* -------------------------   Atualizar tabela e totais (Corrigida)   ------------------------- */
+/* -------------------------   Atualizar tabela e totais   ------------------------- */
 function atualizarTabelaTodas(){
     const unidade = document.getElementById('unidade').value;
     const dataInicio = document.getElementById('dataInicio').value;
@@ -451,18 +455,12 @@ function atualizarTabelaTodas(){
     tbody.innerHTML = '';
 
     let totalF = 0, totalAberto = 0, totalPix = 0, totalDin = 0, totalDeb = 0, totalCred = 0;
-    let totalMO = 0;
-
+    let totalMO = 0; 
+    
     const dadosFiltrados = osData.filter(item => {
         const itemDate = item.data ? item.data.split('/').reverse().join('-') : '2000-01-01';
-        
-        // ** USO DO VALOR NUMÉRICO (Correção para robustez na leitura) **
-        const valorOs = getNumericValue(item.valor_os || 0);
-        const valorMo = getNumericValue(item.valor_mo || 0);
-        // O valor total deve ser o valor calculado (se não tiver o campo 'valor') OU o campo 'valor'
-        const itemValor = getNumericValue(item.valor || (valorOs + valorMo)); 
-        const itemValorMO = valorMo; 
-        
+        const itemValor = parseFloat(item.valor) || (parseFloat(item.valor_os||0) + parseFloat(item.valor_mo||0));
+        const itemValorMO = parseFloat(item.valor_mo || 0); 
         const itemPagamento = item.pagamento ? item.pagamento.toString().toLowerCase().trim() : '';
 
         if(unidade && item.unidade !== unidade) return false;
@@ -472,25 +470,22 @@ function atualizarTabelaTodas(){
         if((item.cliente||'').toUpperCase().includes('CANCELADA')) return false;
         if(termoBusca && !((item.cliente||'').toLowerCase().includes(termoBusca) || (item.placa||'').toLowerCase().includes(termoBusca) || (item.os||'').toLowerCase().includes(termoBusca))) return false;
 
-        // ** LÓGICA DE SOMA **
-        // totalMO soma APENAS MÃO DE OBRA
         totalMO += itemValorMO;
-
-        // Os demais totais somam o VALOR TOTAL DA OS (itemValor)
+        
         if(itemPagamento === 'faturado') totalF += itemValor;
         if(itemPagamento === 'em aberto') totalAberto += itemValor;
-        if(itemPagamento.includes('pix')) totalPix += itemValor;
+        if(itemPagamento.includes('pix')) totalPix += itemValor; 
         if(itemPagamento === 'dinheiro') totalDin += itemValor;
         if(itemPagamento === 'débito' || itemPagamento === 'debito') totalDeb += itemValor;
         if(itemPagamento === 'crédito' || itemPagamento === 'credito') totalCred += itemValor;
-
+        
         return true;
     });
 
     dadosFiltrados.forEach(item => {
-        const valorOs = getNumericValue(item.valor_os || 0);
-        const valorMo = getNumericValue(item.valor_mo || 0);
-        const valorTotal = getNumericValue(item.valor || (valorOs + valorMo));
+        const valorOs = parseFloat(item.valor_os || 0);
+        const valorMo = parseFloat(item.valor_mo || 0);
+        const valorTotal = parseFloat(item.valor || (valorOs + valorMo));
 
         const tr = document.createElement('tr');
         tr.innerHTML = `<td>${item.os || ''}</td>
@@ -514,19 +509,23 @@ function atualizarTabelaTodas(){
     document.getElementById('totalPix').innerHTML=`PIX<br>R$ ${totalPix.toFixed(2).replace('.', ',')}`;
     document.getElementById('totalDinheiro').innerHTML=`DINHEIRO<br>R$ ${totalDin.toFixed(2).replace('.', ',')}`;
     document.getElementById('totalDebito').innerHTML=`DÉBITO<br>R$ ${totalDeb.toFixed(2).replace('.', ',')}`;
-    document.getElementById('totalCredito').innerHTML=`CRÉDITO<br>R$ ${totalCred.toFixed(2).replace('.', ',')}`;}
+    document.getElementById('totalCredito').innerHTML=`CRÉDITO<br>R$ ${totalCred.toFixed(2).replace('.', ',')}`;
+}
 
-/* Funções de filtro e busca */function limparFiltros(){
+/* Funções de filtro e busca (inalteradas, funcionam chamando atualizarTabelaTodas) */
+function limparFiltros(){
     document.getElementById('unidade').value = '';
     document.getElementById('tecnicoFiltro').value = '';
     document.getElementById('dataInicio').value = '';
     document.getElementById('dataFim').value = '';
     document.getElementById('busca').value = '';
-    atualizarTabelaTodas();}
+    atualizarTabelaTodas();
+}
 function filtrar(){ atualizarTabelaTodas(); }
 function buscar(){ atualizarTabelaTodas(); }
 
-/* limpar todos os dados (seu original) */async function limparDados(){
+/* limpar todos os dados (seu original) */
+async function limparDados(){
     if(!confirm('Deseja limpar TODOS os dados NA NUVEM?')) return;
     document.getElementById('loadingOverlay').style.display = 'flex';
     const snapshot = await osCollection.get();
@@ -539,16 +538,18 @@ function buscar(){ atualizarTabelaTodas(); }
         console.error(e); alert('Erro ao apagar dados');
     } finally {
         document.getElementById('loadingOverlay').style.display = 'none';
-    }}
+    }
+}
 
-/* -------------------------   Export Excel   ------------------------- */function exportExcel(){
+/* -------------------------   Export Excel (Com Valor MO)   ------------------------- */
+function exportExcel(){
     const items = osData.map(it => ({
         'O S': it.os || '',
         'DATA': it.data || '',
         'CLIENTE': it.cliente || '',
         'PLACA': it.placa || '',
-        'VALOR OS': getNumericValue(it.valor_os || 0),
-        'VALOR MO': getNumericValue(it.valor_mo || 0),
+        'VALOR OS': parseFloat(it.valor_os || 0), 
+        'VALOR MO': parseFloat(it.valor_mo || 0), 
         'PAGAMENTO': it.pagamento || '',
         'TECNICO': it.tecnico || '',
         'OS TECNICO': it.os_tecnico || '',
@@ -557,9 +558,11 @@ function buscar(){ atualizarTabelaTodas(); }
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.json_to_sheet(items, {header: ['O S','DATA','CLIENTE','PLACA','VALOR OS','VALOR MO','PAGAMENTO','TECNICO','OS TECNICO','UNIDADE']});
     XLSX.utils.book_append_sheet(wb, ws, 'O.S');
-    XLSX.writeFile(wb, 'OS_FrenteCaixa_Export.xlsx');}
+    XLSX.writeFile(wb, 'OS_FrenteCaixa_Export.xlsx');
+}
 
-/* -------------------------   Import Excel   ------------------------- */function importExcel(){ document.getElementById('inputExcel').click(); }
+/* -------------------------   Import Excel (Com Valor MO)   ------------------------- */
+function importExcel(){ document.getElementById('inputExcel').click(); }
 function lerExcel(event){
     const files = event.target.files;
     if(!files || files.length === 0){ event.target.value = null; return; }
@@ -637,249 +640,225 @@ function lerExcel(event){
                                 tecnico: String(tecnicoCell || '').trim(),
                                 os_tecnico: String(osTecnicoCell || '').trim(),
                                 unidade: String(unidadeCell || unidadeDetect || '').trim(),
-                            }
+                                timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                            };
                             dadosCombinados.push(item);
+                        } else {
+                            if(rawRow.length >= 7 && rawRow[0] !== ''){
+                                const dataCell = rawRow[1];
+                                const dateISO = parseDateCell(dataCell);
+                                const vOs = parseMoneyCell(rawRow[4]);
+                                const vMo = parseMoneyCell(rawRow[5]);
+                                const totalValor = (vOs + vMo);
+                                const item = {
+                                    os: String(rawRow[0] || ''),
+                                    data: formatDate(dateISO || '2000-01-01'),
+                                    cliente: String(rawRow[2] || ''),
+                                    placa: String(rawRow[3] || ''),
+                                    valor_os: vOs.toFixed(2),
+                                    valor_mo: vMo.toFixed(2),
+                                    valor: totalValor.toFixed(2),
+                                    pagamento: String(rawRow[6] || ''),
+                                    tecnico: String(rawRow[7] || ''),
+                                    os_tecnico: '',
+                                    unidade: unidadeDetect,
+                                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                                };
+                                dadosCombinados.push(item);
+                            }
                         }
                     }
                 }
-            } catch(e) {
-                console.error("Erro ao ler arquivo:", e);
-                alert(`Erro ao processar o arquivo ${file.name}. Verifique a formatação.`);
+            } catch(err){
+                console.error('Erro processar arquivo', file.name, err);
+                alert('Erro ao ler ' + file.name);
             } finally {
                 arquivosProcessados++;
                 if(arquivosProcessados === files.length){
-                    // Finaliza o processamento
-                    if(dadosCombinados.length > 0){
-                        subirDados(dadosCombinados);
-                    } else {
-                        document.getElementById('loadingOverlay').style.display = 'none';
-                        alert('Nenhuma O.S. válida encontrada nos arquivos.');
+                    document.getElementById('loadingOverlay').style.display = 'none';
+                    const novos = dadosCombinados.filter(it => it.os && it.data && (it.cliente||'').toUpperCase().trim() !== 'CANCELADA');
+                    if(novos.length === 0){
+                        alert('Nenhum registro válido encontrado nos arquivos importados.');
+                        document.getElementById('inputExcel').value = null;
+                        return;
                     }
-                    event.target.value = null; // Limpa o input file
+                    const batch = db.batch();
+                    novos.forEach(n => {
+                        const ref = osCollection.doc();
+                        batch.set(ref, n);
+                    });
+                    batch.commit().then(()=>{
+                        alert(`Importação concluída: ${files.length} arquivo(s) processado(s). ${novos.length} registro(s) adicionados.`);
+                        document.getElementById('inputExcel').value = null;
+                    }).catch(e=>{
+                        console.error(e); alert('Erro ao gravar importação na nuvem.');
+                    });
                 }
             }
-        }
+        };
         reader.readAsBinaryString(file);
     }
     Array.from(files).forEach(processarArquivo);
 }
 
-async function subirDados(dados){
-    if(!confirm(`Deseja importar ${dados.length} Ordens de Serviço? Isso pode demorar.`)) {
-        document.getElementById('loadingOverlay').style.display = 'none';
-        return;
-    }
-
-    const batch = db.batch();
-    dados.forEach(item => {
-        const docRef = osCollection.doc();
-        item.timestamp = firebase.firestore.FieldValue.serverTimestamp();
-        batch.set(docRef, item);
-    });
-
-    try {
-        await batch.commit();
-        alert(`${dados.length} O.S. importadas com sucesso!`);
-    } catch(e) {
-        console.error("Erro no batch commit:", e);
-        alert('Erro ao salvar dados importados na nuvem.');
-    } finally {
-        // O listener do Firestore fará a atualização da tabela
-    }
-}
-
-/* -------------------------   Impressão PDF (Restaurada)   ------------------------- */
-
-function imprimirPDF(tipoRelatorio = 'Todas'){
+/* -------------------------   PDF rendering (FINAL - CORREÇÃO TOTAL GERAL)   ------------------------- */
+function imprimirPDF(filtroPagamento = null) {
     const { jsPDF } = window.jspdf;
-    const doc = new jsPDF('l', 'mm', 'a4'); // Paisagem (landscape)
+    const doc = new jsPDF('l', 'mm', 'a4');
+    const margin = 10;
+    
+    const unidade = document.getElementById('unidade').value;
     const dataInicio = document.getElementById('dataInicio').value;
     const dataFim = document.getElementById('dataFim').value;
-    const unidade = document.getElementById('unidade').value || 'Todas';
-    const tecnico = document.getElementById('tecnicoFiltro').value || 'Todos';
+    const tecnicoFiltro = document.getElementById('tecnicoFiltro').value;
+    const termoBusca = document.getElementById('busca').value.toLowerCase();
     
-    // Filtra os dados novamente com base nos filtros atuais
-    let dadosFiltrados;
-    let titulo;
-
-    if (tipoRelatorio === 'Todas') {
-        // Re-usa a lógica de filtro da tabela principal para garantir consistência
-        dadosFiltrados = osData.filter(item => {
-            const itemDate = item.data ? item.data.split('/').reverse().join('-') : '2000-01-01';
-            const termoBusca = document.getElementById('busca').value.toLowerCase();
-
-            if(unidade && item.unidade !== unidade) return false;
-            if(tecnico && item.tecnico !== tecnico) return false;
-            if(dataInicio && itemDate < dataInicio) return false;
-            if(dataFim && itemDate > dataFim) return false;
-            if((item.cliente||'').toUpperCase().includes('CANCELADA')) return false;
-            if(termoBusca && !((item.cliente||'').toLowerCase().includes(termoBusca) || (item.placa||'').toLowerCase().includes(termoBusca) || (item.os||'').toLowerCase().includes(termoBusca))) return false;
-            
-            return true;
-        });
-        titulo = 'VDI TACOGRAFOS - RELATÓRIO GERAL';
-    } else if (tipoRelatorio === 'MaoDeObra') {
-        dadosFiltrados = osData.filter(item => {
-            const itemDate = item.data ? item.data.split('/').reverse().join('-') : '2000-01-01';
-            // Filtro de datas/unidade/técnico deve ser o mesmo, mas o conteúdo é focado em MO
-            if(unidade && item.unidade !== unidade) return false;
-            if(tecnico && item.tecnico !== tecnico) return false;
-            if(dataInicio && itemDate < dataInicio) return false;
-            if(dataFim && itemDate > dataFim) return false;
-            if((item.cliente||'').toUpperCase().includes('CANCELADA')) return false;
-
-            return getNumericValue(item.valor_mo) > 0;
-        });
-        titulo = 'VDI TACOGRAFOS - RELATÓRIO MÃO DE OBRA';
-    } else {
-        // Relatórios por Forma de Pagamento
-        dadosFiltrados = osData.filter(item => {
-            const itemDate = item.data ? item.data.split('/').reverse().join('-') : '2000-01-01';
-            const itemPagamento = item.pagamento ? item.pagamento.toString().trim().toLowerCase() : '';
-            const filtroPagamento = tipoRelatorio.toLowerCase();
-            
-            if(unidade && item.unidade !== unidade) return false;
-            if(tecnico && item.tecnico !== tecnico) return false;
-            if(dataInicio && itemDate < dataInicio) return false;
-            if(dataFim && itemDate > dataFim) return false;
-            if((item.cliente||'').toUpperCase().includes('CANCELADA')) return false;
-
-            // PIX deve incluir 'pix'
-            if (filtroPagamento.includes('pix')) {
-                return itemPagamento.includes('pix');
-            }
-            // Débito deve incluir 'débito' ou 'debito'
-            if (filtroPagamento.includes('débito')) {
-                return itemPagamento.includes('debito') || itemPagamento.includes('débito');
-            }
-            // Crédito deve incluir 'crédito' ou 'credito'
-            if (filtroPagamento.includes('crédito')) {
-                return itemPagamento.includes('credito') || itemPagamento.includes('crédito');
-            }
-            
-            return itemPagamento === filtroPagamento;
-        });
-        titulo = `VDI TACOGRAFOS - RELATÓRIO ${tipoRelatorio.toUpperCase()}`;
-    }
-
-    if (dadosFiltrados.length === 0) {
-        alert('Nenhuma O.S encontrada para os filtros selecionados.');
-        return;
-    }
-
-    const isMOReport = tipoRelatorio === 'MaoDeObra';
+    let totalGeralNoPDF = 0; 
+    let totalOSNoPDF = 0;
+    let totalMONoPDF = 0;
     
-    let totalOS = 0;
-    let totalMO = 0;
-    let totalGeral = 0;
-
-    const bodyData = dadosFiltrados.map(item => {
-        const vOs = getNumericValue(item.valor_os || 0);
-        const vMo = getNumericValue(item.valor_mo || 0);
-        const vTotal = getNumericValue(item.valor || (vOs + vMo));
+    const dadosParaTabela = []; 
+    
+    osData.forEach(item => {
+        const itemDate = item.data ? item.data.split('/').reverse().join('-') : '2000-01-01';
+        const itemPagamento = (item.pagamento || '').toString().toLowerCase().trim();
         
-        totalOS += vOs;
-        totalMO += vMo;
-        // Total Geral usa o VALOR TOTAL da OS, a menos que seja o relatório de MO
-        totalGeral += isMOReport ? vMo : vTotal; 
+        const itemValorTotal = parseFloat(item.valor || 0);
+        const itemValorOS = parseFloat(item.valor_os || 0);
+        const itemValorMO = parseFloat(item.valor_mo || 0); 
 
-        const row = [
+        // 1. Aplica filtros da interface
+        if(unidade && item.unidade !== unidade) return;
+        if(tecnicoFiltro && item.tecnico !== tecnicoFiltro) return;
+        if(dataInicio && itemDate < dataInicio) return;
+        if(dataFim && itemDate > dataFim) return;
+        if((item.cliente||'').toUpperCase().includes('CANCELADA')) return;
+        if(termoBusca && !((item.cliente||'').toLowerCase().includes(termoBusca) || (item.placa||'').toLowerCase().includes(termoBusca) || (item.os||'').toLowerCase().includes(termoBusca))) return;
+
+        // 2. Aplica filtro de PAGAMENTO (do clique no card)
+        const filtroP = filtroPagamento ? filtroPagamento.toLowerCase().trim() : null;
+        if (filtroP) {
+            
+            if (filtroP === 'maodeobra') {
+                if (itemValorMO <= 0) return; 
+            }
+            else if (filtroP === 'débito' || filtroP === 'debito') {
+                if (!(itemPagamento.includes('débito') || itemPagamento.includes('debito'))) return;
+            } 
+            else if (filtroP === 'crédito' || filtroP === 'credito') {
+                if (!(itemPagamento.includes('crédito') || itemPagamento.includes('credito'))) return;
+            } 
+            else if (filtroP === 'pix') {
+                if (!itemPagamento.includes('pix')) return;
+            }
+            else if (itemPagamento !== filtroP) {
+                return;
+            }
+        }
+        
+        // Acumula Totais (CORREÇÃO DE VALOR TOTAL)
+        totalGeralNoPDF += itemValorOS; 
+        totalOSNoPDF += itemValorOS;
+        totalMONoPDF += itemValorMO;
+        
+        // Formata e adiciona à tabela
+        dadosParaTabela.push([
             item.os || '',
             item.data || '',
             item.cliente || '',
             item.placa || '',
-            `R$ ${vOs.toFixed(2).replace('.', ',')}`,
-            `R$ ${vMo.toFixed(2).replace('.', ',')}`,
-            `R$ ${vTotal.toFixed(2).replace('.', ',')}`,
+            'R$ ' + itemValorOS.toFixed(2).replace('.', ','),
+            'R$ ' + itemValorMO.toFixed(2).replace('.', ','),
+            'R$ ' + itemValorTotal.toFixed(2).replace('.', ','),
             item.pagamento || '',
             item.tecnico || '',
             item.unidade || ''
-        ];
-        
-        // Remove a coluna VALOR OS, VALOR MO e VALOR TOTAL dependendo do tipo
-        if (isMOReport) {
-            // Relatório MO: O VALOR TOTAL deve ser o VALOR MO (Simplificação visual)
-            row[6] = `R$ ${vMo.toFixed(2).replace('.', ',')}`; // Usa Valor MO na coluna Total
-            return [row[0], row[1], row[2], row[3], row[5], row[6], row[7], row[8], row[9]]; // OS, Data, Cliente, Placa, VALOR MO, VALOR (TOTAL), Pagamento, Tecnico, Unidade
-        } else {
-             // Relatórios Pagamento ou Geral: MO fica na coluna VALOR MO, e a soma é o VALOR (TOTAL)
-            return row; // Todas as colunas
-        }
+        ]);
     });
 
-    // Configuração do cabeçalho
-    let headers;
-    if (isMOReport) {
-        headers = [['O.S', 'DATA', 'CLIENTE', 'PLACA', 'VALOR MO', 'VALOR (TOTAL)', 'PAGAMENTO', 'TECNICO', 'UNIDADE']];
-    } else {
-        headers = [['O.S', 'DATA', 'CLIENTE', 'PLACA', 'VALOR OS', 'VALOR MO', 'VALOR (TOTAL)', 'PAGAMENTO', 'TECNICO', 'UNIDADE']];
+    let totalPages = 1;
+    function addHeader(doc, pageNumber, totalPages, title) {
+        doc.setFontSize(16);
+        doc.setFont('helvetica', 'bold');
+        doc.text(`VDI TACÓGRAFOS - RELATÓRIO ${title.toUpperCase()}`, 148.5, 15, { align: 'center' });
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        doc.text(`Período: ${dataInicio ? formatDate(dataInicio) : 'Início'} a ${dataFim ? formatDate(dataFim) : 'Fim'}`, 148.5, 20, { align: 'center' });
+        doc.text(`Unidade: ${unidade || 'Todas'} | Técnico: ${tecnicoFiltro || 'Todos'}`, 148.5, 25, { align: 'center' });
+        doc.text(`Página ${pageNumber} de ${totalPages}`, doc.internal.pageSize.width - margin, 15, { align: 'right' });
     }
 
-    // Título e filtros
-    doc.setFontSize(14);
-    doc.text(titulo, 148, 15, null, null, 'center');
-    doc.setFontSize(10);
-    doc.text(`Período: ${dataInicio || 'Início'} a ${dataFim || 'Fim'} | Unidade: ${unidade} | Técnico: ${tecnico}`, 148, 22, null, null, 'center');
-
-    // Tabela com autoTable
+    let reportTitle = filtroPagamento || 'COMPLETO';
+    
+    // Passagem 1: calcular total de páginas
     doc.autoTable({
-        head: headers,
-        body: bodyData,
-        startY: 28,
+        startY: 30,
+        head: [['O.S', 'DATA', 'CLIENTE', 'PLACA', 'VALOR OS', 'VALOR MO', 'VALOR (TOTAL)', 'PAGAMENTO', 'TECNICO', 'UNIDADE']],
+        body: dadosParaTabela,
         theme: 'striped',
-        styles: { fontSize: 8, cellPadding: 1, halign: 'left' },
-        headStyles: { fillColor: [74, 144, 226], textColor: 255, fontStyle: 'bold' },
-        columnStyles: {
-            // Estilos para alinhar valores à direita
-            4: { halign: 'right' }, // VALOR OS / VALOR MO
-            5: { halign: 'right' }, // VALOR MO / VALOR (TOTAL)
-            6: { halign: 'right' }, // VALOR (TOTAL)
+        styles: { fontSize: 8, cellPadding: 1, overflow: 'ellipsize', halign: 'left' },
+        didDrawPage: (data) => {
+            totalPages = data.pageNumber;
         },
+    });
+    
+    // Passagem 2: renderização final com cabeçalhos e rodapé
+    doc.deletePage(1); 
+    doc.addPage('a4', 'l');
+    
+    doc.autoTable({
+        startY: 30, 
+        head: [['O.S', 'DATA', 'CLIENTE', 'PLACA', 'VALOR OS', 'VALOR MO', 'VALOR (TOTAL)', 'PAGAMENTO', 'TECNICO', 'UNIDADE']],
+        body: dadosParaTabela,
+        theme: 'striped',
+        styles: { fontSize: 8, cellPadding: 1, overflow: 'ellipsize', halign: 'left' },
+        columnStyles: {
+            4: { halign: 'right' }, 
+            5: { halign: 'right' }, 
+            6: { halign: 'right', fontStyle: 'bold' }, 
+        },
+        headStyles: { fillColor: [74, 144, 226], textColor: 255 },
         didDrawPage: function(data) {
-            // Footer para numeração de página
-            doc.setFontSize(8);
-            doc.text("Página " + data.pageNumber, data.settings.margin.left, doc.internal.pageSize.height - 5);
+            addHeader(doc, data.pageNumber, totalPages, reportTitle);
+        },
+        didParseCell: function(data) {
+            if (data.column.index === 7 && data.section === 'body') {
+                const pagamento = data.cell.text[0] || '';
+                const paymentColors = {  
+                    'Faturado': [173, 216, 230],  
+                    'Em Aberto': [255, 192, 203],  
+                    'PIX': [175, 223, 175],  
+                    'Dinheiro': [255, 239, 173],  
+                    'Débito': [253, 222, 173],  
+                    'Crédito': [210, 180, 222]
+                };
+                const cor = paymentColors[pagamento.trim()];
+                if (cor) {
+                    data.cell.styles.fillColor = cor;
+                    if (pagamento.trim() === 'Dinheiro' || pagamento.trim() === 'Débito') {
+                        data.cell.styles.textColor = 0;
+                    }
+                }
+            }
+        },
+        // Rodapé com Totais
+        foot: [
+            ['', '', '', '', 'Total OS:', 'R$ ' + totalOSNoPDF.toFixed(2).replace('.', ','), 'Total MO:', 'R$ ' + totalMONoPDF.toFixed(2).replace('.', ','), 'Total Geral:', 'R$ ' + totalGeralNoPDF.toFixed(2).replace('.', ',')]
+        ],
+        footStyles: { fillColor: [50, 50, 50], textColor: 255, fontStyle: 'bold', fontSize: 10, halign: 'center' },
+        didDrawCell: function(data) {
+            const valueCols = [5, 7, 9]; 
+            if (data.section === 'foot' && data.row.index === 0 && valueCols.includes(data.column.index)) {
+                 data.cell.styles.halign = 'right';
+            }
         }
     });
 
-    let finalY = doc.autoTable.previous.finalY || 35;
-    
-    // Total Geral
-    doc.setFontSize(12);
-    doc.setFont('helvetica', 'bold');
-    
-    // MO Report
-    if (isMOReport) {
-        doc.setFillColor(123, 31, 191); // Cor roxa escura para MO
-        doc.rect(doc.internal.pageSize.width - 70, finalY + 2, 65, 8, 'F');
-        doc.setTextColor(255);
-        doc.text(`Total Mão de Obra: R$ ${totalMO.toFixed(2).replace('.', ',')}`, doc.internal.pageSize.width - 68, finalY + 7);
-    } 
-    // Outros Relatórios (Geral, Crédito, etc.)
-    else {
-        // Coluna Total OS
-        doc.setFillColor(74, 144, 226);
-        doc.rect(doc.internal.pageSize.width - 155, finalY + 2, 40, 8, 'F');
-        doc.setTextColor(255);
-        doc.text(`Total OS: R$ ${totalOS.toFixed(2).replace('.', ',')}`, doc.internal.pageSize.width - 153, finalY + 7);
-        
-        // Coluna Total MO
-        doc.setFillColor(123, 31, 191);
-        doc.rect(doc.internal.pageSize.width - 110, finalY + 2, 40, 8, 'F');
-        doc.setTextColor(255);
-        doc.text(`Total MO: R$ ${totalMO.toFixed(2).replace('.', ',')}`, doc.internal.pageSize.width - 108, finalY + 7);
-        
-        // Coluna Total Geral
-        doc.setFillColor(0, 0, 0); // Preto para Total Geral
-        doc.rect(doc.internal.pageSize.width - 65, finalY + 2, 60, 8, 'F');
-        doc.setTextColor(255);
-        doc.text(`Total Geral: R$ ${totalGeral.toFixed(2).replace('.', ',')}`, doc.internal.pageSize.width - 63, finalY + 7);
-    }
-    
-    doc.save(`${titulo.replace(/\s/g, '_')}_${dataInicio || 'all'}_${dataFim || 'all'}.pdf`);
+    const today = new Date().toLocaleDateString('pt-BR').replace(/\//g, '-');
+    let filename = `Relatorio_VDI_${reportTitle}_${today}.pdf`;
+
+    doc.save(filename);
 }
-
 </script>
-
 </body>
 </html>
