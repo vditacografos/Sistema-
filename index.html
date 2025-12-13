@@ -940,14 +940,13 @@
     }
 
 
-    /* -------------------------   PDF e Excel (Com Correção de Filtros)   ------------------------- */
+    /* -------------------------   PDF e Excel (Com Rodapé Original)   ------------------------- */
 
     async function imprimirPDF(filtro = null) {
-        // ... (Função imprimirPDF é a mesma, com o tratamento do filtro 'ValorOS')
         document.getElementById('loadingOverlay').style.display = 'flex';
         
         let dadosFiltrados = [...osData]; 
-        let titulo = 'Relatório Geral de Ordens de Serviço';
+        let reportTitle = 'Relatório Geral de Ordens de Serviço';
         let colunas = ['O.S', 'Data', 'Cliente', 'Placa', 'Valor O.S', 'Valor M.O', 'Total', 'Pagamento', 'Técnico', 'Unidade'];
         
         // Captura os filtros da tela
@@ -956,9 +955,6 @@
         const unidadeFiltro = document.getElementById('unidade').value.toUpperCase();
         const tecnicoFiltro = document.getElementById('tecnicoFiltro').value.toUpperCase();
         
-        let totalizador = 0;
-        let totalGeral = 0;
-
         // --- 1. APLICA OS FILTROS DA INTERFACE PRIMEIRO (Data, Unidade, Técnico) ---
         
         if (unidadeFiltro) {
@@ -993,15 +989,11 @@
             case 'ValorOS':
                 // Filtra para mostrar apenas OS com Valor OS (Peças) > 0
                 dadosFiltrados = dadosFiltrados.filter(item => (item.valor_os || 0) > 0);
-                titulo = 'Relatório TOTAL GERAL (VALOR OS - PEÇAS)';
-                // Soma APENAS o campo valor_os para o totalizador
-                totalizador = dadosFiltrados.reduce((sum, item) => sum + (item.valor_os || 0), 0);
+                reportTitle = 'TOTAL GERAL (VALOR OS - PEÇAS)';
                 break;
             case 'MãoDeObra':
                 dadosFiltrados = dadosFiltrados.filter(item => (item.valor_mo || 0) > 0);
-                titulo = 'Relatório de O.S. (MÃO DE OBRA)';
-                // Soma APENAS o campo valor_mo para o totalizador
-                totalizador = dadosFiltrados.reduce((sum, item) => sum + (item.valor_mo || 0), 0);
+                reportTitle = 'O.S. (MÃO DE OBRA)';
                 break;
             case 'Faturado':
             case 'Em Aberto':
@@ -1010,19 +1002,21 @@
             case 'Débito':
             case 'Crédito':
                 dadosFiltrados = dadosFiltrados.filter(item => (item.pagamento || '').trim() === filtro);
-                titulo = `Relatório de O.S. Pagas em ${filtro}`;
-                // Soma o campo valor (total: OS+MO)
-                totalizador = dadosFiltrados.reduce((sum, item) => sum + (item.valor || 0), 0);
+                reportTitle = `O.S. Pagas em ${filtro}`;
                 break;
             default:
-                // Filtro geral (botão Imprimir / Salvar PDF Geral)
-                // Soma o campo valor (total: OS+MO)
-                totalGeral = dadosFiltrados.reduce((sum, item) => sum + (item.valor || 0), 0);
+                // Filtro geral
                 break;
         }
 
-
-        // 3. Prepara os dados para a tabela do PDF
+        // --- 3. CÁLCULO DOS TOTAIS PARA O RODAPÉ ---
+        // Calcula os totais baseados nos dados filtrados, independentemente do filtro de botão
+        const totalOSNoPDF = dadosFiltrados.reduce((sum, item) => sum + (item.valor_os || 0), 0);
+        const totalMONoPDF = dadosFiltrados.reduce((sum, item) => sum + (item.valor_mo || 0), 0);
+        const totalGeralNoPDF = totalOSNoPDF + totalMONoPDF;
+        
+        
+        // 4. Prepara os dados para a tabela do PDF
         const dataTable = dadosFiltrados.map(item => {
             const valorOS = item.valor_os || 0;
             const valorMO = item.valor_mo || 0;
@@ -1030,7 +1024,7 @@
             
             return [
                 item.os || '',
-                formatarDataPDF(item.data) || '',
+                formatDate(item.data) || '',
                 item.cliente || '',
                 item.placa || '',
                 `R$ ${valorOS.toFixed(2).replace('.', ',')}`,
@@ -1042,7 +1036,7 @@
             ];
         });
 
-        // 4. Configura o jsPDF
+        // 5. Configura o jsPDF
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF('l', 'mm', 'a4'); // Paisagem (landscape), mm, A4
 
@@ -1050,7 +1044,7 @@
 
         // Título e filtros aplicados
         doc.setFontSize(16);
-        doc.text(titulo, 14, 15);
+        doc.text(reportTitle, 14, 15);
         
         doc.setFontSize(10);
         const filtrosAplicados = [
@@ -1062,11 +1056,16 @@
         finalY = 30;
 
 
-        // Adiciona a tabela
+        // Adiciona a tabela com o rodapé configurado
         doc.autoTable({
             startY: finalY,
             head: [colunas],
             body: dataTable,
+            // Rodapé com Totais (O que foi solicitado)
+            foot: [
+                ['', '', '', '', 'Total OS:', `R$ ${totalOSNoPDF.toFixed(2).replace('.', ',')}`, 'Total MO:', `R$ ${totalMONoPDF.toFixed(2).replace('.', ',')}`, 'Total Geral:', `R$ ${totalGeralNoPDF.toFixed(2).replace('.', ',')}`]
+            ],
+            footStyles: { fillColor: [50, 50, 50], textColor: 255, fontStyle: 'bold', fontSize: 10, halign: 'center' },
             styles: { fontSize: 8, cellPadding: 2, overflow: 'linebreak' },
             headStyles: { fillColor: [74, 144, 226] },
             columnStyles: {
@@ -1082,35 +1081,25 @@
                         data.cell.styles.fillColor = paymentColors[pagamento];
                     }
                 }
+                // Alinha à direita os valores no rodapé (Ajustando a lógica para jsPDF autoTable)
+                const valueCols = [5, 7, 9]; 
+                if (data.section === 'foot' && data.row.index === 0 && valueCols.includes(data.column.index)) { 
+                    data.cell.styles.halign = 'right';
+                }
             },
             didDrawPage: function(data) {
-                // Footer
+                // Footer (Página)
                 doc.setFontSize(8);
                 const pageCount = doc.internal.getNumberOfPages();
                 doc.text(`Página ${data.pageNumber} de ${pageCount}`, data.settings.margin.left, doc.internal.pageSize.height - 5);
             }
         });
-
-        // Adiciona o total no final
-        finalY = doc.autoTable.previous.finalY + 3;
-        doc.setFontSize(12);
-        doc.setFont('helvetica', 'bold');
         
-        if (filtro === null) {
-            // Relatório Geral (sem clique em card)
-            doc.text(`TOTAL GERAL DE TODAS AS O.S. FILTRADAS (O.S. + M.O.): R$ ${totalGeral.toFixed(2).replace('.', ',')}`, 14, finalY);
-        } else if (filtro === 'ValorOS') {
-            // Relatório de Valor OS (Peças)
-            doc.text(`TOTAL CALCULADO (VALOR OS - PEÇAS): R$ ${totalizador.toFixed(2).replace('.', ',')}`, 14, finalY);
-        } else if (filtro === 'MãoDeObra') {
-            // Relatório de Mão de Obra
-            doc.text(`TOTAL CALCULADO (MÃO DE OBRA): R$ ${totalizador.toFixed(2).replace('.', ',')}`, 14, finalY);
-        } else {
-            // Relatórios por Pagamento
-            doc.text(`TOTAL PAGO/FATURADO em ${filtro} (O.S. + M.O.): R$ ${totalizador.toFixed(2).replace('.', ',')}`, 14, finalY);
-        }
+        // Define o nome do arquivo, como estava no seu original
+        const today = new Date().toLocaleDateString('pt-BR').replace(/\//g, '-');
+        let filename = `Relatorio_VDI_${reportTitle}_${today}.pdf`;
 
-        doc.save(`${titulo.replace(/[^a-zA-Z0-9]/g, '_')}_${new Date().toLocaleDateString('pt-BR').replace(/\//g, '-')}.pdf`);
+        doc.save(filename);
         document.getElementById('loadingOverlay').style.display = 'none';
     }
 
@@ -1285,10 +1274,6 @@
             }
         }
     }
-
-
-    /* Chamada da função de inicialização no final do script, como você indicou que estava no original */
-    setupFirestoreListener(); 
-    </script>
+</script>
 </body>
 </html>
