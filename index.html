@@ -2,1278 +2,848 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VDI TACÓGRAFOS - Frente de Caixa</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>VDI Tacógrafos — Frente de Caixa</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://unpkg.com/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 0;
-            background-color: #f4f7f6;
-            color: #333;
-        }
-
-        /* ------------------------- Layout Principal ------------------------- */
-        .header {
-            background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
-            color: white;
-            padding: 15px 20px;
-            text-align: center;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            position: relative;
-        }
-        .header h1 {
-            margin: 0;
-            font-size: 24px;
-        }
-        /* Botão Sair/Logout foi removido, mas mantemos o estilo se for adicionado futuramente */
-        .logout-btn {
-            position: absolute;
-            top: 50%;
-            right: 20px;
-            transform: translateY(-50%);
-            background: rgba(255, 255, 255, 0.2);
-            border: none;
-            color: white;
-            padding: 8px 15px;
-            border-radius: 4px;
-            cursor: pointer;
-            transition: background 0.3s;
-            display: none; /* Ocultado por padrão já que a autenticação foi removida */
-        }
-        .logout-btn:hover {
-            background: rgba(255, 255, 255, 0.4);
-        }
-
-        .container {
-            padding: 20px;
-        }
-
-        /* ------------------------- Controles e Ações ------------------------- */
-        .action-bar {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
-            flex-wrap: wrap;
-        }
-        .action-bar button, .action-bar input[type="file"] {
-            padding: 10px 15px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-weight: bold;
-            transition: background-color 0.3s;
-        }
-        .action-bar button:nth-child(1) { /* Novo O.S */
-            background-color: #4CAF50;
-            color: white;
-        }
-        .action-bar button:nth-child(1):hover {
-            background-color: #45a049;
-        }
-        .action-bar button:not(:first-child) {
-            background-color: #e0e0e0;
-            color: #333;
-        }
-        .action-bar button:not(:first-child):hover {
-            background-color: #ccc;
-        }
-
-        /* ------------------------- Filtros ------------------------- */
-        .filters-bar {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
-            align-items: center;
-            flex-wrap: wrap;
-            padding: 15px;
-            background-color: #fff;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-        }
-        .filters-bar select, .filters-bar input[type="date"], .filters-bar button {
-            padding: 8px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            font-size: 14px;
-        }
-        .filters-bar button {
-            background-color: #2196F3;
-            color: white;
-            font-weight: normal;
-        }
-        .filters-bar button:hover {
-            background-color: #0b7dda;
-        }
-
-        /* ------------------------- Busca ------------------------- */
-        .search-bar {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 30px;
-            padding: 0 15px;
-        }
-        .search-bar input {
-            flex-grow: 1;
-            padding: 10px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            font-size: 16px;
-        }
-        .search-bar button {
-            background-color: #6c757d;
-            color: white;
-            padding: 10px 15px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-
-        /* ------------------------- Resumo - Cards ------------------------- */
-        .resumo-title {
-            font-size: 20px;
-            font-weight: bold;
-            margin-bottom: 15px;
-        }
-
-        .cards-row {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 15px;
-            margin-bottom: 30px;
-        }
-        .card {
-            padding: 15px;
-            border-radius: 8px;
-            color: white;
-            text-align: center;
-            font-weight: bold;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-            cursor: pointer;
-            transition: transform 0.2s;
-            font-size: 14px;
-            line-height: 1.4;
-        }
-        .card:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
-        }
-
-        /* Cores dos Cards */
-        #totalOSCard { background-color: #007bff; } /* NOVO: Azul Claro para TOTAL OS */
-        #totalMO { background-color: #794BC4; } 
-        #totalFaturadas { background-color: #38A0F2; } 
-        #totalAberto { background-color: #E9577D; } 
-        #totalPix { background-color: #3BB16B; } 
-        #totalDinheiro { background-color: #FFC107; } 
-        #totalDebito { background-color: #F8941C; } 
-        #totalCreditoContainer {
-            grid-column: 1 / -1; 
-            background-color: #A064B9; 
-            padding: 15px;
-            border-radius: 8px;
-            text-align: center;
-            font-weight: bold;
-            color: white;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-            cursor: pointer;
-            transition: transform 0.2s;
-        }
-        #totalCreditoContainer:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
-        }
-        
-        /* ------------------------- Tabela ------------------------- */
-        .table-container {
-            background-color: white;
-            border-radius: 8px;
-            overflow-x: auto;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
-            padding: 10px;
-        }
-        .table-title {
-            font-size: 18px;
-            font-weight: bold;
-            margin-bottom: 15px;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 14px;
-        }
-        table th, table td {
-            padding: 12px 8px;
-            text-align: left;
-            border-bottom: 1px solid #ddd;
-        }
-        table th {
-            background-color: #4a90e2;
-            color: white;
-            font-weight: bold;
-            text-transform: uppercase;
-            white-space: nowrap;
-        }
-        table tr:nth-child(even) {
-            background-color: #f9f9f9;
-        }
-        table tr:hover {
-            background-color: #f1f1f1;
-        }
-        .edit, .delete {
-            padding: 5px 10px;
-            margin: 2px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 12px;
-            font-weight: bold;
-            transition: opacity 0.3s;
-        }
-        .edit {
-            background-color: #4CAF50;
-            color: white;
-        }
-        .delete {
-            background-color: #f44336;
-            color: white;
-        }
-
-        /* ------------------------- Modal Form (Novo/Editar O.S.) ------------------------- */
-        .modal {
-            display: none;
-            position: fixed;
-            z-index: 1000;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            overflow: auto;
-            background-color: rgba(0,0,0,0.6);
-            align-items: center;
-            justify-content: center;
-        }
-        .modal-content {
-            background-color: #fefefe;
-            padding: 30px;
-            border-radius: 10px;
-            width: 90%;
-            max-width: 600px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-            position: relative;
-        }
-        .close-btn {
-            color: #aaa;
-            float: right;
-            font-size: 28px;
-            font-weight: bold;
-            position: absolute;
-            top: 10px;
-            right: 20px;
-            cursor: pointer;
-        }
-        .close-btn:hover, .close-btn:focus {
-            color: #000;
-            text-decoration: none;
-            cursor: pointer;
-        }
-        .modal-content h2 {
-            margin-top: 0;
-            color: #4a90e2;
-        }
-        .form-group {
-            margin-bottom: 15px;
-        }
-        .form-group label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: bold;
-        }
-        .form-group input, .form-group select {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            box-sizing: border-box;
-        }
-        .form-actions {
-            text-align: right;
-            margin-top: 20px;
-        }
-        .form-actions button {
-            padding: 10px 20px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-weight: bold;
-            margin-left: 10px;
-        }
-        #btnSalvar {
-            background-color: #4CAF50;
-            color: white;
-        }
-        #btnSalvar:hover {
-            background-color: #45a049;
-        }
-        #btnCancelar {
-            background-color: #f44336;
-            color: white;
-        }
-
-        /* ------------------------- Loading Overlay ------------------------- */
-        .loading-overlay {
-            display: none;
-            position: fixed;
-            z-index: 2000;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(255, 255, 255, 0.8);
-            align-items: center;
-            justify-content: center;
-            flex-direction: column;
-            font-size: 18px;
-            color: #2196F3;
-        }
-        .spinner {
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #2196F3;
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            animation: spin 1s linear infinite;
-            margin-bottom: 15px;
-        }
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        /* ------------------------- Responsividade ------------------------- */
-        @media (max-width: 768px) {
-            .header h1 {
-                font-size: 20px;
-            }
-            .action-bar, .filters-bar {
-                flex-direction: column;
-                align-items: stretch;
-            }
-            .cards-row {
-                grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-            }
-            .card {
-                font-size: 12px;
-            }
-        }
+        /* Estilos CSS (inalterados) */
+        body { font-family: 'Poppins', sans-serif; margin:0; padding:0; background:#f4f6f9; }
+        header { background: linear-gradient(90deg,#4a90e2,#9013fe); color:white; padding:20px; text-align:center; box-shadow:0 4px 6px rgba(0,0,0,0.1); }
+        .container { padding:20px; max-width:1200px; margin:auto; }
+        .buttons, .filters, .search { display:flex; flex-wrap:wrap; gap:10px; margin-bottom:20px; }
+        button { background:#4a90e2; color:white; border:none; padding:10px 18px; border-radius:8px; cursor:pointer; font-weight:600; transition:0.2s; display:flex; align-items:center; gap:5px; }
+        button:hover { background:#357ABD; }
+        input, select { padding:10px 12px; border-radius:6px; border:1px solid #ccc; box-sizing: border-box;}
+        table { width:100%; border-collapse:collapse; margin-bottom:20px; background:white; border-radius:8px; overflow:hidden; box-shadow:0 2px 4px rgba(0,0,0,0.1); }
+        th, td { padding:8px 10px; text-align:left; font-size:13px; }
+        th { background:#4a90e2; color:white; }
+        tr:nth-child(even) { background:#f9f9f9; }
+        tr:hover { background:#dce6f1; }
+        .summary { display:flex; gap:15px; flex-wrap:wrap; margin-bottom:20px; }
+        .card { flex:1 1 150px; padding:15px; border-radius:10px; color:white; font-weight:600; text-align:center; box-shadow:0 2px 6px rgba(0,0,0,0.1); cursor:pointer; transition:0.2s; }
+        .card:hover { opacity:0.9; transform:scale(1.02); }
+        /* NOVO ESTILO PARA O CARD DE TOTAL OS */
+        .totalos { background: linear-gradient(45deg, #007bff, #0056b3); } 
+        /* FIM NOVO ESTILO */
+        .faturadas { background: linear-gradient(45deg,#2d9cdb,#1b7ecf); }
+        .emaberto { background: linear-gradient(45deg,#e94e77,#d43d5c); }
+        .pix { background: linear-gradient(45deg,#27ae60,#1e8449); }
+        .dinheiro { background: linear-gradient(45deg,#f1c40f,#d4ac0d); }
+        .debito { background: linear-gradient(45deg,#f39c12,#d68910); }
+        .credito { background: linear-gradient(45deg,#9b59b6,#8e44ad); }
+        .maodeobra { background: linear-gradient(45deg, #7b1fa2, #4a148c); } 
+        .edit, .delete { border:none; padding:5px 10px; border-radius:6px; color:white; cursor:pointer; margin-right:5px; font-size:12px; }
+        .edit { background:#27ae60; }
+        .delete { background:#e74c3c; }
+        /* Estilo para Modais e Login */
+        .modal { display:none; position:fixed; z-index:1000; left:0; top:0; width:100%; height:100%; overflow:auto; background:rgba(0,0,0,0.4); justify-content:center; align-items:center; }
+        .modal-content { background:white; padding:20px; border-radius:10px; width:95%; max-width:480px; box-shadow:0 5px 15px rgba(0,0,0,0.3); }
+        .modal-content h2 { color:#4a90e2; margin-top:0; }
+        .modal-content input, .modal-content select, .modal-content button { margin-bottom:12px; width:100%; box-sizing:border-box; }
+        #loadingOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.8); display: flex; justify-content: center; align-items: center; z-index:2000; font-size: 18px; font-weight: 600; color: #4a90e2; }
+        @media(max-width:900px){ table th, table td { font-size:12px; } .card { font-size:13px; } }
+        #headerLogo { max-height: 75px; width: auto; display: block; margin: 0 auto 5px auto; }
+        #headerTitle { margin: 0; font-size: 20px; font-weight: 600; text-align:center; }
     </style>
 </head>
 <body>
+<div id="loadingOverlay" style="display:none;">Conectando à Nuvem...</div>
 
-    <div id="appContent">
-
-        <div class="header">
-            <h1>VDI TACÓGRAFOS - Frente de Caixa (Barueri - Cotia - Embu)</h1>
-            <button class="logout-btn" onclick="alert('Funcionalidade de Logout removida, pois o sistema está sem autenticação.')">Sair</button>
-        </div>
-
-        <div class="container">
-            
-            <div class="action-bar">
-                <button onclick="abrirForm()">+ Nova O.S</button>
-                <button onclick="exportExcel()">Exportar Excel</button>
-                <button onclick="importExcel()">Importar Excel</button>
-                <input type="file" id="inputExcel" accept=".xlsx, .xls" style="display: none;" onchange="lerExcel(event)">
-                <button onclick="imprimirPDF()">Imprimir / Salvar PDF Geral</button>
-                <button onclick="limparDados()">Limpar dados</button>
-            </div>
-
-            <div class="filters-bar">
-                <select id="unidade" onchange="filtrar()">
-                    <option value="">Todas Unidades</option>
-                    <option value="BARUERI">Barueri</option>
-                    <option value="COTIA">Cotia</option>
-                    <option value="EMBU">Embu</option>
-                </select>
-                <select id="tecnicoFiltro" onchange="filtrar()">
-                    <option value="">Todos Técnicos</option>
-                    </select>
-                <input type="date" id="dataInicio" onchange="filtrar()">
-                <input type="date" id="dataFim" onchange="filtrar()">
-                <button onclick="filtrar()">Filtrar</button>
-                <button onclick="limparFiltros()">Limpar filtros</button>
-            </div>
-
-            <div class="search-bar">
-                <input type="text" id="busca" placeholder="Buscar cliente, placa ou O.S" onkeyup="buscar()">
-                <button onclick="buscar()">Buscar</button>
-            </div>
-
-            <div class="resumo-title">Resumo — Controle de Caixa Diário</div>
-            <div class="cards-row">
-                <div class="card" id="totalOSCard" onclick="imprimirPDF('ValorOS')">TOTAL GERAL (OS)<br>R$ 0,00</div>
-                <div class="card" id="totalMO" onclick="imprimirPDF('MãoDeObra')">MÃO DE OBRA<br>R$ 0,00</div>
-                <div class="card" id="totalFaturadas" onclick="imprimirPDF('Faturado')">FATURADAS<br>R$ 0,00</div>
-                <div class="card" id="totalAberto" onclick="imprimirPDF('Em Aberto')">EM ABERTO<br>R$ 0,00</div>
-                <div class="card" id="totalPix" onclick="imprimirPDF('PIX')">PIX<br>R$ 0,00</div>
-                <div class="card" id="totalDinheiro" onclick="imprimirPDF('Dinheiro')">DINHEIRO<br>R$ 0,00</div>
-                <div class="card" id="totalDebito" onclick="imprimirPDF('Débito')">DÉBITO<br>R$ 0,00</div>
-            </div>
-            <div class="cards-row" style="margin-top: -15px;">
-                <div id="totalCreditoContainer" onclick="imprimirPDF('Crédito')">CRÉDITO<br>R$ 0,00</div>
-            </div>
-            
-            <div class="table-container">
-                <div class="table-title">Todas as O.S</div>
-                <table id="tabelaTodas">
-                    <thead>
-                        <tr>
-                            <th>O.S</th>
-                            <th>DATA</th>
-                            <th>CLIENTE</th>
-                            <th>PLACA</th>
-                            <th>VALOR OS</th>
-                            <th>VALOR MO</th>
-                            <th>VALOR (TOTAL)</th>
-                            <th>PAGAMENTO</th>
-                            <th>TECNICO</th>
-                            <th>OS TECNICO</th>
-                            <th>UNIDADE</th>
-                            <th>Ações</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        </tbody>
-                </table>
-            </div>
-        </div>
-
-        <div id="formModal" class="modal">
-            <div class="modal-content">
-                <span class="close-btn" onclick="fecharForm()">&times;</span>
-                <h2>Cadastro de Ordem de Serviço</h2>
-                <div id="osForm">
-                    <div class="form-group">
-                        <label for="formOS">O.S:</label>
-                        <input type="text" id="formOS" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="formData">Data:</label>
-                        <input type="date" id="formData" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="formCliente">Cliente:</label>
-                        <input type="text" id="formCliente" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="formPlaca">Placa:</label>
-                        <input type="text" id="formPlaca" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="formValorOS">Valor O.S (Peças):</label>
-                        <input type="number" id="formValorOS" step="0.01" value="0.00">
-                    </div>
-                    <div class="form-group">
-                        <label for="formValorMO">Valor M.O (Mão de Obra):</label>
-                        <input type="number" id="formValorMO" step="0.01" value="0.00">
-                    </div>
-                    <div class="form-group">
-                        <label for="formPagamento">Pagamento:</label>
-                        <select id="formPagamento">
-                            <option value="">Selecione</option>
-                            <option value="Faturado">Faturado</option>
-                            <option value="Em Aberto">Em Aberto</option>
-                            <option value="PIX">PIX</option>
-                            <option value="Dinheiro">Dinheiro</option>
-                            <option value="Débito">Débito</option>
-                            <option value="Crédito">Crédito</option>
-                            <option value="Transferência">Transferência</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="formTecnico">Técnico:</label>
-                        <input type="text" id="formTecnico">
-                    </div>
-                    <div class="form-group">
-                        <label for="formOsTecnico">O.S Técnico:</label>
-                        <input type="text" id="formOsTecnico">
-                    </div>
-                    <div class="form-group">
-                        <label for="formUnidade">Unidade:</label>
-                        <select id="formUnidade">
-                            <option value="COTIA">Cotia</option>
-                            <option value="BARUERI">Barueri</option>
-                            <option value="EMBU">Embu</option>
-                        </select>
-                    </div>
-                    <div class="form-actions">
-                        <button id="btnCancelar" type="button" onclick="fecharForm()">Cancelar</button>
-                        <button id="btnSalvar" type="button" onclick="salvarForm()">Salvar O.S</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div id="loadingOverlay" class="loading-overlay">
-            <div class="spinner"></div>
-            <div>Carregando dados...</div>
-        </div>
-
+<div id="loginModal" class="modal" style="display: flex;">
+    <div class="modal-content">
+        <h2>Acesso VDI - Frente de Caixa</h2>
+        <p>Por favor, utilize suas credenciais de usuário.</p>
+        <input type="email" id="loginEmail" placeholder="Email do Usuário">
+        <input type="password" id="loginPassword" placeholder="Senha do Usuário">
+        <button onclick="handleLogin()">Entrar</button>
     </div>
+</div>
 
-    <script>
-    /* =============================================
-    Configurações Firebase (Versão 8)
-    ============================================= */
-    const firebaseConfig = {
-      // Use os dados do seu projeto aqui!
-      apiKey: "AIzaSyC5up-MQFQNeH1ftI8KTMoXI5pY2D2jpgM", 
-      authDomain: "vditacografosfrentecaixa.firebaseapp.com",
-      databaseURL: "https://vditacografosfrentecaixa-default-rtdb.firebaseio.com",
-      projectId: "vditacografosfrentecaixa",
-      storageBucket: "vditacografosfrentecaixa.firebasestorage.app", 
-      messagingSenderId: "1008625665373",
-      appId: "1:1008625665373:web:1f1870898ecb04b4b854b4",
-      measurementId: "G-9SYYV1VLNY"
+<div id="appContent" style="display:none;">
+    <header>
+        <img src="logo.png" alt="Logo VDI Tacógrafos" id="headerLogo">
+        <h1 id="headerTitle">VDI TACÓGRAFOS — Frente de Caixa (Barueri · Cotia · Embu)</h1>
+        <button onclick="handleLogout()" style="position: absolute; top: 20px; right: 20px; background: #c0392b;">Sair</button>
+    </header>
+    <div class="container">
+        <div class="buttons">
+            <button onclick="abrirForm()">+ Nova O.S</button>
+            <button onclick="exportExcel()">Exportar Excel</button>
+            <button onclick="importExcel()">Importar Excel</button>
+            <button onclick="imprimirPDF()">Imprimir / Salvar PDF</button>
+            <button onclick="limparDados()">Limpar dados</button>
+        </div>
+        <input type="file" id="inputExcel" accept=".xlsx,.csv" style="display:none" onchange="lerExcel(event)" multiple>
+
+        <div class="filters">
+            <select id="unidade" onchange="atualizarTabelaTodas()">
+                <option value="">Todas Unidades</option>
+                <option value="Barueri">Barueri</option>
+                <option value="Cotia">Cotia</option>
+                <option value="Embu">Embu</option>
+            </select>
+            <select id="tecnicoFiltro" onchange="atualizarTabelaTodas()">
+                <option value="">Todos Técnicos</option>
+            </select>
+            <input type="date" id="dataInicio">
+            <input type="date" id="dataFim">
+            <button onclick="filtrar()">Filtrar</button>
+            <button onclick="limparFiltros()">Limpar filtros</button>
+        </div>
+
+        <div class="search">
+            <input type="text" id="busca" placeholder="Buscar cliente, placa ou O.S">
+            <button onclick="buscar()">Buscar</button>
+        </div>
+
+        <h3>Todas as O.S</h3>
+        <table id="tabelaTodas">
+            <thead>
+                <tr>
+                    <th>O.S</th>
+                    <th>DATA</th>
+                    <th>CLIENTE</th>
+                    <th>PLACA</th>
+                    <th>VALOR OS</th>
+                    <th>VALOR MO</th>
+                    <th>VALOR (TOTAL)</th>
+                    <th>PAGAMENTO</th>
+                    <th>TECNICO</th>
+                    <th>OS TECNICO</th>
+                    <th>UNIDADE</th>
+                    <th>Ações</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+
+        <h3>Resumo — Controle de Caixa Diário</h3>
+        <div class="summary">
+            <div class="card totalos" id="totalOSCard" onclick="imprimirPDF('ValorOS')">TOTAL GERAL (VALOR OS)<br>R$ 0,00</div> 
+            
+            <div class="card maodeobra" id="totalMO" onclick="imprimirPDF('MaoDeObra')">MÃO DE OBRA<br>R$ 0,00</div> 
+            <div class="card faturadas" id="totalFaturadas" onclick="imprimirPDF('Faturado')">FATURADAS<br>R$ 0,00</div>
+            <div class="card emaberto" id="totalAberto" onclick="imprimirPDF('Em Aberto')">EM ABERTO<br>R$ 0,00</div>
+            <div class="card pix" id="totalPix" onclick="imprimirPDF('PIX')">PIX<br>R$ 0,00</div>
+            <div class="card dinheiro" id="totalDinheiro" onclick="imprimirPDF('Dinheiro')">DINHEIRO<br>R$ 0,00</div>
+            <div class="card debito" id="totalDebito" onclick="imprimirPDF('Débito')">DÉBITO<br>R$ 0,00</div>
+            <div class="card credito" id="totalCredito" onclick="imprimirPDF('Crédito')">CRÉDITO<br>R$ 0,00</div>
+        </div>
+    </div>
+    
+    <div id="formModal" class="modal">
+        <div class="modal-content">
+            <h2>Nova O.S</h2>
+            <input type="text" id="formOS" placeholder="Número da O.S">
+            <input type="date" id="formData">
+            <input type="text" id="formCliente" placeholder="Cliente">
+            <input type="text" id="formPlaca" placeholder="Placa">
+            <input type="number" id="formValorOS" placeholder="Valor OS (R$)" step="0.01">
+            <input type="number" id="formValorMO" placeholder="Valor MO (R$)" step="0.01"> 
+            <select id="formPagamento">
+                <option value="">Selecione pagamento</option>
+                <option value="PIX">PIX</option>
+                <option value="Dinheiro">Dinheiro</option>
+                <option value="Crédito">Crédito</option>
+                <option value="Débito">Débito</option>
+                <option value="Em Aberto">Em Aberto</option>
+                <option value="Faturado">Faturado</option>
+            </select>
+            <select id="formUnidade">
+                <option value="">Selecione a Unidade</option>
+                <option value="Barueri">Barueri</option>
+                <option value="Cotia">Cotia</option>
+                <option value="Embu">Embu</option>
+            </select>
+            <input type="text" id="formTecnico" placeholder="Técnico">
+            <input type="text" id="formOsTecnico" placeholder="OS Técnico (opcional)">
+            <button id="btnSalvar" onclick="salvarForm()">Salvar O.S</button>
+            <button onclick="fecharForm()" style="margin-top:8px;background:#e74c3c;">Cancelar</button>
+        </div>
+    </div>
+</div>
+
+<script>
+/* =============================================   Configurações Firebase (Versão 8)   ============================================= */
+// 🛑 🛑 🛑 IMPORTANTE: VERIFIQUE SE ESTA CHAVE API É REAL E VÁLIDA PARA SEU PROJETO! 🛑 🛑 🛑
+const firebaseConfig = {
+  apiKey: "AIzaSyC5up-MQFQNeH1ftI8KTMoXI5pY2D2jpgM", 
+  authDomain: "vditacografosfrentecaixa.firebaseapp.com",
+  databaseURL: "https://vditacografosfrentecaixa-default-rtdb.firebaseio.com",
+  projectId: "vditacografosfrentecaixa",
+  storageBucket: "vditacografosfrentecaixa.firebasestorage.app", 
+  messagingSenderId: "1008625665373",
+  appId: "1:1008625665373:web:1f1870898ecb04b4b854b4",
+  measurementId: "G-9SYYV1VLNY"
+};
+
+// Inicialização dos serviços (Versão 8)
+const app = firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore(app);
+const auth = firebase.auth(); // Inicializa o Auth
+const osCollection = db.collection('ordens_servico');
+let osData = [];
+window.firestoreListenerStarted = false; // Flag para garantir que o listener só inicie uma vez
+
+/* cores para pdf (seu original) */
+const paymentColors = {
+    'Faturado': [173, 216, 230],
+    'Em Aberto': [255, 192, 203],
+    'PIX': [175, 223, 175],
+    'Dinheiro': [255, 239, 173],
+    'Débito': [253, 222, 173],
+    'Crédito': [210, 180, 222]
+};
+
+/* -------------------------   Helpers (seu original)   ------------------------- */
+function formatDate(iso){
+    if(!iso) return '01/01/2000';
+    const parts = iso.split('-');
+    if(parts.length !== 3) return iso;
+    return `${parts[2]}/${parts[1]}/${parts[0]}`
+}
+function normalizeHeader(s){
+    return String(s || '').toUpperCase().replace(/\s+/g, ' ').trim();
+}
+function parseDateCell(cell){
+    if(!cell && cell !== 0) return null;
+    if (cell instanceof Date) {
+        return cell.toISOString().split('T')[0];
+    }
+    const txt = String(cell).trim();
+    if(/^\d{4}-\d{2}-\d{2}/.test(txt)) return txt.split('T')[0];
+    if(/^\d{2}\/\d{2}\/\d{4}$/.test(txt)){
+        const [d,m,y] = txt.split('/');
+        return `${y}-${m}-${d}`;
+    }
+    const dt = new Date(txt);
+    if(!isNaN(dt)) return dt.toISOString().split('T')[0];
+    return null;
+}
+function parseMoneyCell(cell){
+    if(cell === null || cell === undefined || cell === '') return 0;
+    let txt = String(cell).replace(/\s/g,'').replace(/\u00A0/g,'');
+    if(/^\d{1,3}(\.\d{3})+,\d{2}$/.test(txt) || (txt.indexOf(',')>-1 && txt.indexOf('.')>-1)){
+        txt = txt.replace(/\./g,'').replace(',', '.');
+    } else {
+        txt = txt.replace(',', '.');
+    }
+    const val = parseFloat(txt);
+    return isNaN(val) ? 0 : val;
+}
+
+/* -------------------------   Funções Firebase AUTH (Novo)   ------------------------- */
+async function handleLogin() {
+    const email = document.getElementById('loginEmail').value;
+    const password = document.getElementById('loginPassword').value;
+
+    if (!email || !password) {
+        alert('Preencha email e senha.');
+        return;
+    }
+
+    try {
+        document.getElementById('loadingOverlay').style.display = 'flex';
+        await auth.signInWithEmailAndPassword(email, password);
+        // onAuthStateChanged irá lidar com o restante
+    } catch (error) {
+        document.getElementById('loadingOverlay').style.display = 'none';
+        alert(`Erro de Login: Verifique suas credenciais. (${error.message})`);
+    }}
+
+function handleLogout() {
+    if (confirm('Deseja sair do sistema?')) {
+        auth.signOut();
+    }}
+
+function checkAuthState() {
+    auth.onAuthStateChanged(user => {
+        if (user) {
+            // USUÁRIO LOGADO: Mostra o app e carrega os dados
+            document.getElementById('loginModal').style.display = 'none';
+            document.getElementById('appContent').style.display = 'block';
+                        
+            if (!window.firestoreListenerStarted) {
+                setupFirestoreListener();
+                window.firestoreListenerStarted = true;
+            } else { 
+                 document.getElementById('loadingOverlay').style.display = 'none';
+            }
+        } else {
+            // USUÁRIO DESLOGADO: Mostra a tela de login
+            document.getElementById('appContent').style.display = 'none';
+            document.getElementById('loginModal').style.display = 'flex';
+            document.getElementById('loadingOverlay').style.display = 'none';
+        }
+    });
+}
+
+/* -------------------------   Firestore listener (Adaptado para rodar após login)   ------------------------- */
+function setupFirestoreListener(){
+    document.getElementById('loadingOverlay').style.display = 'flex';
+    osCollection.onSnapshot(snapshot => {
+        const changes = snapshot.docChanges();
+        changes.forEach(change => {
+            const docData = { ...change.doc.data(), id: change.doc.id };
+            if (change.type === "added" || change.type === "modified") {
+                const idx = osData.findIndex(i => i.id === docData.id);
+                if(idx > -1) osData[idx] = docData;
+                else osData.push(docData);
+            }
+            if (change.type === "removed") {
+                osData = osData.filter(i => i.id !== docData.id);
+            }
+        });
+        osData.sort((a,b)=>{
+            const pa = a.data ? a.data.split('/') : ['01','01','2000'];
+            const pb = b.data ? b.data.split('/') : ['01','01','2000'];
+            const da = new Date(pa[2], pa[1]-1, pa[0]);
+            const db = new Date(pb[2], pb[1]-1, pb[0]);
+            return db - da;
+        });
+        getTecnicosUnicos(); 
+        atualizarTabelaTodas();
+        document.getElementById('loadingOverlay').style.display = 'none';
+    }, err => {
+        console.error('Erro Firestore', err);
+        document.getElementById('loadingOverlay').style.display = 'none'; 
+        alert('Erro ao carregar dados do Firebase. Verifique sua chave API e Regras de Segurança.');
+    });
+}
+
+function getTecnicosUnicos(){
+    const select = document.getElementById('tecnicoFiltro');
+    const current = select.value;
+    const tecnicos = [...new Set(osData.map(i=> (i.tecnico||'').toString().trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b, 'pt-BR'));
+    select.innerHTML = '<option value="">Todos Técnicos</option>';
+    tecnicos.forEach(t => {
+        const opt = document.createElement('option');
+        opt.value = t;
+        opt.textContent = t;
+        select.appendChild(opt);
+    });
+    if(current && Array.from(select.options).some(o=>o.value===current)) select.value = current;
+}
+
+/* Start listener now */
+checkAuthState(); // Substituído a chamada direta ao listener pela verificação de Auth
+
+/* -------------------------   Form open/close & save (corrigido para MO)   ------------------------- */
+function abrirForm(item=null){
+    const modal = document.getElementById('formModal');
+    const btnSalvar = document.getElementById('btnSalvar');
+
+    // clear fields
+    document.getElementById('formOS').value = item ? (item.os || '') : '';
+    if(item && item.data){
+        const parts = item.data.split('/');
+        document.getElementById('formData').value = `${parts[2]}-${parts[1]}-${parts[0]}`;
+    } else {
+        document.getElementById('formData').value = '';
+    }
+    document.getElementById('formCliente').value = item ? (item.cliente || '') : '';
+    document.getElementById('formPlaca').value = item ? (item.placa || '') : '';
+    document.getElementById('formValorOS').value = item ? (parseFloat(item.valor_os || 0).toFixed(2)) : '';
+    document.getElementById('formValorMO').value = item ? (parseFloat(item.valor_mo || 0).toFixed(2)) : ''; 
+    document.getElementById('formPagamento').value = item ? (item.pagamento || '') : '';
+    document.getElementById('formUnidade').value = item ? (item.unidade || '') : '';
+    document.getElementById('formTecnico').value = item ? (item.tecnico || '') : '';
+    document.getElementById('formOsTecnico').value = item ? (item.os_tecnico || '') : '';
+
+    if(item && item.id) {
+        modal.dataset.editId = item.id;
+        btnSalvar.textContent = 'Atualizar O.S';
+        document.getElementById('formOS').disabled = true; 
+    } else {
+        delete modal.dataset.editId;
+        btnSalvar.textContent = 'Salvar O.S';
+        document.getElementById('formOS').disabled = false;
+    }
+    modal.style.display = 'flex';
+}
+
+function fecharForm(){
+    document.getElementById('formModal').style.display='none';
+    delete document.getElementById('formModal').dataset.editId;
+}
+
+async function salvarForm(){
+    const modal = document.getElementById('formModal');
+    const editId = modal.dataset.editId || null; 
+
+    const os = document.getElementById('formOS').value.trim();
+    const dataInput = document.getElementById('formData').value;
+    const cliente = document.getElementById('formCliente').value.trim();
+    const placa = document.getElementById('formPlaca').value.trim();
+    const valorOS = parseFloat(document.getElementById('formValorOS').value || 0);
+    const valorMO = parseFloat(document.getElementById('formValorMO').value || 0); 
+    const pagamento = document.getElementById('formPagamento').value;
+    const tecnico = document.getElementById('formTecnico').value.trim();
+    const unidade = document.getElementById('formUnidade').value;
+    const osTecnico = document.getElementById('formOsTecnico').value.trim();
+
+    if(!os || !dataInput || !cliente || !placa){
+        alert('Preencha os campos mínimos: O.S, DATA, CLIENTE, PLACA');
+        return;
+    }
+
+    const dataFormatada = formatDate(dataInput);
+
+    const registro = {
+        os,
+        data: dataFormatada,
+        cliente,
+        placa,
+        valor_os: valorOS.toFixed(2),
+        valor_mo: valorMO.toFixed(2), 
+        valor: (valorOS + valorMO).toFixed(2), // VALOR TOTAL
+        pagamento,
+        tecnico,
+        os_tecnico: osTecnico,
+        unidade,
     };
 
-    // Variável para armazenar a função de cancelamento do listener
-    let unsubscribeListener = null;
-
-    // Inicialização dos serviços (Versão 8)
-    const app = firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore(app);
-    const osCollection = db.collection('ordens_servico');
-
-    let osData = [];
-
-    /* cores para pdf */
-    const paymentColors = {
-        'Faturado': [173, 216, 230],
-        'Em Aberto': [255, 192, 203],
-        'PIX': [175, 223, 175],
-        'Dinheiro': [255, 239, 173],
-        'Débito': [253, 222, 173],
-        'Crédito': [210, 180, 222]
-    };
-
-    /* -------------------------   Helpers   ------------------------- */
-    function formatDate(iso){
-        if(!iso) return '01/01/2000';
-        const parts = iso.split('-');
-        if(parts.length !== 3) return iso;
-        return `${parts[2]}/${parts[1]}/${parts[0]}`
-    }
-    function normalizeHeader(s){
-        return String(s || '').toUpperCase().replace(/\s+/g, ' ').trim();
-    }
-    function parseDateCell(cell){
-        if(!cell && cell !== 0) return null;
-        if (cell instanceof Date) {
-            return cell.toISOString().split('T')[0];
-        }
-        const txt = String(cell).trim();
-        if(/^\d{4}-\d{2}-\d{2}/.test(txt)) return txt.split('T')[0];
-        if(/^\d{2}\/\d{2}\/\d{4}$/.test(txt)){
-            const [d,m,y] = txt.split('/');
-            return `${y}-${m}-${d}`;
-        }
-        const dt = new Date(txt);
-        if(!isNaN(dt)) return dt.toISOString().split('T')[0];
-        return null;
-    }
-    function parseMoneyCell(cell){
-        if(cell === null || cell === undefined || cell === '') return 0;
-        let txt = String(cell).replace(/\s/g,'').replace(/\u00A0/g,'');
-        if(/^\d{1,3}(\.\d{3})+,\d{2}$/.test(txt) || (txt.indexOf(',')>-1 && txt.indexOf('.')>-1)){
-            txt = txt.replace(/\./g,'').replace(',', '.');
+    try {
+        if(editId){
+            delete registro.timestamp;
+            await osCollection.doc(editId).update(registro);
+            alert('O.S. atualizada com sucesso!');
         } else {
-            txt = txt.replace(',', '.');
+            registro.timestamp = firebase.firestore.FieldValue.serverTimestamp();
+            await osCollection.add(registro);
+            alert('O.S. salva com sucesso!');
         }
-        const val = parseFloat(txt);
-        return isNaN(val) ? 0 : val;
-    }
+        fecharForm();
+    } catch(e){
+        console.error(e);
+        alert('Erro ao salvar na nuvem');
+    }}
 
-    /* -------------------------   Funções Listener ESTÁVEL (Sem Login)   ------------------------- */
+/* helper to open modal in edit mode (seu original) */
+function abrirFormForEdit(id){
+    const item = osData.find(d=>d.id===id);
+    if(!item) { alert('Registro não encontrado'); return; }
+    abrirForm(item);
+    document.getElementById('formModal').dataset.editId = id;
+}
 
-    // Função que configura o listener do Firestore e lida com o carregamento
-    function setupFirestoreListener(){
-        if (unsubscribeListener) {
-            unsubscribeListener(); 
-        }
+/* apagar (seu original) */
+async function apagarOS(id){
+    if(!confirm('Deseja apagar esta O.S? Esta ação é irreversível.')) return;
+    try {
+        await osCollection.doc(id).delete();
+        alert('O.S. apagada');
+    } catch(e){
+        console.error(e);
+        alert('Erro ao apagar');
+    }}
+
+/* -------------------------   Atualizar tabela e totais   ------------------------- */
+function atualizarTabelaTodas(){
+    const unidade = document.getElementById('unidade').value;
+    const dataInicio = document.getElementById('dataInicio').value;
+    const dataFim = document.getElementById('dataFim').value;
+    const termoBusca = document.getElementById('busca').value.toLowerCase();
+    const tecnicoFiltro = document.getElementById('tecnicoFiltro').value;
+    const tbody = document.querySelector('#tabelaTodas tbody');
+    tbody.innerHTML = '';
+
+    let totalOS = 0; // NOVO TOTAL PARA VALOR OS (PEÇAS)
+    let totalF = 0, totalAberto = 0, totalPix = 0, totalDin = 0, totalDeb = 0, totalCred = 0;
+    let totalMO = 0; 
+    
+    const dadosFiltrados = osData.filter(item => {
+        const itemDate = item.data ? item.data.split('/').reverse().join('-') : '2000-01-01';
+        const itemValor = parseFloat(item.valor) || (parseFloat(item.valor_os||0) + parseFloat(item.valor_mo||0));
+        const itemValorOS = parseFloat(item.valor_os || 0); // Captura Valor OS
+        const itemValorMO = parseFloat(item.valor_mo || 0); 
+        const itemPagamento = item.pagamento ? item.pagamento.toString().toLowerCase().trim() : '';
+
+        if(unidade && item.unidade !== unidade) return false;
+        if(tecnicoFiltro && item.tecnico !== tecnicoFiltro) return false;
+        if(dataInicio && itemDate < dataInicio) return false;
+        if(dataFim && itemDate > dataFim) return false;
+        if((item.cliente||'').toUpperCase().includes('CANCELADA')) return false;
+        if(termoBusca && !((item.cliente||'').toLowerCase().includes(termoBusca) || (item.placa||'').toLowerCase().includes(termoBusca) || (item.os||'').toLowerCase().includes(termoBusca))) return false;
+
+        totalOS += itemValorOS; // Soma Total OS (Peças)
+        totalMO += itemValorMO;                
+
+        if(itemPagamento === 'faturado') totalF += itemValor;
+        if(itemPagamento === 'em aberto') totalAberto += itemValor;
+        if(itemPagamento.includes('pix')) totalPix += itemValor; 
+        if(itemPagamento === 'dinheiro') totalDin += itemValor;
+        if(itemPagamento === 'débito' || itemPagamento === 'debito') totalDeb += itemValor;
+        if(itemPagamento === 'crédito' || itemPagamento === 'credito') totalCred += itemValor;
         
-        document.getElementById('loadingOverlay').style.display = 'flex';
+        return true;
+    });
 
-        unsubscribeListener = osCollection.orderBy('data', 'desc').onSnapshot(snapshot => {
-            osData = [];
-            snapshot.forEach(doc => {
-                osData.push({ id: doc.id, ...doc.data() });
-            });
-            
-            // Após carregar, popular o filtro de técnicos e aplicar o filtro
-            popularTecnicos();
-            filtrar(); 
-            // Oculta o overlay APENAS após o primeiro carregamento
-            document.getElementById('loadingOverlay').style.display = 'none'; 
-        }, error => {
-            console.error("Erro ao carregar dados do Firestore:", error);
-            // Mensagem de erro que estava aparecendo
-            alert("Erro ao carregar dados. Verifique a conexão ou permissões. (Regras do Firestore?)");
-            document.getElementById('loadingOverlay').style.display = 'none';
-        });
-    }
+    dadosFiltrados.forEach(item => {
+        const valorOs = parseFloat(item.valor_os || 0);
+        const valorMo = parseFloat(item.valor_mo || 0);
+        const valorTotal = parseFloat(item.valor || (valorOs + valorMo));
 
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${item.os || ''}</td>
+                        <td>${item.data || ''}</td>
+                        <td>${item.cliente || ''}</td>
+                        <td>${item.placa || ''}</td>
+                        <td style="text-align:right;">R$ ${valorOs.toFixed(2).replace('.', ',')}</td>
+                        <td style="text-align:right;">R$ ${valorMo.toFixed(2).replace('.', ',')}</td>
+                        <td style="text-align:right;">R$ ${valorTotal.toFixed(2).replace('.', ',')}</td>
+                        <td>${item.pagamento || ''}</td>
+                        <td>${item.tecnico || ''}</td>
+                        <td>${item.os_tecnico || ''}</td>
+                        <td>${item.unidade || ''}</td>
+                        <td><button class="edit" onclick="abrirFormForEdit('${item.id}')">Editar</button> <button class="delete" onclick="apagarOS('${item.id}')">Apagar</button></td>`;
+        tbody.appendChild(tr);
+    });
 
-    /* -------------------------   CRUD - Salvar e Deletar   ------------------------- */
-    let currentEditId = null;
+    // ATUALIZAÇÃO DO NOVO CARD
+    document.getElementById('totalOSCard').innerHTML=`TOTAL GERAL (VALOR OS)<br>R$ ${totalOS.toFixed(2).replace('.', ',')}`;
 
-    function abrirForm(id = null) {
-        currentEditId = id;
-        const modal = document.getElementById('formModal');
-        const h2 = modal.querySelector('h2');
-        const btnSalvar = document.getElementById('btnSalvar');
-        
-        // Limpa o formulário
-        document.getElementById('formOS').value = '';
-        document.getElementById('formData').value = new Date().toISOString().split('T')[0];
-        document.getElementById('formCliente').value = '';
-        document.getElementById('formPlaca').value = '';
-        document.getElementById('formValorOS').value = '0.00';
-        document.getElementById('formValorMO').value = '0.00';
-        document.getElementById('formPagamento').value = '';
-        document.getElementById('formTecnico').value = '';
-        document.getElementById('formOsTecnico').value = '';
-        document.getElementById('formUnidade').value = 'COTIA';
+    document.getElementById('totalMO').innerHTML=`MÃO DE OBRA<br>R$ ${totalMO.toFixed(2).replace('.', ',')}`;
+    document.getElementById('totalFaturadas').innerHTML=`FATURADAS<br>R$ ${totalF.toFixed(2).replace('.', ',')}`;
+    document.getElementById('totalAberto').innerHTML=`EM ABERTO<br>R$ ${totalAberto.toFixed(2).replace('.', ',')}`;
+    document.getElementById('totalPix').innerHTML=`PIX<br>R$ ${totalPix.toFixed(2).replace('.', ',')}`;
+    document.getElementById('totalDinheiro').innerHTML=`DINHEIRO<br>R$ ${totalDin.toFixed(2).replace('.', ',')}`;
+    document.getElementById('totalDebito').innerHTML=`DÉBITO<br>R$ ${totalDeb.toFixed(2).replace('.', ',')}`;
+    document.getElementById('totalCredito').innerHTML=`CRÉDITO<br>R$ ${totalCred.toFixed(2).replace('.', ',')}`;
+}
 
-        if (id) {
-            h2.textContent = 'Editar Ordem de Serviço';
-            btnSalvar.textContent = 'Atualizar O.S';
-            const os = osData.find(o => o.id === id);
-            if (os) {
-                document.getElementById('formOS').value = os.os || '';
-                document.getElementById('formData').value = os.data || '';
-                document.getElementById('formCliente').value = os.cliente || '';
-                document.getElementById('formPlaca').value = os.placa || '';
-                document.getElementById('formValorOS').value = os.valor_os ? os.valor_os.toFixed(2) : '0.00';
-                document.getElementById('formValorMO').value = os.valor_mo ? os.valor_mo.toFixed(2) : '0.00';
-                document.getElementById('formPagamento').value = os.pagamento || '';
-                document.getElementById('formTecnico').value = os.tecnico || '';
-                document.getElementById('formOsTecnico').value = os.os_tecnico || '';
-                document.getElementById('formUnidade').value = os.unidade || 'COTIA';
-            }
-        } else {
-            h2.textContent = 'Cadastro de Ordem de Serviço';
-            btnSalvar.textContent = 'Salvar O.S';
-        }
-        
-        modal.style.display = 'flex';
-    }
+/* Funções de filtro e busca (inalteradas, funcionam chamando atualizarTabelaTodas) */
+function limparFiltros(){
+    document.getElementById('unidade').value = '';
+    document.getElementById('tecnicoFiltro').value = '';
+    document.getElementById('dataInicio').value = '';
+    document.getElementById('dataFim').value = '';
+    document.getElementById('busca').value = '';
+    atualizarTabelaTodas();
+}
+function filtrar(){ atualizarTabelaTodas(); }
+function buscar(){ atualizarTabelaTodas(); }
 
-    function fecharForm() {
-        document.getElementById('formModal').style.display = 'none';
-        currentEditId = null;
-    }
-
-    async function salvarForm() {
-        // ... (Função salvarForm é a mesma)
-        const os = document.getElementById('formOS').value.trim();
-        const data = document.getElementById('formData').value.trim();
-        const cliente = document.getElementById('formCliente').value.trim();
-        const placa = document.getElementById('formPlaca').value.trim();
-        const valor_os = parseMoneyCell(document.getElementById('formValorOS').value);
-        const valor_mo = parseMoneyCell(document.getElementById('formValorMO').value);
-        const pagamento = document.getElementById('formPagamento').value.trim();
-        const tecnico = document.getElementById('formTecnico').value.trim();
-        const os_tecnico = document.getElementById('formOsTecnico').value.trim();
-        const unidade = document.getElementById('formUnidade').value.trim();
-
-        if (!os || !data || !cliente || !pagamento || !unidade) {
-            alert('Por favor, preencha os campos obrigatórios (O.S, Data, Cliente, Pagamento, Unidade).');
-            return;
-        }
-
-        const osDataToSave = {
-            os: os,
-            data: data,
-            cliente: cliente,
-            placa: placa,
-            valor_os: valor_os, 
-            valor_mo: valor_mo, 
-            valor: valor_os + valor_mo, 
-            pagamento: pagamento,
-            tecnico: tecnico,
-            os_tecnico: os_tecnico,
-            unidade: unidade,
-            // A escrita não funcionará se a regra do Firebase não permitir "allow write: if true"
-            // Se as regras estiverem "allow write: if request.auth != null", você não conseguirá salvar/editar sem login
-            timestamp: firebase.firestore.FieldValue.serverTimestamp() 
-        };
-
-        document.getElementById('loadingOverlay').style.display = 'flex';
-
-        try {
-            if (currentEditId) {
-                await osCollection.doc(currentEditId).update(osDataToSave);
-                alert('Ordem de Serviço atualizada com sucesso!');
-            } else {
-                await osCollection.add(osDataToSave);
-                alert('Ordem de Serviço salva com sucesso!');
-            }
-            fecharForm();
-        } catch (error) {
-            console.error("Erro ao salvar O.S.:", error);
-            // Mensagem de erro específica para o caso de regras de escrita
-            alert("Erro ao salvar a O.S. Verifique se as Regras do Firestore permitem a escrita.");
-        } finally {
-            document.getElementById('loadingOverlay').style.display = 'none';
-        }
-    }
-
-    async function deletarOS(id) {
-        // ... (Função deletarOS é a mesma, com aviso sobre regras de escrita)
-        if (confirm('Tem certeza que deseja deletar esta Ordem de Serviço? Esta ação é irreversível.')) {
-            document.getElementById('loadingOverlay').style.display = 'flex';
-            try {
-                await osCollection.doc(id).delete();
-                alert('Ordem de Serviço deletada com sucesso!');
-            } catch (error) {
-                console.error("Erro ao deletar O.S.:", error);
-                alert("Erro ao deletar a O.S. Verifique se as Regras do Firestore permitem a escrita.");
-            } finally {
-                document.getElementById('loadingOverlay').style.display = 'none';
-            }
-        }
-    }
-
-    /* -------------------------   Filtros e Busca   ------------------------- */
-
-    function popularTecnicos() {
-        // ... (Função popularTecnicos é a mesma)
-        const tecnicoSet = new Set();
-        osData.forEach(item => {
-            if (item.tecnico) tecnicoSet.add(item.tecnico.toUpperCase());
-        });
-        
-        const select = document.getElementById('tecnicoFiltro');
-        const currentValue = select.value;
-        select.innerHTML = '<option value="">Todos Técnicos</option>';
-        
-        const sortedTecnicos = Array.from(tecnicoSet).sort();
-        sortedTecnicos.forEach(tecnico => {
-            const option = document.createElement('option');
-            option.value = tecnico;
-            option.textContent = tecnico;
-            select.appendChild(option);
-        });
-
-        if (currentValue && tecnicoSet.has(currentValue)) {
-            select.value = currentValue;
-        }
-    }
-
-    function filtrar() {
-        // ... (Função filtrar é a mesma)
-        const unidadeFiltro = document.getElementById('unidade').value.toUpperCase();
-        const dataInicioFiltro = document.getElementById('dataInicio').value;
-        const dataFimFiltro = document.getElementById('dataFim').value;
-        const tecnicoFiltro = document.getElementById('tecnicoFiltro').value.toUpperCase();
-        const buscaTermo = document.getElementById('busca').value.toLowerCase().trim();
-
-        let dadosFiltrados = osData;
-
-        // 1. Filtro por Unidade
-        if (unidadeFiltro) {
-            dadosFiltrados = dadosFiltrados.filter(item => 
-                (item.unidade || '').toUpperCase() === unidadeFiltro
-            );
-        }
-
-        // 2. Filtro por Técnico
-        if (tecnicoFiltro) {
-            dadosFiltrados = dadosFiltrados.filter(item => 
-                (item.tecnico || '').toUpperCase() === tecnicoFiltro
-            );
-        }
-
-        // 3. Filtro por Data
-        if (dataInicioFiltro && dataFimFiltro) {
-            dadosFiltrados = dadosFiltrados.filter(item => 
-                item.data >= dataInicioFiltro && item.data <= dataFimFiltro
-            );
-        } else if (dataInicioFiltro) {
-            dadosFiltrados = dadosFiltrados.filter(item => 
-                item.data >= dataInicioFiltro
-            );
-        } else if (dataFimFiltro) {
-            dadosFiltrados = dadosFiltrados.filter(item => 
-                item.data <= dataFimFiltro
-            );
-        }
-
-        // 4. Busca por Termo
-        if (buscaTermo) {
-            dadosFiltrados = dadosFiltrados.filter(item => 
-                (item.cliente || '').toLowerCase().includes(buscaTermo) ||
-                (item.placa || '').toLowerCase().includes(buscaTermo) ||
-                (item.os || '').toLowerCase().includes(buscaTermo)
-            );
-        }
-
-        atualizarTabelaTodas(dadosFiltrados);
-        atualizarCards(dadosFiltrados);
-    }
-
-    function buscar() {
-        filtrar();
-    }
-
-    function limparFiltros() {
-        document.getElementById('unidade').value = '';
-        document.getElementById('tecnicoFiltro').value = '';
-        document.getElementById('dataInicio').value = '';
-        document.getElementById('dataFim').value = '';
-        document.getElementById('busca').value = '';
-        filtrar();
-    }
-
-    /* -------------------------   Atualização da Tabela e Cards   ------------------------- */
-
-    function atualizarTabelaTodas(dados) {
-        // ... (Função atualizarTabelaTodas é a mesma)
-        const tbody = document.getElementById('tabelaTodas').querySelector('tbody');
-        tbody.innerHTML = ''; 
-
-        dados.forEach(item => {
-            const tr = document.createElement('tr');
-            
-            const valorOS = item.valor_os || 0;
-            const valorMO = item.valor_mo || 0;
-            const valorTotal = valorOS + valorMO;
-
-            tr.innerHTML = `
-                <td>${item.os || ''}</td>
-                <td>${formatDate(item.data) || ''}</td>
-                <td>${item.cliente || ''}</td>
-                <td>${item.placa || ''}</td>
-                <td>R$ ${valorOS.toFixed(2).replace('.', ',')}</td>
-                <td>R$ ${valorMO.toFixed(2).replace('.', ',')}</td>
-                <td>R$ ${valorTotal.toFixed(2).replace('.', ',')}</td>
-                <td>${item.pagamento || ''}</td>
-                <td>${item.tecnico || ''}</td>
-                <td>${item.os_tecnico || ''}</td>
-                <td>${item.unidade || ''}</td>
-                <td>
-                    <button class="edit" onclick="abrirForm('${item.id}')">Editar</button>
-                    <button class="delete" onclick="deletarOS('${item.id}')">Deletar</button>
-                </td>
-            `;
-            tbody.appendChild(tr);
-        });
-    }
-
-    function atualizarCards(dados) {
-        // ... (Função atualizarCards é a mesma, incluindo o novo totalOSCard)
-        let totais = {
-            valorOS: 0, 
-            maoDeObra: 0,
-            Faturado: 0,
-            EmAberto: 0,
-            PIX: 0,
-            Dinheiro: 0,
-            Debito: 0,
-            Credito: 0
-        };
-
-        dados.forEach(item => {
-            const valorOS = item.valor_os || 0;
-            const valorMO = item.valor_mo || 0;
-            const valorCompleto = valorOS + valorMO;
-            const pagamento = (item.pagamento || '').trim();
-
-            // Totalizadores Principais
-            totais.valorOS += valorOS; 
-            totais.maoDeObra += valorMO;
-
-            // Totalizadores por Pagamento (usando o valor COMPLETO da O.S.)
-            switch (pagamento) {
-                case 'Faturado':
-                    totais.Faturado += valorCompleto;
-                    break;
-                case 'Em Aberto':
-                    totais.EmAberto += valorCompleto;
-                    break;
-                case 'PIX':
-                    totais.PIX += valorCompleto;
-                    break;
-                case 'Dinheiro':
-                    totais.Dinheiro += valorCompleto;
-                    break;
-                case 'Débito':
-                    totais.Debito += valorCompleto;
-                    break;
-                case 'Crédito':
-                    totais.Credito += valorCompleto;
-                    break;
-            }
-        });
-
-        // Função para formatar o valor (R$ 0,00)
-        const formatarReal = valor => `R$ ${valor.toFixed(2).replace('.', ',')}`;
-
-        // Atualiza os Cards
-        // NOVO CARD: Total Geral (OS)
-        document.getElementById('totalOSCard').innerHTML = `TOTAL GERAL (OS)<br>${formatarReal(totais.valorOS)}`;
-        
-        document.getElementById('totalMO').innerHTML = `MÃO DE OBRA<br>${formatarReal(totais.maoDeObra)}`;
-        document.getElementById('totalFaturadas').innerHTML = `FATURADAS<br>${formatarReal(totais.Faturado)}`;
-        document.getElementById('totalAberto').innerHTML = `EM ABERTO<br>${formatarReal(totais.EmAberto)}`;
-        document.getElementById('totalPix').innerHTML = `PIX<br>${formatarReal(totais.PIX)}`;
-        document.getElementById('totalDinheiro').innerHTML = `DINHEIRO<br>${formatarReal(totais.Dinheiro)}`;
-        document.getElementById('totalDebito').innerHTML = `DÉBITO<br>${formatarReal(totais.Debito)}`;
-        document.getElementById('totalCreditoContainer').innerHTML = `CRÉDITO<br>${formatarReal(totais.Credito)}`;
-    }
-
-
-    /* -------------------------   PDF e Excel (Com Rodapé Original)   ------------------------- */
-
-    async function imprimirPDF(filtro = null) {
-        document.getElementById('loadingOverlay').style.display = 'flex';
-        
-        let dadosFiltrados = [...osData]; 
-        let reportTitle = 'Relatório Geral de Ordens de Serviço';
-        let colunas = ['O.S', 'Data', 'Cliente', 'Placa', 'Valor O.S', 'Valor M.O', 'Total', 'Pagamento', 'Técnico', 'Unidade'];
-        
-        // Captura os filtros da tela
-        const dataInicioFiltro = document.getElementById('dataInicio').value;
-        const dataFimFiltro = document.getElementById('dataFim').value;
-        const unidadeFiltro = document.getElementById('unidade').value.toUpperCase();
-        const tecnicoFiltro = document.getElementById('tecnicoFiltro').value.toUpperCase();
-        
-        // --- 1. APLICA OS FILTROS DA INTERFACE PRIMEIRO (Data, Unidade, Técnico) ---
-        
-        if (unidadeFiltro) {
-            dadosFiltrados = dadosFiltrados.filter(item => 
-                (item.unidade || '').toUpperCase() === unidadeFiltro
-            );
-        }
-
-        if (tecnicoFiltro) {
-            dadosFiltrados = dadosFiltrados.filter(item => 
-                (item.tecnico || '').toUpperCase() === tecnicoFiltro
-            );
-        }
-
-        if (dataInicioFiltro && dataFimFiltro) {
-            dadosFiltrados = dadosFiltrados.filter(item => 
-                item.data >= dataInicioFiltro && item.data <= dataFimFiltro
-            );
-        } else if (dataInicioFiltro) {
-            dadosFiltrados = dadosFiltrados.filter(item => 
-                item.data >= dataInicioFiltro
-            );
-        } else if (dataFimFiltro) {
-            dadosFiltrados = dadosFiltrados.filter(item => 
-                item.data <= dataFimFiltro
-            );
-        }
-        
-        // --- 2. APLICA O FILTRO ESPECÍFICO DO BOTÃO (Pagamento ou Valor) ---
-
-        switch (filtro) {
-            case 'ValorOS':
-                // Filtra para mostrar apenas OS com Valor OS (Peças) > 0
-                dadosFiltrados = dadosFiltrados.filter(item => (item.valor_os || 0) > 0);
-                reportTitle = 'TOTAL GERAL (VALOR OS - PEÇAS)';
-                break;
-            case 'MãoDeObra':
-                dadosFiltrados = dadosFiltrados.filter(item => (item.valor_mo || 0) > 0);
-                reportTitle = 'O.S. (MÃO DE OBRA)';
-                break;
-            case 'Faturado':
-            case 'Em Aberto':
-            case 'PIX':
-            case 'Dinheiro':
-            case 'Débito':
-            case 'Crédito':
-                dadosFiltrados = dadosFiltrados.filter(item => (item.pagamento || '').trim() === filtro);
-                reportTitle = `O.S. Pagas em ${filtro}`;
-                break;
-            default:
-                // Filtro geral
-                break;
-        }
-
-        // --- 3. CÁLCULO DOS TOTAIS PARA O RODAPÉ ---
-        // Calcula os totais baseados nos dados filtrados, independentemente do filtro de botão
-        const totalOSNoPDF = dadosFiltrados.reduce((sum, item) => sum + (item.valor_os || 0), 0);
-        const totalMONoPDF = dadosFiltrados.reduce((sum, item) => sum + (item.valor_mo || 0), 0);
-        const totalGeralNoPDF = totalOSNoPDF + totalMONoPDF;
-        
-        
-        // 4. Prepara os dados para a tabela do PDF
-        const dataTable = dadosFiltrados.map(item => {
-            const valorOS = item.valor_os || 0;
-            const valorMO = item.valor_mo || 0;
-            const valorTotal = valorOS + valorMO;
-            
-            return [
-                item.os || '',
-                formatDate(item.data) || '',
-                item.cliente || '',
-                item.placa || '',
-                `R$ ${valorOS.toFixed(2).replace('.', ',')}`,
-                `R$ ${valorMO.toFixed(2).replace('.', ',')}`,
-                `R$ ${valorTotal.toFixed(2).replace('.', ',')}`,
-                item.pagamento || '',
-                item.tecnico || '',
-                item.unidade || ''
-            ];
-        });
-
-        // 5. Configura o jsPDF
-        const { jsPDF } = window.jspdf;
-        const doc = new jsPDF('l', 'mm', 'a4'); // Paisagem (landscape), mm, A4
-
-        let finalY = 20;
-
-        // Título e filtros aplicados
-        doc.setFontSize(16);
-        doc.text(reportTitle, 14, 15);
-        
-        doc.setFontSize(10);
-        const filtrosAplicados = [
-            `Período: ${dataInicioFiltro ? formatDate(dataInicioFiltro) : 'Início'} a ${dataFimFiltro ? formatDate(dataFimFiltro) : 'Fim'}`,
-            `Unidade: ${unidadeFiltro || 'Todas'}`,
-            `Técnico: ${tecnicoFiltro || 'Todos'}`,
-        ];
-        doc.text(filtrosAplicados.join(' | '), 14, 22);
-        finalY = 30;
-
-
-        // Adiciona a tabela com o rodapé configurado
-        doc.autoTable({
-            startY: finalY,
-            head: [colunas],
-            body: dataTable,
-            // Rodapé com Totais (O que foi solicitado)
-            foot: [
-                ['', '', '', '', 'Total OS:', `R$ ${totalOSNoPDF.toFixed(2).replace('.', ',')}`, 'Total MO:', `R$ ${totalMONoPDF.toFixed(2).replace('.', ',')}`, 'Total Geral:', `R$ ${totalGeralNoPDF.toFixed(2).replace('.', ',')}`]
-            ],
-            footStyles: { fillColor: [50, 50, 50], textColor: 255, fontStyle: 'bold', fontSize: 10, halign: 'center' },
-            styles: { fontSize: 8, cellPadding: 2, overflow: 'linebreak' },
-            headStyles: { fillColor: [74, 144, 226] },
-            columnStyles: {
-                4: { cellWidth: 20, halign: 'right' }, // Valor OS
-                5: { cellWidth: 20, halign: 'right' }, // Valor MO
-                6: { cellWidth: 20, halign: 'right' }  // Total
-            },
-            didParseCell: function(data) {
-                // Colore a linha baseada na forma de pagamento
-                if (data.section === 'body') {
-                    const pagamento = dadosFiltrados[data.row.index].pagamento;
-                    if (paymentColors && paymentColors[pagamento]) { 
-                        data.cell.styles.fillColor = paymentColors[pagamento];
-                    }
-                }
-                // Alinha à direita os valores no rodapé (Ajustando a lógica para jsPDF autoTable)
-                const valueCols = [5, 7, 9]; 
-                if (data.section === 'foot' && data.row.index === 0 && valueCols.includes(data.column.index)) { 
-                    data.cell.styles.halign = 'right';
-                }
-            },
-            didDrawPage: function(data) {
-                // Footer (Página)
-                doc.setFontSize(8);
-                const pageCount = doc.internal.getNumberOfPages();
-                doc.text(`Página ${data.pageNumber} de ${pageCount}`, data.settings.margin.left, doc.internal.pageSize.height - 5);
-            }
-        });
-        
-        // Define o nome do arquivo, como estava no seu original
-        const today = new Date().toLocaleDateString('pt-BR').replace(/\//g, '-');
-        let filename = `Relatorio_VDI_${reportTitle}_${today}.pdf`;
-
-        doc.save(filename);
+/* limpar todos os dados (seu original) */
+async function limparDados(){
+    if(!confirm('Deseja limpar TODOS os dados NA NUVEM?')) return;
+    document.getElementById('loadingOverlay').style.display = 'flex';
+    const snapshot = await osCollection.get();
+    const batch = db.batch();
+    snapshot.docs.forEach(doc => batch.delete(doc.ref));
+    try {
+        await batch.commit();
+        alert('Dados apagados');
+    } catch(e){
+        console.error(e); alert('Erro ao apagar dados');
+    } finally {
         document.getElementById('loadingOverlay').style.display = 'none';
     }
+}
 
+/* -------------------------   Export Excel (Com Valor MO)   ------------------------- */
+function exportExcel(){
+    const items = osData.map(it => ({
+        'O S': it.os || '',
+        'DATA': it.data || '',
+        'CLIENTE': it.cliente || '',
+        'PLACA': it.placa || '',
+        'VALOR OS': parseFloat(it.valor_os || 0), 
+        'VALOR MO': parseFloat(it.valor_mo || 0), 
+        'PAGAMENTO': it.pagamento || '',
+        'TECNICO': it.tecnico || '',
+        'OS TECNICO': it.os_tecnico || '',
+        'UNIDADE': it.unidade || ''
+    }));
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(items, {header: ['O S','DATA','CLIENTE','PLACA','VALOR OS','VALOR MO','PAGAMENTO','TECNICO','OS TECNICO','UNIDADE']});
+    XLSX.utils.book_append_sheet(wb, ws, 'O.S');
+    XLSX.writeFile(wb, 'OS_FrenteCaixa_Export.xlsx');
+}
 
-    function exportExcel() {
-        // ... (Função exportExcel é a mesma)
-        if (osData.length === 0) {
-            alert('Não há dados para exportar.');
+/* -------------------------   Import Excel (Com Valor MO)   ------------------------- */
+function importExcel(){ document.getElementById('inputExcel').click(); }
+function lerExcel(event){
+    const files = event.target.files;
+    if(!files || files.length === 0){ event.target.value = null; return; }
+    document.getElementById('loadingOverlay').style.display = 'flex';
+    let arquivosProcessados = 0;
+    let dadosCombinados = [];
+    
+    function processarArquivo(file){
+        const reader = new FileReader();
+        const fileName = file.name.toUpperCase();
+        let unidadeDetect = '';
+        if(fileName.includes('BARUERI')) unidadeDetect = 'Barueri';
+        if(fileName.includes('COTIA')) unidadeDetect = 'Cotia';
+        if(fileName.includes('EMBU')) unidadeDetect = 'Embu';
+        
+        reader.onload = function(e){
+            const data = e.target.result;
+            try {
+                const workbook = XLSX.read(data, {type:'binary', raw:true, cellDates:true});
+                const first = workbook.Sheets[workbook.SheetNames[0]];
+                const sheet = XLSX.utils.sheet_to_json(first, {header:1, raw:true, defval:''});
+                
+                let headerMap = null;
+                let capturing = false;
+                
+                for(let i=0;i<sheet.length;i++){
+                    const rawRow = sheet[i];
+                    const normalizedRow = rawRow.map(c => normalizeHeader(c));
+                    const hasData = normalizedRow.some(c => c === 'DATA');
+                    const hasOS = normalizedRow.some(c => c === 'O S' || c === 'O.S' || c === 'OS');
+                    const hasCliente = normalizedRow.some(c => c === 'CLIENTE');
+                    
+                    if(!headerMap && hasData && hasOS && hasCliente){
+                        headerMap = {};
+                        normalizedRow.forEach((cellText, idx) => {
+                            if(cellText === 'O S' || cellText === 'O.S' || cellText === 'OS') headerMap.os = idx;
+                            else if(cellText === 'DATA') headerMap.data = idx;
+                            else if(cellText === 'CLIENTE') headerMap.cliente = idx;
+                            else if(cellText === 'PLACA') headerMap.placa = idx;
+                            else if(cellText === 'VALOR OS' || cellText === 'VALOR_OS' || cellText === 'VALOR') headerMap.valor_os = idx;
+                            else if(cellText === 'VALOR MO' || cellText === 'VALOR_MO' ) headerMap.valor_mo = idx;
+                            else if(cellText === 'PAGAMENTO') headerMap.pagamento = idx;
+                            else if(cellText === 'TECNICO') headerMap.tecnico = idx;
+                            else if(cellText === 'OS TECNICO' || cellText === 'OS_TECNICO') headerMap.os_tecnico = idx;
+                            else if(cellText === 'UNIDADE') headerMap.unidade = idx;
+                        });
+                        capturing = true;
+                        continue;
+                    }
+                    
+                    if(capturing){
+                        const rowText = normalizedRow.join(' ');
+                        if(rowText.includes('TOTAL') || rowText.includes('RESUMO') || rowText.includes('SAIDAS') || rowText.includes('INICIO DE CX') || (!rawRow || rawRow.length===0) ){
+                            capturing = false;
+                            continue;
+                        }
+
+                        if(headerMap){
+                            const rawOS = rawRow[ headerMap.os ] || rawRow[0];
+                            if(!rawOS || String(rawOS).trim()==='') continue;
+                            
+                            let dataCell = headerMap.data !== undefined ? rawRow[headerMap.data] : rawRow[1];
+                            let dateISO = parseDateCell(dataCell) || null;
+                            if(!dateISO && String(dataCell).trim().length===8 && /^\d{2}\/\d{2}\/\d{4}$/.test(String(dataCell))) dateISO = parseDateCell(dataCell);
+                            
+                            const valorOsCell = headerMap.valor_os!==undefined ? rawRow[headerMap.valor_os] : rawRow[4];
+                            const valorMoCell = headerMap.valor_mo!==undefined ? rawRow[headerMap.valor_mo] : rawRow[5];
+                            const pagamentoCell = headerMap.pagamento!==undefined ? rawRow[headerMap.pagamento] : rawRow[6];
+                            const tecnicoCell = headerMap.tecnico!==undefined ? rawRow[headerMap.tecnico] : rawRow[7];
+                            const osTecnicoCell = headerMap.os_tecnico!==undefined ? rawRow[headerMap.os_tecnico] : '';
+                            const unidadeCell = headerMap.unidade!==undefined ? rawRow[headerMap.unidade] : unidadeDetect;
+                            
+                            const vOs = parseMoneyCell(valorOsCell);
+                            const vMo = parseMoneyCell(valorMoCell);
+                            const totalValor = (vOs + vMo);
+                            
+                            const item = {
+                                os: String(rawOS || '').toString(),
+                                data: formatDate(dateISO || '2000-01-01'),
+                                cliente: String(rawRow[ headerMap.cliente !== undefined ? headerMap.cliente : 2 ] || ''),
+                                placa: String(rawRow[ headerMap.placa !== undefined ? headerMap.placa : 3 ] || ''),
+                                valor_os: vOs.toFixed(2),
+                                valor_mo: vMo.toFixed(2),
+                                valor: totalValor.toFixed(2),
+                                pagamento: String(pagamentoCell || '').trim(),
+                                tecnico: String(tecnicoCell || '').trim(),
+                                os_tecnico: String(osTecnicoCell || '').trim(),
+                                unidade: String(unidadeCell || '').trim()
+                            };
+                            dadosCombinados.push(item);
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error("Erro ao ler o arquivo Excel:", error);
+                alert(`Erro ao processar o arquivo ${file.name}. Verifique o formato.`);
+            }
+
+            arquivosProcessados++;
+            if (arquivosProcessados === files.length) {
+                salvarDadosImportados(dadosCombinados);
+            }
+        };
+        reader.readAsBinaryString(file);
+    }
+
+    // Função para salvar no Firestore (Batch Write)
+    function salvarDadosImportados(dados){
+        if(dados.length === 0) {
+            alert('Nenhuma O.S. válida para importação encontrada.');
+            document.getElementById('loadingOverlay').style.display = 'none';
+            document.getElementById('inputExcel').value = null;
             return;
         }
 
-        const dataForExport = osData.map(item => ({
-            OS: item.os || '',
-            Data: formatDate(item.data) || '',
-            Cliente: item.cliente || '',
-            Placa: item.placa || '',
-            'Valor OS (Peças)': (item.valor_os || 0).toFixed(2).replace('.', ','),
-            'Valor MO': (item.valor_mo || 0).toFixed(2).replace('.', ','),
-            'Valor Total': (item.valor || 0).toFixed(2).replace('.', ','),
-            Pagamento: item.pagamento || '',
-            Técnico: item.tecnico || '',
-            'OS Técnico': item.os_tecnico || '',
-            Unidade: item.unidade || ''
-        }));
+        const batch = db.batch();
+        let importCount = 0;
 
-        const ws = XLSX.utils.json_to_sheet(dataForExport);
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "OrdensServico");
-        XLSX.writeFile(wb, `Ordens_Servico_Exportacao_${new Date().toLocaleDateString('pt-BR').replace(/\//g, '-')}.xlsx`);
-    }
-
-    function importExcel() {
-        // ... (Função importExcel é a mesma)
-        document.getElementById('inputExcel').click();
-    }
-
-    function lerExcel(event) {
-        // ... (Função lerExcel é a mesma, com a lógica de importação)
-        const file = event.target.files[0];
-        if (!file) return;
-
-        document.getElementById('loadingOverlay').style.display = 'flex';
-        const reader = new FileReader();
-
-        reader.onload = function(e) {
-            const data = new Uint8Array(e.target.result);
-            const workbook = XLSX.read(data, { type: 'array', cellDates: true, dateNF: 'yyyy-mm-dd' });
-            const sheetName = workbook.SheetNames[0];
-            const worksheet = workbook.Sheets[sheetName];
-            
-            // Converte para JSON, mantendo a formatação e tipos corretos
-            const json = XLSX.utils.sheet_to_json(worksheet, { header: 1, raw: false, defval: null });
-            
-            if (json.length < 2) {
-                alert('O arquivo Excel não contém dados válidos.');
-                document.getElementById('loadingOverlay').style.display = 'none';
-                return;
+        dados.forEach(item => {
+            if(item.os && item.data && item.cliente){
+                const newDocRef = osCollection.doc(); 
+                batch.set(newDocRef, { ...item, timestamp: firebase.firestore.FieldValue.serverTimestamp() });
+                importCount++;
             }
+        });
 
-            const headerRow = json[0].map(normalizeHeader);
-            const records = json.slice(1);
-            let importCount = 0;
-
-            const mapHeader = (colName) => {
-                const index = headerRow.findIndex(h => h.includes(colName));
-                return index !== -1 ? index : null;
-            };
-
-            const osIndex = mapHeader('OS');
-            const dataIndex = mapHeader('DATA');
-            const clienteIndex = mapHeader('CLIENTE');
-            const placaIndex = mapHeader('PLACA');
-            const valorOsIndex = mapHeader('VALOR OS');
-            const valorMoIndex = mapHeader('VALOR MO');
-            const pagamentoIndex = mapHeader('PAGAMENTO');
-            const tecnicoIndex = mapHeader('TÉCNICO');
-            const osTecnicoIndex = mapHeader('OS TÉCNICO') || mapHeader('OS TECNICO');
-            const unidadeIndex = mapHeader('UNIDADE');
-
-            if (osIndex === null || dataIndex === null || clienteIndex === null || pagamentoIndex === null) {
-                alert('Cabeçalhos obrigatórios não encontrados (O.S, Data, Cliente, Pagamento). Verifique o formato da sua planilha.');
-                document.getElementById('loadingOverlay').style.display = 'none';
-                return;
-            }
-
-            const batch = db.batch();
-
-            records.forEach(row => {
-                const os = String(row[osIndex] || '').trim();
-                const data = parseDateCell(row[dataIndex]); 
-                const cliente = String(row[clienteIndex] || '').trim();
-                const placa = String(row[placaIndex] || '').trim();
-                const valor_os = parseMoneyCell(row[valorOsIndex]);
-                const valor_mo = parseMoneyCell(row[valorMoIndex]);
-                const pagamento = String(row[pagamentoIndex] || '').trim();
-                const tecnico = String(row[tecnicoIndex] || '').trim();
-                const os_tecnico = String(row[osTecnicoIndex] || '').trim();
-                const unidade = String(row[unidadeIndex] || 'COTIA').trim().toUpperCase();
-
-                if (os && data && cliente && pagamento) {
-                    const dataToSave = {
-                        os,
-                        data,
-                        cliente,
-                        placa,
-                        valor_os,
-                        valor_mo,
-                        valor: valor_os + valor_mo,
-                        pagamento,
-                        tecnico,
-                        os_tecnico,
-                        unidade,
-                        timestamp: firebase.firestore.FieldValue.serverTimestamp()
-                    };
-
-                    const newDocRef = osCollection.doc(); 
-                    batch.set(newDocRef, dataToSave);
-                    importCount++;
-                }
-            });
-
-            if (importCount > 0) {
-                batch.commit()
-                    .then(() => {
-                        alert(`${importCount} Ordens de Serviço importadas com sucesso!`);
-                    })
-                    .catch(error => {
-                        console.error("Erro ao realizar o Batch Write:", error);
-                        alert(`Erro ao importar dados. ${error.message}. Verifique as Regras de Escrita no Firestore.`);
-                    })
-                    .finally(() => {
-                        document.getElementById('loadingOverlay').style.display = 'none';
-                        document.getElementById('inputExcel').value = ''; // Limpa o input
-                    });
-            } else {
-                alert('Nenhuma O.S. válida encontrada para importação. Verifique se os campos obrigatórios estão preenchidos.');
-                document.getElementById('loadingOverlay').style.display = 'none';
-            }
-        };
-
-        reader.readAsArrayBuffer(file);
-    }
-
-    async function limparDados() {
-        // ... (Função limparDados é a mesma, com aviso sobre regras de escrita)
-        if (confirm('ATENÇÃO: Deseja realmente DELETAR TODAS AS ORDENS DE SERVIÇO? Esta ação é irreversível.')) {
-            document.getElementById('loadingOverlay').style.display = 'flex';
-            try {
-                // Desabilitar o listener temporariamente para evitar recargas excessivas
-                if (unsubscribeListener) {
-                    unsubscribeListener();
-                }
-
-                const snapshot = await osCollection.get();
-                const batch = db.batch();
-                let deleteCount = 0;
-
-                snapshot.docs.forEach(doc => {
-                    batch.delete(doc.ref);
-                    deleteCount++;
+        if (importCount > 0) {
+            batch.commit()
+                .then(() => {
+                    alert(`${importCount} Ordens de Serviço importadas com sucesso!`);
+                })
+                .catch(error => {
+                    console.error("Erro ao realizar o Batch Write:", error);
+                    alert(`Erro ao importar dados. Verifique as Regras de Escrita no Firestore. Detalhe: ${error.message}`);
+                })
+                .finally(() => {
+                    document.getElementById('loadingOverlay').style.display = 'none';
+                    document.getElementById('inputExcel').value = null;
                 });
-
-                await batch.commit();
-                alert(`${deleteCount} Ordens de Serviço deletadas com sucesso.`);
-            } catch (error) {
-                console.error("Erro ao limpar dados:", error);
-                alert(`Erro ao limpar dados: ${error.message}. Verifique as Regras de Escrita no Firestore.`);
-            } finally {
-                // Reativar o listener para carregar o estado atual (vazio)
-                setupFirestoreListener(); 
-                document.getElementById('loadingOverlay').style.display = 'none';
-            }
+        } else {
+            alert('Nenhuma O.S. válida para importação encontrada.');
+            document.getElementById('loadingOverlay').style.display = 'none';
+            document.getElementById('inputExcel').value = null;
         }
     }
+
+    // Inicia o processamento dos arquivos
+    Array.from(files).forEach(processarArquivo);
+}
+
+/* -------------------------   PDF (Atualizado com ValorOS)   ------------------------- */
+async function imprimirPDF(filtro = null) {
+    document.getElementById('loadingOverlay').style.display = 'flex';
+    
+    // 1. Filtrar dados com base nos filtros da tela
+    let dadosFiltrados = osData; 
+    const unidadeFiltro = document.getElementById('unidade').value;
+    const dataInicioFiltro = document.getElementById('dataInicio').value;
+    const dataFimFiltro = document.getElementById('dataFim').value;
+    const tecnicoFiltro = document.getElementById('tecnicoFiltro').value;
+    const termoBusca = document.getElementById('busca').value.toLowerCase();
+
+    dadosFiltrados = dadosFiltrados.filter(item => {
+        const itemDate = item.data ? item.data.split('/').reverse().join('-') : '2000-01-01';
+        if(unidadeFiltro && item.unidade !== unidadeFiltro) return false;
+        if(tecnicoFiltro && item.tecnico !== tecnicoFiltro) return false;
+        if(dataInicioFiltro && itemDate < dataInicioFiltro) return false;
+        if(dataFimFiltro && itemDate > dataFimFiltro) return false;
+        if((item.cliente||'').toUpperCase().includes('CANCELADA')) return false;
+        if(termoBusca && !((item.cliente||'').toLowerCase().includes(termoBusca) || (item.placa||'').toLowerCase().includes(termoBusca) || (item.os||'').toLowerCase().includes(termoBusca))) return false;
+        return true;
+    });
+
+    let reportTitle = 'Relatório Geral de Ordens de Serviço';
+
+    // 2. Aplicar o filtro do botão, se houver
+    switch (filtro) {
+        case 'ValorOS': // NOVO FILTRO
+            dadosFiltrados = dadosFiltrados.filter(item => parseFloat(item.valor_os || 0) > 0);
+            reportTitle = 'Relatório de TOTAL GERAL (VALOR OS - PEÇAS)';
+            break;
+        case 'MaoDeObra':
+            dadosFiltrados = dadosFiltrados.filter(item => parseFloat(item.valor_mo || 0) > 0);
+            reportTitle = 'Relatório de MÃO DE OBRA';
+            break;
+        case 'Faturado':
+        case 'Em Aberto':
+        case 'PIX':
+        case 'Dinheiro':
+        case 'Débito':
+        case 'Crédito':
+            dadosFiltrados = dadosFiltrados.filter(item => (item.pagamento || '').trim() === filtro);
+            reportTitle = `Relatório de O.S. Pagas em ${filtro}`;
+            break;
+        default:
+            // Filtro geral
+            break;
+    }
+    
+    // 3. Cálculos e Preparação para PDF
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF('l', 'mm', 'a4'); 
+    
+    // Colunas (se o filtro for ValorOS ou MaoDeObra, a coluna Valor Total no PDF será a soma dos dois)
+    const colunas = ['O.S', 'DATA', 'CLIENTE', 'PLACA', 'VALOR OS', 'VALOR MO', 'VALOR (TOTAL)', 'PAGAMENTO', 'TECNICO', 'UNIDADE'];
+    
+    const dataTable = dadosFiltrados.map(item => {
+        const valorOs = parseFloat(item.valor_os || 0);
+        const valorMo = parseFloat(item.valor_mo || 0);
+        const valorTotal = valorOs + valorMo;
+        
+        return [
+            item.os || '',
+            item.data || '',
+            item.cliente || '',
+            item.placa || '',
+            `R$ ${valorOs.toFixed(2).replace('.', ',')}`,
+            `R$ ${valorMo.toFixed(2).replace('.', ',')}`,
+            `R$ ${valorTotal.toFixed(2).replace('.', ',')}`,
+            item.pagamento || '',
+            item.tecnico || '',
+            item.unidade || ''
+        ];
+    });
+
+    // Cálculos para o Rodapé
+    const totalOsPDF = dadosFiltrados.reduce((sum, item) => sum + parseFloat(item.valor_os || 0), 0);
+    const totalMoPDF = dadosFiltrados.reduce((sum, item) => sum + parseFloat(item.valor_mo || 0), 0);
+    const totalGeralPDF = dadosFiltrados.reduce((sum, item) => sum + (parseFloat(item.valor_os || 0) + parseFloat(item.valor_mo || 0)), 0);
+
+    const footData = [
+        ['', '', '', '', 'Total OS:', `R$ ${totalOsPDF.toFixed(2).replace('.', ',')}`, 'Total MO:', `R$ ${totalMoPDF.toFixed(2).replace('.', ',')}`, 'Total Geral:', `R$ ${totalGeralPDF.toFixed(2).replace('.', ',')}`]
+    ];
+    
+    // Título no PDF
+    doc.setFontSize(16);
+    doc.text(reportTitle, 14, 15);
+    doc.setFontSize(10);
+    doc.text(`Filtros: Unidade=${unidadeFiltro||'Todas'}, Técnico=${tecnicoFiltro||'Todos'}, Período=${dataInicioFiltro?formatDate(dataInicioFiltro):'Início'} a ${dataFimFiltro?formatDate(dataFimFiltro):'Fim'}`, 14, 22);
+
+    // Configuração da Tabela
+    doc.autoTable({
+        startY: 30,
+        head: [colunas],
+        body: dataTable,
+        foot: footData,
+        footStyles: { fillColor: [50, 50, 50], textColor: 255, fontStyle: 'bold', fontSize: 10, halign: 'center' },
+        styles: { fontSize: 8, cellPadding: 2, overflow: 'linebreak' },
+        headStyles: { fillColor: [74, 144, 226] },
+        columnStyles: {
+            4: { cellWidth: 20, halign: 'right' }, // VALOR OS
+            5: { cellWidth: 20, halign: 'right' }, // VALOR MO
+            6: { cellWidth: 20, halign: 'right' }  // VALOR (TOTAL)
+        },
+        didParseCell: function(data) {
+            if (data.section === 'body') {
+                const pagamento = dadosFiltrados[data.row.index].pagamento;
+                if (paymentColors && paymentColors[pagamento]) { 
+                    data.cell.styles.fillColor = paymentColors[pagamento];
+                }
+            }
+        },
+        didDrawPage: function(data) {
+            const pageCount = doc.internal.getNumberOfPages();
+            doc.setFontSize(8);
+            doc.text(`Página ${data.pageNumber} de ${pageCount}`, doc.internal.pageSize.width - 20, doc.internal.pageSize.height - 5, { align: 'right' });
+        }
+    });
+
+    const today = new Date().toLocaleDateString('pt-BR').replace(/\//g, '-');
+    let filename = `Relatorio_VDI_${reportTitle.replace(/\s/g, '_')}_${today}.pdf`;
+
+    doc.save(filename);
+    document.getElementById('loadingOverlay').style.display = 'none';
+}
 </script>
 </body>
 </html>
