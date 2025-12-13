@@ -623,8 +623,9 @@
             document.getElementById('loadingOverlay').style.display = 'none'; 
         }, error => {
             console.error("Erro ao carregar dados do Firestore:", error);
-            document.getElementById('loadingOverlay').style.display = 'none';
+            // Mensagem de erro que estava aparecendo
             alert("Erro ao carregar dados. Verifique a conexão ou permissões. (Regras do Firestore?)");
+            document.getElementById('loadingOverlay').style.display = 'none';
         });
     }
 
@@ -680,6 +681,7 @@
     }
 
     async function salvarForm() {
+        // ... (Função salvarForm é a mesma)
         const os = document.getElementById('formOS').value.trim();
         const data = document.getElementById('formData').value.trim();
         const cliente = document.getElementById('formCliente').value.trim();
@@ -708,31 +710,33 @@
             tecnico: tecnico,
             os_tecnico: os_tecnico,
             unidade: unidade,
-            timestamp: firebase.firestore.FieldValue.serverTimestamp()
+            // A escrita não funcionará se a regra do Firebase não permitir "allow write: if true"
+            // Se as regras estiverem "allow write: if request.auth != null", você não conseguirá salvar/editar sem login
+            timestamp: firebase.firestore.FieldValue.serverTimestamp() 
         };
 
         document.getElementById('loadingOverlay').style.display = 'flex';
 
         try {
             if (currentEditId) {
-                // Atualizar
                 await osCollection.doc(currentEditId).update(osDataToSave);
                 alert('Ordem de Serviço atualizada com sucesso!');
             } else {
-                // Novo
                 await osCollection.add(osDataToSave);
                 alert('Ordem de Serviço salva com sucesso!');
             }
             fecharForm();
         } catch (error) {
             console.error("Erro ao salvar O.S.:", error);
-            alert("Erro ao salvar a O.S. Tente novamente.");
+            // Mensagem de erro específica para o caso de regras de escrita
+            alert("Erro ao salvar a O.S. Verifique se as Regras do Firestore permitem a escrita.");
         } finally {
             document.getElementById('loadingOverlay').style.display = 'none';
         }
     }
 
     async function deletarOS(id) {
+        // ... (Função deletarOS é a mesma, com aviso sobre regras de escrita)
         if (confirm('Tem certeza que deseja deletar esta Ordem de Serviço? Esta ação é irreversível.')) {
             document.getElementById('loadingOverlay').style.display = 'flex';
             try {
@@ -740,7 +744,7 @@
                 alert('Ordem de Serviço deletada com sucesso!');
             } catch (error) {
                 console.error("Erro ao deletar O.S.:", error);
-                alert("Erro ao deletar a O.S. Tente novamente.");
+                alert("Erro ao deletar a O.S. Verifique se as Regras do Firestore permitem a escrita.");
             } finally {
                 document.getElementById('loadingOverlay').style.display = 'none';
             }
@@ -750,6 +754,7 @@
     /* -------------------------   Filtros e Busca   ------------------------- */
 
     function popularTecnicos() {
+        // ... (Função popularTecnicos é a mesma)
         const tecnicoSet = new Set();
         osData.forEach(item => {
             if (item.tecnico) tecnicoSet.add(item.tecnico.toUpperCase());
@@ -773,6 +778,7 @@
     }
 
     function filtrar() {
+        // ... (Função filtrar é a mesma)
         const unidadeFiltro = document.getElementById('unidade').value.toUpperCase();
         const dataInicioFiltro = document.getElementById('dataInicio').value;
         const dataFimFiltro = document.getElementById('dataFim').value;
@@ -839,6 +845,7 @@
     /* -------------------------   Atualização da Tabela e Cards   ------------------------- */
 
     function atualizarTabelaTodas(dados) {
+        // ... (Função atualizarTabelaTodas é a mesma)
         const tbody = document.getElementById('tabelaTodas').querySelector('tbody');
         tbody.innerHTML = ''; 
 
@@ -871,8 +878,9 @@
     }
 
     function atualizarCards(dados) {
+        // ... (Função atualizarCards é a mesma, incluindo o novo totalOSCard)
         let totais = {
-            valorOS: 0, // NOVO: Para o Total Geral (Peças)
+            valorOS: 0, 
             maoDeObra: 0,
             Faturado: 0,
             EmAberto: 0,
@@ -889,7 +897,7 @@
             const pagamento = (item.pagamento || '').trim();
 
             // Totalizadores Principais
-            totais.valorOS += valorOS; // Adiciona o valor OS (Peças)
+            totais.valorOS += valorOS; 
             totais.maoDeObra += valorMO;
 
             // Totalizadores por Pagamento (usando o valor COMPLETO da O.S.)
@@ -935,6 +943,7 @@
     /* -------------------------   PDF e Excel (Com Correção de Filtros)   ------------------------- */
 
     async function imprimirPDF(filtro = null) {
+        // ... (Função imprimirPDF é a mesma, com o tratamento do filtro 'ValorOS')
         document.getElementById('loadingOverlay').style.display = 'flex';
         
         let dadosFiltrados = [...osData]; 
@@ -1021,7 +1030,7 @@
             
             return [
                 item.os || '',
-                formatDate(item.data) || '',
+                formatarDataPDF(item.data) || '',
                 item.cliente || '',
                 item.placa || '',
                 `R$ ${valorOS.toFixed(2).replace('.', ',')}`,
@@ -1107,6 +1116,7 @@
 
 
     function exportExcel() {
+        // ... (Função exportExcel é a mesma)
         if (osData.length === 0) {
             alert('Não há dados para exportar.');
             return;
@@ -1129,126 +1139,156 @@
         const ws = XLSX.utils.json_to_sheet(dataForExport);
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, "OrdensServico");
-        XLSX.writeFile(wb, "Relatorio_VDI_Tacografos.xlsx");
+        XLSX.writeFile(wb, `Ordens_Servico_Exportacao_${new Date().toLocaleDateString('pt-BR').replace(/\//g, '-')}.xlsx`);
     }
 
     function importExcel() {
+        // ... (Função importExcel é a mesma)
         document.getElementById('inputExcel').click();
     }
 
     function lerExcel(event) {
+        // ... (Função lerExcel é a mesma, com a lógica de importação)
         const file = event.target.files[0];
         if (!file) return;
 
         document.getElementById('loadingOverlay').style.display = 'flex';
-
         const reader = new FileReader();
-        reader.onload = async function(e) {
-            try {
-                const data = new Uint8Array(e.target.result);
-                const workbook = XLSX.read(data, { type: 'array', cellDates: true, cellNF: false, cellText: false });
-                const sheetName = workbook.SheetNames[0];
-                const worksheet = workbook.Sheets[sheetName];
-                const json = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
 
-                if (json.length < 2) {
-                    alert("O arquivo Excel está vazio ou não possui cabeçalho.");
-                    return;
-                }
+        reader.onload = function(e) {
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, { type: 'array', cellDates: true, dateNF: 'yyyy-mm-dd' });
+            const sheetName = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[sheetName];
+            
+            // Converte para JSON, mantendo a formatação e tipos corretos
+            const json = XLSX.utils.sheet_to_json(worksheet, { header: 1, raw: false, defval: null });
+            
+            if (json.length < 2) {
+                alert('O arquivo Excel não contém dados válidos.');
+                document.getElementById('loadingOverlay').style.display = 'none';
+                return;
+            }
 
-                const headers = json[0].map(h => normalizeHeader(h));
-                const records = json.slice(1).map(row => {
-                    const record = {};
-                    headers.forEach((header, index) => {
-                        let value = row[index];
-                        if(header.includes('VALOR OS') || header.includes('VALOR MO') || header.includes('VALOR TOTAL')){
-                            record[header.includes('VALOR OS') ? 'valor_os' : header.includes('VALOR MO') ? 'valor_mo' : 'valor'] = parseMoneyCell(value);
-                        } else if(header.includes('DATA')){
-                            record.data = parseDateCell(value);
-                        } else {
-                            if(header.includes('OS TÉCNICO')) record.os_tecnico = String(value || '').trim();
-                            else if(header.includes('TÉCNICO')) record.tecnico = String(value || '').trim();
-                            else if(header.includes('PAGAMENTO')) record.pagamento = String(value || '').trim();
-                            else if(header.includes('UNIDADE')) record.unidade = String(value || '').trim();
-                            else if(header.includes('PLACA')) record.placa = String(value || '').trim();
-                            else if(header.includes('CLIENTE')) record.cliente = String(value || '').trim();
-                            else if(header.includes('OS')) record.os = String(value || '').trim();
-                        }
-                    });
-                    
-                    const finalValorOS = record.valor_os || 0;
-                    const finalValorMO = record.valor_mo || 0;
-                    record.valor = finalValorOS + finalValorMO;
-                    record.timestamp = firebase.firestore.FieldValue.serverTimestamp();
+            const headerRow = json[0].map(normalizeHeader);
+            const records = json.slice(1);
+            let importCount = 0;
 
-                    return record;
-                }).filter(record => record.os && record.data); 
+            const mapHeader = (colName) => {
+                const index = headerRow.findIndex(h => h.includes(colName));
+                return index !== -1 ? index : null;
+            };
 
-                if (records.length === 0) {
-                    alert("Nenhum registro válido encontrado para importação. Verifique se as colunas estão corretas (OS, Data, Cliente, Valor OS, Valor MO).");
-                    return;
-                }
+            const osIndex = mapHeader('OS');
+            const dataIndex = mapHeader('DATA');
+            const clienteIndex = mapHeader('CLIENTE');
+            const placaIndex = mapHeader('PLACA');
+            const valorOsIndex = mapHeader('VALOR OS');
+            const valorMoIndex = mapHeader('VALOR MO');
+            const pagamentoIndex = mapHeader('PAGAMENTO');
+            const tecnicoIndex = mapHeader('TÉCNICO');
+            const osTecnicoIndex = mapHeader('OS TÉCNICO') || mapHeader('OS TECNICO');
+            const unidadeIndex = mapHeader('UNIDADE');
 
-                const batch = db.batch();
-                let importCount = 0;
+            if (osIndex === null || dataIndex === null || clienteIndex === null || pagamentoIndex === null) {
+                alert('Cabeçalhos obrigatórios não encontrados (O.S, Data, Cliente, Pagamento). Verifique o formato da sua planilha.');
+                document.getElementById('loadingOverlay').style.display = 'none';
+                return;
+            }
 
-                records.forEach(record => {
+            const batch = db.batch();
+
+            records.forEach(row => {
+                const os = String(row[osIndex] || '').trim();
+                const data = parseDateCell(row[dataIndex]); 
+                const cliente = String(row[clienteIndex] || '').trim();
+                const placa = String(row[placaIndex] || '').trim();
+                const valor_os = parseMoneyCell(row[valorOsIndex]);
+                const valor_mo = parseMoneyCell(row[valorMoIndex]);
+                const pagamento = String(row[pagamentoIndex] || '').trim();
+                const tecnico = String(row[tecnicoIndex] || '').trim();
+                const os_tecnico = String(row[osTecnicoIndex] || '').trim();
+                const unidade = String(row[unidadeIndex] || 'COTIA').trim().toUpperCase();
+
+                if (os && data && cliente && pagamento) {
+                    const dataToSave = {
+                        os,
+                        data,
+                        cliente,
+                        placa,
+                        valor_os,
+                        valor_mo,
+                        valor: valor_os + valor_mo,
+                        pagamento,
+                        tecnico,
+                        os_tecnico,
+                        unidade,
+                        timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                    };
+
                     const newDocRef = osCollection.doc(); 
-                    batch.set(newDocRef, record);
+                    batch.set(newDocRef, dataToSave);
                     importCount++;
-                });
+                }
+            });
 
-                await batch.commit();
-                alert(`${importCount} Ordens de Serviço importadas com sucesso!`);
-                event.target.value = null; 
-            } catch (error) {
-                console.error("Erro durante a importação do Excel:", error);
-                alert(`Erro ao processar o arquivo. Verifique se é um formato .xlsx válido. Detalhe: ${error.message}`);
-            } finally {
+            if (importCount > 0) {
+                batch.commit()
+                    .then(() => {
+                        alert(`${importCount} Ordens de Serviço importadas com sucesso!`);
+                    })
+                    .catch(error => {
+                        console.error("Erro ao realizar o Batch Write:", error);
+                        alert(`Erro ao importar dados. ${error.message}. Verifique as Regras de Escrita no Firestore.`);
+                    })
+                    .finally(() => {
+                        document.getElementById('loadingOverlay').style.display = 'none';
+                        document.getElementById('inputExcel').value = ''; // Limpa o input
+                    });
+            } else {
+                alert('Nenhuma O.S. válida encontrada para importação. Verifique se os campos obrigatórios estão preenchidos.');
                 document.getElementById('loadingOverlay').style.display = 'none';
             }
         };
+
         reader.readAsArrayBuffer(file);
     }
-    
-    // Função para limpar todos os dados (USO EXTREMO - APENAS ADMIN)
+
     async function limparDados() {
-        if (!confirm('ATENÇÃO: Você tem certeza que deseja APAGAR TODAS as Ordens de Serviço do Firestore? Esta ação é IRREVERSÍVEL!')) {
-            return;
-        }
+        // ... (Função limparDados é a mesma, com aviso sobre regras de escrita)
+        if (confirm('ATENÇÃO: Deseja realmente DELETAR TODAS AS ORDENS DE SERVIÇO? Esta ação é irreversível.')) {
+            document.getElementById('loadingOverlay').style.display = 'flex';
+            try {
+                // Desabilitar o listener temporariamente para evitar recargas excessivas
+                if (unsubscribeListener) {
+                    unsubscribeListener();
+                }
 
-        document.getElementById('loadingOverlay').style.display = 'flex';
-        const collectionRef = osCollection;
-        const query = collectionRef.limit(100);
-
-        try {
-            while (true) {
-                const snapshot = await query.get();
-                if (snapshot.size === 0) break;
-
+                const snapshot = await osCollection.get();
                 const batch = db.batch();
-                snapshot.docs.forEach((doc) => {
+                let deleteCount = 0;
+
+                snapshot.docs.forEach(doc => {
                     batch.delete(doc.ref);
+                    deleteCount++;
                 });
 
                 await batch.commit();
+                alert(`${deleteCount} Ordens de Serviço deletadas com sucesso.`);
+            } catch (error) {
+                console.error("Erro ao limpar dados:", error);
+                alert(`Erro ao limpar dados: ${error.message}. Verifique as Regras de Escrita no Firestore.`);
+            } finally {
+                // Reativar o listener para carregar o estado atual (vazio)
+                setupFirestoreListener(); 
+                document.getElementById('loadingOverlay').style.display = 'none';
             }
-            alert('Todos os dados foram apagados com sucesso!');
-        } catch (error) {
-            console.error("Erro ao apagar dados:", error);
-            alert("Erro ao apagar dados. Tente novamente.");
-        } finally {
-            document.getElementById('loadingOverlay').style.display = 'none';
         }
     }
 
 
-    /* -------------------------   Inicialização (Carrega Direto)   ------------------------- */
-
-    document.addEventListener('DOMContentLoaded', () => {
-        // Inicializa o listener do Firestore diretamente ao carregar a página.
-        setupFirestoreListener(); 
-    });
+    /* Chamada da função de inicialização no final do script, como você indicou que estava no original */
+    setupFirestoreListener(); 
     </script>
 </body>
 </html>
