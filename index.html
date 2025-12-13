@@ -201,7 +201,7 @@ const firebaseConfig = {
    authDomain: "vditacografosfrentecaixa.firebaseapp.com",
   databaseURL: "https://vditacografosfrentecaixa-default-rtdb.firebaseio.com",
   projectId: "vditacografosfrentecaixa",
-  storageBucket: "vditacografosfrentecaixa.firebaseapp.com", // CORRIGIDO: O SÓ DEVE SER .app
+  storageBucket: "vditacografosfrentecaixa.firebaseapp.com", 
    messagingSenderId: "1008625665373",
   appId: "1:1008625665373:web:1f1870898ecb04b4b854b4",
   measurementId: "G-9SYYV1VLNY"
@@ -217,7 +217,6 @@ try {
     osCollection = db.collection('ordens_servico');
 } catch (e) {
     console.error("Erro na inicialização do Firebase:", e);
-    // Poderia mostrar uma mensagem mais amigável aqui, mas o loadingOverlay já fará isso.
 }
 
 let osData = [];
@@ -604,7 +603,7 @@ function atualizarTabelaTodas(){
     document.getElementById('totalCredito').innerHTML=`CRÉDITO<br>R$ ${totalCred.toFixed(2).replace('.', ',')}`;}
 
 
-/* -------------------------   Função Imprimir PDF   ------------------------- */
+/* -------------------------   Função Imprimir PDF (CORRIGIDA)  ------------------------- */
 function imprimirPDF(filtroPagamento = null) {
     const dadosParaPDF = getDadosFiltrados(filtroPagamento, true, true);
 
@@ -622,8 +621,9 @@ function imprimirPDF(filtroPagamento = null) {
     const body = dadosParaPDF.map(item => {
         const vOs = parseFloat(item.valor_os || 0);
         const vMo = parseFloat(item.valor_mo || 0);
-        const vTotal = parseFloat(item.valor || (vOs + vMo));
-
+        const vTotal = parseFloat(item.valor || (vOs + vMo)); // Valor Total no Firebase
+        
+        // CORREÇÃO AQUI: Garante que todos os valores sejam somados para o rodapé
         totalGeral += vTotal;
         totalOS += vOs;
         totalMO += vMo;
@@ -646,7 +646,7 @@ function imprimirPDF(filtroPagamento = null) {
         ['', '', '', '', 
          `Total OS: R$ ${totalOS.toFixed(2).replace('.', ',')}`, 
          `Total MO: R$ ${totalMO.toFixed(2).replace('.', ',')}`, 
-         `Total Geral: R$ ${totalGeral.toFixed(2).replace('.', ',')}`, 
+         `Total Geral: R$ ${totalGeral.toFixed(2).replace('.', ',')}`, // Usa totalGeral calculado
          '', '', '']
     ];
 
@@ -677,9 +677,9 @@ function imprimirPDF(filtroPagamento = null) {
         footStyles: { fillColor: [51, 51, 51], textColor: [255, 255, 255], fontStyle: 'bold', halign: 'center' },
         styles: { fontSize: 8 },
         columnStyles: {
-            'VALOR OS': { halign: 'right' },
-            'VALOR MO': { halign: 'right' },
-            'VALOR (TOTAL)': { halign: 'right', fontStyle: 'bold' }
+            4: { halign: 'right' }, // Valor OS
+            5: { halign: 'right' }, // Valor MO
+            6: { halign: 'right', fontStyle: 'bold' } // Valor Total
         }
     });
 
@@ -884,7 +884,6 @@ async function salvarImportacao(data){
 
 /* -------------------------   Garante que a verificação de Auth inicie apenas após o DOM carregar   ------------------------- */
 document.addEventListener('DOMContentLoaded', () => {
-    // Atraso intencional para garantir que o Firebase Auth esteja pronto
     setTimeout(checkAuthState, 500); 
 });
 
