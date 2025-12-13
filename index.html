@@ -8,6 +8,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://unpkg.com/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
@@ -20,7 +21,7 @@
             padding:20px; 
             text-align:center; 
             box-shadow:0 4px 6px rgba(0,0,0,0.1); 
-            position: relative; /* Para posicionar o botão Sair */
+            position: relative; 
         }
         .container { padding:20px; max-width:1200px; margin:auto; }
         
@@ -30,7 +31,7 @@
             flex-wrap:wrap; 
             gap:10px; 
             margin-bottom:20px; 
-            align-items: center; /* Alinha verticalmente */
+            align-items: center; 
         }
         
         button { background:#4a90e2; color:white; border:none; padding:10px 18px; border-radius:8px; cursor:pointer; font-weight:600; transition:0.2s; display:flex; align-items:center; gap:5px; white-space: nowrap; }
@@ -200,19 +201,27 @@ const firebaseConfig = {
    authDomain: "vditacografosfrentecaixa.firebaseapp.com",
   databaseURL: "https://vditacografosfrentecaixa-default-rtdb.firebaseio.com",
   projectId: "vditacografosfrentecaixa",
-  storageBucket: "vditacografosfrentecaixa.firebasestorage.app", 
+  storageBucket: "vditacografosfrentecaixa.firebaseapp.com", // CORRIGIDO: O SÓ DEVE SER .app
    messagingSenderId: "1008625665373",
   appId: "1:1008625665373:web:1f1870898ecb04b4b854b4",
   measurementId: "G-9SYYV1VLNY"
 };
 
 // Inicialização dos serviços (Versão 8)
-const app = firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore(app);
-const auth = firebase.auth(); // Inicializa o Auth
-const osCollection = db.collection('ordens_servico');
+let app, db, auth, osCollection;
+
+try {
+    app = firebase.initializeApp(firebaseConfig);
+    db = firebase.firestore(app);
+    auth = firebase.auth(); 
+    osCollection = db.collection('ordens_servico');
+} catch (e) {
+    console.error("Erro na inicialização do Firebase:", e);
+    // Poderia mostrar uma mensagem mais amigável aqui, mas o loadingOverlay já fará isso.
+}
+
 let osData = [];
-window.firestoreListenerStarted = false; // Flag para garantir que o listener só inicie uma vez
+window.firestoreListenerStarted = false; 
 
 /* -------------------------   Helpers   ------------------------- */
 function formatDate(iso){
@@ -278,6 +287,11 @@ function handleLogout() {
 }
 
 function checkAuthState() {
+    if (!auth) {
+        console.error("Firebase Auth não inicializado. Verifique a configuração.");
+        document.getElementById('loadingOverlay').style.display = 'none';
+        return;
+    }
     auth.onAuthStateChanged(user => {
         if (user) {
             document.getElementById('loginModal').style.display = 'none';
@@ -299,6 +313,11 @@ function checkAuthState() {
 /* -------------------------   Firestore listener   ------------------------- */
 function setupFirestoreListener(){
     document.getElementById('loadingOverlay').style.display = 'flex';
+    if (!osCollection) {
+        console.error("Firestore Collection não inicializada.");
+        document.getElementById('loadingOverlay').style.display = 'none';
+        return;
+    }
     osCollection.onSnapshot(snapshot => {
         const changes = snapshot.docChanges();
         changes.forEach(change => {
@@ -343,7 +362,6 @@ function getTecnicosUnicos(){
     if(current && Array.from(select.options).some(o=>o.value===current)) select.value = current;
 }
 
-checkAuthState(); 
 
 /* -------------------------   Form open/close & save   ------------------------- */
 function abrirForm(item=null){
@@ -456,13 +474,9 @@ async function apagarOS(id){
 }
 
 
-/* -------------------------   Função Central de Filtro (CORREÇÃO DE CRÉDITO/DÉBITO)   ------------------------- */
+/* -------------------------   Função Central de Filtro   ------------------------- */
 /**
  * Retorna o array de dados filtrados baseado nos filtros de tela E no filtro de pagamento.
- * @param {string} filtroPagamento - 'Faturado', 'PIX', 'MãoDeObra', etc. (null para todos)
- * @param {boolean} aplicarFiltrosDeTela - Se deve aplicar filtros de data, unidade e técnico.
- * @param {boolean} ignorarBusca - Se deve ignorar o filtro de busca de texto (usado para totais/PDF).
- * @returns {Array} Array de objetos de O.S. filtrados.
  */
 function getDadosFiltrados(filtroPagamento = null, aplicarFiltrosDeTela = true, ignorarBusca = true) {
     // 1. Capturar os filtros da tela
@@ -493,8 +507,7 @@ function getDadosFiltrados(filtroPagamento = null, aplicarFiltrosDeTela = true, 
 
         // Filtro de Pagamento (Se a função foi chamada por um cartão de resumo)
         if (filtroPagamento) {
-            // Normaliza o filtro de entrada, removendo acentos e espaços
-            const normalizedFiltro = filtroPagamento.toLowerCase().replace(/\s/g, '').replace('á', 'a').replace('é', 'e').replace('e', 'é').replace('í', 'i').replace('ó', 'o');
+            const normalizedFiltro = filtroPagamento.toLowerCase().replace(/\s/g, '').replace('á', 'a').replace('é', 'e').replace('í', 'i').replace('ó', 'o');
             
             if (normalizedFiltro === 'maodeobra') {
                  return (parseFloat(item.valor_mo || 0) > 0);
@@ -508,7 +521,7 @@ function getDadosFiltrados(filtroPagamento = null, aplicarFiltrosDeTela = true, 
                  if (itemPagamento !== 'dinheiro') return false;
             } 
             
-            // CORREÇÃO PARA CRÉDITO E DÉBITO: Checa as duas formas de escrita
+            // Tratamento robusto para Débito e Crédito (com ou sem acento)
             else if (normalizedFiltro === 'débito' || normalizedFiltro === 'debito') {
                  if (itemPagamento !== 'débito' && itemPagamento !== 'debito') return false;
             } else if (normalizedFiltro === 'crédito' || normalizedFiltro === 'credito') {
@@ -533,10 +546,10 @@ function atualizarTabelaTodas(){
     tbody.innerHTML = '';
     
     // 1. DADOS PARA A TABELA (Inclui filtros de tela + filtro de busca)
-    const dadosParaTabela = getDadosFiltrados(null, true, false); // busca=false (aplicar busca)
+    const dadosParaTabela = getDadosFiltrados(null, true, false); 
 
     // 2. DADOS PARA OS TOTAIS (Inclui filtros de tela, mas IGNORA a busca)
-    const dadosParaTotais = getDadosFiltrados(null, true, true); // busca=true (ignorar busca)
+    const dadosParaTotais = getDadosFiltrados(null, true, true); 
 
 
     let totalF = 0, totalAberto = 0, totalPix = 0, totalDin = 0, totalDeb = 0, totalCred = 0;    
@@ -554,7 +567,6 @@ function atualizarTabelaTodas(){
         if(itemPagamento === 'em aberto') totalAberto += valorTotal;
         if(itemPagamento.includes('pix')) totalPix += valorTotal; 
         if(itemPagamento === 'dinheiro') totalDin += valorTotal;
-        // CORREÇÃO: Usar as duas formas para Débito/Crédito
         if(itemPagamento === 'débito' || itemPagamento === 'debito') totalDeb += valorTotal;
         if(itemPagamento === 'crédito' || itemPagamento === 'credito') totalCred += valorTotal;
     });
@@ -588,7 +600,7 @@ function atualizarTabelaTodas(){
     document.getElementById('totalAberto').innerHTML=`EM ABERTO<br>R$ ${totalAberto.toFixed(2).replace('.', ',')}`;
     document.getElementById('totalPix').innerHTML=`PIX<br>R$ ${totalPix.toFixed(2).replace('.', ',')}`;
     document.getElementById('totalDinheiro').innerHTML=`DINHEIRO<br>R$ ${totalDin.toFixed(2).replace('.', ',')}`;
-    document.getElementById('totalDebito').innerHTML=`DÉBITO<br>R$ ${totalDebito.toFixed(2).replace('.', ',')}`;
+    document.getElementById('totalDebito').innerHTML=`DÉBITO<br>R$ ${totalDeb.toFixed(2).replace('.', ',')}`;
     document.getElementById('totalCredito').innerHTML=`CRÉDITO<br>R$ ${totalCred.toFixed(2).replace('.', ',')}`;}
 
 
@@ -869,6 +881,13 @@ async function salvarImportacao(data){
     document.getElementById('loadingOverlay').style.display = 'none';
     alert(`Importação concluída. Sucesso: ${successCount}. Falhas: ${failCount}.`);
 }
+
+/* -------------------------   Garante que a verificação de Auth inicie apenas após o DOM carregar   ------------------------- */
+document.addEventListener('DOMContentLoaded', () => {
+    // Atraso intencional para garantir que o Firebase Auth esteja pronto
+    setTimeout(checkAuthState, 500); 
+});
+
 </script>
 </body>
 </html>
