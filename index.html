@@ -473,9 +473,10 @@ async function apagarOS(id){
 }
 
 
-/* -------------------------   Função Central de Filtro   ------------------------- */
+/* -------------------------   Função Central de Filtro (AJUSTADA)  ------------------------- */
 /**
  * Retorna o array de dados filtrados baseado nos filtros de tela E no filtro de pagamento.
+ * A principal diferença aqui é o tratamento de Débito/Crédito e Mão de Obra.
  */
 function getDadosFiltrados(filtroPagamento = null, aplicarFiltrosDeTela = true, ignorarBusca = true) {
     // 1. Capturar os filtros da tela
@@ -509,6 +510,7 @@ function getDadosFiltrados(filtroPagamento = null, aplicarFiltrosDeTela = true, 
             const normalizedFiltro = filtroPagamento.toLowerCase().replace(/\s/g, '').replace('á', 'a').replace('é', 'e').replace('í', 'i').replace('ó', 'o');
             
             if (normalizedFiltro === 'maodeobra') {
+                 // Para Mão de Obra, filtramos todas as OS com valor MO > 0
                  return (parseFloat(item.valor_mo || 0) > 0);
             } else if (normalizedFiltro === 'faturado') {
                  if (itemPagamento !== 'faturado') return false;
@@ -603,9 +605,11 @@ function atualizarTabelaTodas(){
     document.getElementById('totalCredito').innerHTML=`CRÉDITO<br>R$ ${totalCred.toFixed(2).replace('.', ',')}`;}
 
 
-/* -------------------------   Função Imprimir PDF (CORRIGIDA)  ------------------------- */
+/* -------------------------   Função Imprimir PDF (AJUSTADA)  ------------------------- */
 function imprimirPDF(filtroPagamento = null) {
-    const dadosParaPDF = getDadosFiltrados(filtroPagamento, true, true);
+    // A função getDadosFiltrados JÁ APLICA os filtros de tela (data/unidade/técnico)
+    // E, se 'filtroPagamento' for fornecido (clique no card), aplica o filtro do card.
+    const dadosParaPDF = getDadosFiltrados(filtroPagamento, true, true); 
 
     if (dadosParaPDF.length === 0) {
         alert('Nenhuma Ordem de Serviço encontrada para o(s) filtro(s) selecionado(s).');
@@ -621,9 +625,9 @@ function imprimirPDF(filtroPagamento = null) {
     const body = dadosParaPDF.map(item => {
         const vOs = parseFloat(item.valor_os || 0);
         const vMo = parseFloat(item.valor_mo || 0);
-        const vTotal = parseFloat(item.valor || (vOs + vMo)); // Valor Total no Firebase
+        const vTotal = parseFloat(item.valor || (vOs + vMo));
         
-        // CORREÇÃO AQUI: Garante que todos os valores sejam somados para o rodapé
+        // Garante que todos os valores sejam somados para o rodapé
         totalGeral += vTotal;
         totalOS += vOs;
         totalMO += vMo;
@@ -646,11 +650,13 @@ function imprimirPDF(filtroPagamento = null) {
         ['', '', '', '', 
          `Total OS: R$ ${totalOS.toFixed(2).replace('.', ',')}`, 
          `Total MO: R$ ${totalMO.toFixed(2).replace('.', ',')}`, 
-         `Total Geral: R$ ${totalGeral.toFixed(2).replace('.', ',')}`, // Usa totalGeral calculado
+         `Total Geral: R$ ${totalGeral.toFixed(2).replace('.', ',')}`, 
          '', '', '']
     ];
 
-    const titulo = filtroPagamento ? `VDI TACÓGRAFOS - RELATÓRIO ${filtroPagamento.toUpperCase().replace('MÃODEOBRA', 'MÃO DE OBRA').replace('EM ABERTO', 'EM ABERTO')}` : 'VDI TACÓGRAFOS - RELATÓRIO GERAL';
+    // Lógica para nome do relatório
+    let tituloFiltro = filtroPagamento ? filtroPagamento.toUpperCase().replace('MÃODEOBRA', 'MÃO DE OBRA').replace('EM ABERTO', 'EM ABERTO') : 'GERAL';
+    const titulo = `VDI TACÓGRAFOS - RELATÓRIO ${tituloFiltro}`;
     
     const dataInicio = document.getElementById('dataInicio').value;
     const dataFim = document.getElementById('dataFim').value;
