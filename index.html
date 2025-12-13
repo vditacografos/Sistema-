@@ -165,7 +165,6 @@
         }
 
         /* Cores dos Cards */
-        /* NOVO: TOTAL GERAL (Valor OS) */
         #totalOSCard { background-color: #007bff; } 
         #totalMO { background-color: #794BC4; } /* Roxo */
         #totalFaturadas { background-color: #38A0F2; } /* Azul */
@@ -358,7 +357,7 @@
 
         /* ------------------------- Login Modal ------------------------- */
         #loginModal {
-            display: flex;
+            display: flex; /* Começa visível no HTML, será escondido pelo JS após o login */
             position: fixed;
             z-index: 3000;
             left: 0;
@@ -595,6 +594,7 @@
     ============================================= */
     // 🛑 🛑 🛑 IMPORTANTE: VERIFIQUE SE ESTA CHAVE API É REAL E VÁLIDA PARA SEU PROJETO! 🛑 🛑 🛑
     const firebaseConfig = {
+      // Use os dados do seu projeto aqui!
       apiKey: "AIzaSyC5up-MQFQNeH1ftI8KTMoXI5pY2D2jpgM", 
       authDomain: "vditacografosfrentecaixa.firebaseapp.com",
       databaseURL: "https://vditacografosfrentecaixa-default-rtdb.firebaseio.com",
@@ -605,6 +605,9 @@
       measurementId: "G-9SYYV1VLNY"
     };
 
+    // Variável para armazenar a função de cancelamento do listener
+    let unsubscribeListener = null;
+
     // Inicialização dos serviços (Versão 8)
     const app = firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore(app);
@@ -612,7 +615,6 @@
     const osCollection = db.collection('ordens_servico');
 
     let osData = [];
-    window.firestoreListenerStarted = false; // Flag para garantir que o listener só inicie uma vez
 
     /* cores para pdf (seu original) */
     const paymentColors = {
@@ -675,7 +677,7 @@
         try {
             document.getElementById('loadingOverlay').style.display = 'flex';
             await auth.signInWithEmailAndPassword(email, password);
-            // onAuthStateChanged irá lidar com o restante
+            // O onAuthStateChanged (abaixo) irá lidar com o sucesso
         } catch (error) {
             document.getElementById('loadingOverlay').style.display = 'none';
             alert(`Erro de Login: Verifique suas credenciais. (${error.message})`);
@@ -684,39 +686,28 @@
 
     function handleLogout() {
         if (confirm('Deseja sair do sistema?')) {
+             if (unsubscribeListener) {
+                unsubscribeListener(); // Cancela o listener do Firestore
+                unsubscribeListener = null;
+            }
             auth.signOut();
         }
     }
 
-    function checkAuthState() {
-        auth.onAuthStateChanged(user => {
-            if (user) {
-                // USUÁRIO LOGADO: Mostra o app e carrega os dados
-                document.getElementById('loginModal').style.display = 'none';
-                document.getElementById('appContent').style.display = 'block';
-                            if (!window.firestoreListenerStarted) {
-                    setupFirestoreListener();
-                    window.firestoreListenerStarted = true;
-                } else {
-                    document.getElementById('loadingOverlay').style.display = 'none';
-                }
-            } else {
-                // USUÁRIO DESLOGADO: Mostra a tela de login
-                document.getElementById('appContent').style.display = 'none';
-                document.getElementById('loginModal').style.display = 'flex';
-                document.getElementById('loadingOverlay').style.display = 'none';
-            }
-        });
-    }
-
-    /* -------------------------   Firestore listener   ------------------------- */
+    // Função que configura o listener do Firestore e lida com o carregamento
     function setupFirestoreListener(){
+        if (unsubscribeListener) {
+            unsubscribeListener(); // Garante que o listener anterior seja cancelado se existir
+        }
+        
         document.getElementById('loadingOverlay').style.display = 'flex';
-        osCollection.orderBy('data', 'desc').onSnapshot(snapshot => {
+
+        unsubscribeListener = osCollection.orderBy('data', 'desc').onSnapshot(snapshot => {
             osData = [];
             snapshot.forEach(doc => {
                 osData.push({ id: doc.id, ...doc.data() });
             });
+            
             // Após carregar, popular o filtro de técnicos e aplicar o filtro
             popularTecnicos();
             filtrar(); 
@@ -724,7 +715,24 @@
         }, error => {
             console.error("Erro ao carregar dados do Firestore:", error);
             document.getElementById('loadingOverlay').style.display = 'none';
-            alert("Erro ao carregar dados. Verifique a conexão ou permissões.");
+            alert("Erro ao carregar dados. Verifique a conexão ou permissões. (Regras do Firestore?)");
+        });
+    }
+
+    // Observa o estado de autenticação (função principal)
+    function checkAuthState() {
+        auth.onAuthStateChanged(user => {
+            if (user) {
+                // USUÁRIO LOGADO: Mostra o app e carrega os dados
+                document.getElementById('loginModal').style.display = 'none';
+                document.getElementById('appContent').style.display = 'block';
+                setupFirestoreListener(); // Inicia o listener/carregamento
+            } else {
+                // USUÁRIO DESLOGADO: Mostra a tela de login
+                document.getElementById('appContent').style.display = 'none';
+                document.getElementById('loginModal').style.display = 'flex';
+                document.getElementById('loadingOverlay').style.display = 'none';
+            }
         });
     }
 
@@ -1029,7 +1037,7 @@
         document.getElementById('totalMO').innerHTML = `MÃO DE OBRA<br>${formatarReal(totais.maoDeObra)}`;
         document.getElementById('totalFaturadas').innerHTML = `FATURADAS<br>${formatarReal(totais.Faturado)}`;
         document.getElementById('totalAberto').innerHTML = `EM ABERTO<br>${formatarReal(totais.EmAberto)}`;
-        document.getElementById('totalPix').innerHTML = `PIX<br>${formatarReal(totais.PIX)}`;
+        document.getElementById('totalPix').innerHTML = `PIX<br>${formatarReal(totais.Pix)}`;
         document.getElementById('totalDinheiro').innerHTML = `DINHEIRO<br>${formatarReal(totais.Dinheiro)}`;
         document.getElementById('totalDebito').innerHTML = `DÉBITO<br>${formatarReal(totais.Debito)}`;
         document.getElementById('totalCreditoContainer').innerHTML = `CRÉDITO<br>${formatarReal(totais.Credito)}`;
