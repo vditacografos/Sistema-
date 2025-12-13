@@ -8,41 +8,18 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://unpkg.com/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <style>
-        /* Estilos CSS */
+        /* Estilos CSS (inalterados) */
         body { font-family: 'Poppins', sans-serif; margin:0; padding:0; background:#f4f6f9; }
-        header { 
-            background: linear-gradient(90deg,#4a90e2,#9013fe); 
-            color:white; 
-            padding:20px; 
-            text-align:center; 
-            box-shadow:0 4px 6px rgba(0,0,0,0.1); 
-            position: relative; 
-        }
+        header { background: linear-gradient(90deg,#4a90e2,#9013fe); color:white; padding:20px; text-align:center; box-shadow:0 4px 6px rgba(0,0,0,0.1); }
         .container { padding:20px; max-width:1200px; margin:auto; }
-        
-        /* CORREÇÃO DO ALINHAMENTO DOS BOTÕES E FILTROS */
-        .buttons, .filters, .search { 
-            display:flex; 
-            flex-wrap:wrap; 
-            gap:10px; 
-            margin-bottom:20px; 
-            align-items: center; 
-        }
-        
-        button { background:#4a90e2; color:white; border:none; padding:10px 18px; border-radius:8px; cursor:pointer; font-weight:600; transition:0.2s; display:flex; align-items:center; gap:5px; white-space: nowrap; }
+        .buttons, .filters, .search { display:flex; flex-wrap:wrap; gap:10px; margin-bottom:20px; }
+        button { background:#4a90e2; color:white; border:none; padding:10px 18px; border-radius:8px; cursor:pointer; font-weight:600; transition:0.2s; display:flex; align-items:center; gap:5px; }
         button:hover { background:#357ABD; }
-        
-        /* Ajuste para inputs/selects nos filtros */
-        .filters input, .filters select { flex-grow: 1; min-width: 120px; }
-        .search input { flex-grow: 1; }
-        
         input, select { padding:10px 12px; border-radius:6px; border:1px solid #ccc; box-sizing: border-box;}
-        
         table { width:100%; border-collapse:collapse; margin-bottom:20px; background:white; border-radius:8px; overflow:hidden; box-shadow:0 2px 4px rgba(0,0,0,0.1); }
         th, td { padding:8px 10px; text-align:left; font-size:13px; }
         th { background:#4a90e2; color:white; }
@@ -61,23 +38,14 @@
          .edit, .delete { border:none; padding:5px 10px; border-radius:6px; color:white; cursor:pointer; margin-right:5px; font-size:12px; }
         .edit { background:#27ae60; }
         .delete { background:#e74c3c; }
-        
-        /* Estilos para Modais e Login */
+        /* Estilo para Modais e Login */
         .modal { display:none; position:fixed; z-index:1000; left:0; top:0; width:100%; height:100%; overflow:auto; background:rgba(0,0,0,0.4); justify-content:center; align-items:center; }
         .modal-content { background:white; padding:20px; border-radius:10px; width:95%; max-width:480px; box-shadow:0 5px 15px rgba(0,0,0,0.3); }
         .modal-content h2 { color:#4a90e2; margin-top:0; }
         .modal-content input, .modal-content select, .modal-content button { margin-bottom:12px; width:100%; box-sizing:border-box; }
         #loadingOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.8); display: flex; justify-content: center; align-items: center; z-index:2000; font-size: 18px; font-weight: 600; color: #4a90e2; }
-        
         @media(max-width:900px){ table th, table td { font-size:12px; } .card { font-size:13px; } }
-        
-        /* CORREÇÃO DO LOGO: Garantir que ele apareça */
-        #headerLogo { 
-            max-height: 75px; 
-            width: auto; 
-            display: block; 
-            margin: 0 auto 5px auto; 
-        }
+        #headerLogo { max-height: 75px; width: auto; display: block; margin: 0 auto 5px auto; }
         #headerTitle { margin: 0; font-size: 20px; font-weight: 600; text-align:center; }
     </style>
 </head>
@@ -201,28 +169,31 @@ const firebaseConfig = {
    authDomain: "vditacografosfrentecaixa.firebaseapp.com",
   databaseURL: "https://vditacografosfrentecaixa-default-rtdb.firebaseio.com",
   projectId: "vditacografosfrentecaixa",
-  storageBucket: "vditacografosfrentecaixa.firebaseapp.com", 
+  storageBucket: "vditacografosfrentecaixa.firebasestorage.app", 
    messagingSenderId: "1008625665373",
   appId: "1:1008625665373:web:1f1870898ecb04b4b854b4",
   measurementId: "G-9SYYV1VLNY"
 };
 
 // Inicialização dos serviços (Versão 8)
-let app, db, auth, osCollection;
-
-try {
-    app = firebase.initializeApp(firebaseConfig);
-    db = firebase.firestore(app);
-    auth = firebase.auth(); 
-    osCollection = db.collection('ordens_servico');
-} catch (e) {
-    console.error("Erro na inicialização do Firebase:", e);
-}
-
+const app = firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore(app);
+const auth = firebase.auth(); // Inicializa o Auth
+const osCollection = db.collection('ordens_servico');
 let osData = [];
-window.firestoreListenerStarted = false; 
+window.firestoreListenerStarted = false; // Flag para garantir que o listener só inicie uma vez
 
-/* -------------------------   Helpers   ------------------------- */
+/* cores para pdf (seu original) */
+const paymentColors = {
+    'Faturado': [173, 216, 230],
+    'Em Aberto': [255, 192, 203],
+    'PIX': [175, 223, 175],
+    'Dinheiro': [255, 239, 173],
+    'Débito': [253, 222, 173],
+    'Crédito': [210, 180, 222]
+};
+
+/* -------------------------   Helpers (seu original)   ------------------------- */
 function formatDate(iso){
     if(!iso) return '01/01/2000';
     const parts = iso.split('-');
@@ -259,7 +230,7 @@ function parseMoneyCell(cell){
     return isNaN(val) ? 0 : val;
 }
 
-/* -------------------------   Funções Firebase AUTH   ------------------------- */
+/* -------------------------   Funções Firebase AUTH (Novo)   ------------------------- */
 
 async function handleLogin() {
     const email = document.getElementById('loginEmail').value;
@@ -273,6 +244,7 @@ async function handleLogin() {
     try {
         document.getElementById('loadingOverlay').style.display = 'flex';
         await auth.signInWithEmailAndPassword(email, password);
+        // onAuthStateChanged irá lidar com o restante
     } catch (error) {
         document.getElementById('loadingOverlay').style.display = 'none';
         alert(`Erro de Login: Verifique suas credenciais. (${error.message})`);
@@ -286,13 +258,9 @@ function handleLogout() {
 }
 
 function checkAuthState() {
-    if (!auth) {
-        console.error("Firebase Auth não inicializado. Verifique a configuração.");
-        document.getElementById('loadingOverlay').style.display = 'none';
-        return;
-    }
     auth.onAuthStateChanged(user => {
         if (user) {
+            // USUÁRIO LOGADO: Mostra o app e carrega os dados
             document.getElementById('loginModal').style.display = 'none';
             document.getElementById('appContent').style.display = 'block';
                         if (!window.firestoreListenerStarted) {
@@ -302,6 +270,7 @@ function checkAuthState() {
                  document.getElementById('loadingOverlay').style.display = 'none';
             }
         } else {
+            // USUÁRIO DESLOGADO: Mostra a tela de login
             document.getElementById('appContent').style.display = 'none';
             document.getElementById('loginModal').style.display = 'flex';
             document.getElementById('loadingOverlay').style.display = 'none';
@@ -309,14 +278,9 @@ function checkAuthState() {
     });
 }
 
-/* -------------------------   Firestore listener   ------------------------- */
+/* -------------------------   Firestore listener (Adaptado para rodar após login)   ------------------------- */
 function setupFirestoreListener(){
     document.getElementById('loadingOverlay').style.display = 'flex';
-    if (!osCollection) {
-        console.error("Firestore Collection não inicializada.");
-        document.getElementById('loadingOverlay').style.display = 'none';
-        return;
-    }
     osCollection.onSnapshot(snapshot => {
         const changes = snapshot.docChanges();
         changes.forEach(change => {
@@ -361,8 +325,10 @@ function getTecnicosUnicos(){
     if(current && Array.from(select.options).some(o=>o.value===current)) select.value = current;
 }
 
+/* Start listener now */
+checkAuthState(); // Substituído a chamada direta ao listener pela verificação de Auth
 
-/* -------------------------   Form open/close & save   ------------------------- */
+/* -------------------------   Form open/close & save (corrigido para MO)   ------------------------- */
 function abrirForm(item=null){
     const modal = document.getElementById('formModal');
     const btnSalvar = document.getElementById('btnSalvar');
@@ -454,6 +420,7 @@ async function salvarForm(){
     }
 }
 
+/* helper to open modal in edit mode (seu original) */
 function abrirFormForEdit(id){
     const item = osData.find(d=>d.id===id);
     if(!item) { alert('Registro não encontrado'); return; }
@@ -461,6 +428,7 @@ function abrirFormForEdit(id){
     document.getElementById('formModal').dataset.editId = id;
 }
 
+/* apagar (seu original) */
 async function apagarOS(id){
     if(!confirm('Deseja apagar esta O.S? Esta ação é irreversível.')) return;
     try {
@@ -473,12 +441,14 @@ async function apagarOS(id){
 }
 
 
-/* -------------------------   Função Central de Filtro (AJUSTADA)  ------------------------- */
+/* -------------------------   Função Central de Filtro (NOVA)   ------------------------- */
 /**
- * Retorna o array de dados filtrados baseado nos filtros de tela E no filtro de pagamento.
- * A principal diferença aqui é o tratamento de Débito/Crédito e Mão de Obra.
+ * Retorna o array de dados filtrados baseado nos filtros de tela E no filtro de pagamento
+ * @param {string} filtroPagamento - 'Faturado', 'PIX', 'MãoDeObra', etc. (null para todos)
+ * @param {boolean} aplicarFiltrosDeTela - Se deve aplicar filtros de data, unidade e técnico.
+ * @returns {Array} Array de objetos de O.S. filtrados.
  */
-function getDadosFiltrados(filtroPagamento = null, aplicarFiltrosDeTela = true, ignorarBusca = true) {
+function getDadosFiltrados(filtroPagamento = null, aplicarFiltrosDeTela = true) {
     // 1. Capturar os filtros da tela
     const unidade = document.getElementById('unidade').value;
     const dataInicio = document.getElementById('dataInicio').value;
@@ -498,8 +468,8 @@ function getDadosFiltrados(filtroPagamento = null, aplicarFiltrosDeTela = true, 
             if (dataInicio && itemDate < dataInicio) return false;
             if (dataFim && itemDate > dataFim) return false;
             
-            // Filtro de busca (Apenas se não for para os totais/PDF)
-            if (!ignorarBusca && termoBusca && !((item.cliente||'').toLowerCase().includes(termoBusca) || (item.placa||'').toLowerCase().includes(termoBusca) || (item.os||'').toLowerCase().includes(termoBusca))) return false;
+            // Filtro de busca (APENAS na tabela, não nos totais/PDF)
+            if (filtroPagamento === null && termoBusca && !((item.cliente||'').toLowerCase().includes(termoBusca) || (item.placa||'').toLowerCase().includes(termoBusca) || (item.os||'').toLowerCase().includes(termoBusca))) return false;
         }
 
         // Excluir canceladas (sempre)
@@ -507,30 +477,23 @@ function getDadosFiltrados(filtroPagamento = null, aplicarFiltrosDeTela = true, 
 
         // Filtro de Pagamento (Se a função foi chamada por um cartão de resumo)
         if (filtroPagamento) {
-            const normalizedFiltro = filtroPagamento.toLowerCase().replace(/\s/g, '').replace('á', 'a').replace('é', 'e').replace('í', 'i').replace('ó', 'o');
+            const normalizedFiltro = filtroPagamento.toLowerCase().replace(/\s/g, '').replace('á', 'a').replace('é', 'e').replace('e', 'é');
             
             if (normalizedFiltro === 'maodeobra') {
-                 // Para Mão de Obra, filtramos todas as OS com valor MO > 0
+                 // Para Mão de Obra, considera O.S. com valor MO > 0
                  return (parseFloat(item.valor_mo || 0) > 0);
             } else if (normalizedFiltro === 'faturado') {
                  if (itemPagamento !== 'faturado') return false;
             } else if (normalizedFiltro === 'emaberto') {
-                 if (itemPagamento !== 'em aberto') return false; 
+                 if (itemPagamento !== 'em aberto') return false;
             } else if (normalizedFiltro === 'pix') {
                  if (!itemPagamento.includes('pix')) return false;
             } else if (normalizedFiltro === 'dinheiro') {
                  if (itemPagamento !== 'dinheiro') return false;
-            } 
-            
-            // Tratamento robusto para Débito e Crédito (com ou sem acento)
-            else if (normalizedFiltro === 'débito' || normalizedFiltro === 'debito') {
+            } else if (normalizedFiltro === 'débito' || normalizedFiltro === 'debito') {
                  if (itemPagamento !== 'débito' && itemPagamento !== 'debito') return false;
             } else if (normalizedFiltro === 'crédito' || normalizedFiltro === 'credito') {
                  if (itemPagamento !== 'crédito' && itemPagamento !== 'credito') return false;
-            } 
-            
-            else {
-                return false;
             }
         }
         
@@ -541,28 +504,25 @@ function getDadosFiltrados(filtroPagamento = null, aplicarFiltrosDeTela = true, 
 }
 
 
-/* -------------------------   Atualizar tabela e totais   ------------------------- */
+/* -------------------------   Atualizar tabela e totais (CORRIGIDO PARA USAR getDadosFiltrados)   ------------------------- */
 function atualizarTabelaTodas(){
     const tbody = document.querySelector('#tabelaTodas tbody');
     tbody.innerHTML = '';
     
-    // 1. DADOS PARA A TABELA (Inclui filtros de tela + filtro de busca)
-    const dadosParaTabela = getDadosFiltrados(null, true, false); 
-
-    // 2. DADOS PARA OS TOTAIS (Inclui filtros de tela, mas IGNORA a busca)
-    const dadosParaTotais = getDadosFiltrados(null, true, true); 
-
+    // Obtém os dados filtrados (incluindo o filtro de busca)
+    // Usamos getDadosFiltrados() com applyScreenFilters=true e filterPayment=null para obter o array principal
+    const dadosFiltrados = getDadosFiltrados(null, true);
 
     let totalF = 0, totalAberto = 0, totalPix = 0, totalDin = 0, totalDeb = 0, totalCred = 0;    
     let totalMO = 0;         
 
-    // CÁLCULOS DOS TOTAIS DO RESUMO (usando dadosParaTotais)
-    dadosParaTotais.forEach(item => {
+    dadosFiltrados.forEach(item => {
         const valorOs = parseFloat(item.valor_os || 0);
         const valorMo = parseFloat(item.valor_mo || 0);
         const valorTotal = parseFloat(item.valor || (valorOs + valorMo));
         const itemPagamento = item.pagamento ? item.pagamento.toString().toLowerCase().trim() : '';
-              
+
+        // CÁLCULOS DOS TOTAIS DO RESUMO (devem ser feitos aqui, usando os dados filtrados)
         totalMO += valorMo;                
         if(itemPagamento === 'faturado') totalF += valorTotal;
         if(itemPagamento === 'em aberto') totalAberto += valorTotal;
@@ -570,13 +530,6 @@ function atualizarTabelaTodas(){
         if(itemPagamento === 'dinheiro') totalDin += valorTotal;
         if(itemPagamento === 'débito' || itemPagamento === 'debito') totalDeb += valorTotal;
         if(itemPagamento === 'crédito' || itemPagamento === 'credito') totalCred += valorTotal;
-    });
-
-    // POPULAR A TABELA (usando dadosParaTabela)
-    dadosParaTabela.forEach(item => {
-        const valorOs = parseFloat(item.valor_os || 0);
-        const valorMo = parseFloat(item.valor_mo || 0);
-        const valorTotal = parseFloat(item.valor || (valorOs + valorMo));
 
         const tr = document.createElement('tr');
         tr.innerHTML = `<td>${item.os || ''}</td>
@@ -594,7 +547,6 @@ function atualizarTabelaTodas(){
         tbody.appendChild(tr);
     });
 
-
     // ATUALIZA OS CARDS DO RESUMO COM OS TOTAIS CALCULADOS
     document.getElementById('totalMO').innerHTML=`MÃO DE OBRA<br>R$ ${totalMO.toFixed(2).replace('.', ',')}`;
     document.getElementById('totalFaturadas').innerHTML=`FATURADAS<br>R$ ${totalF.toFixed(2).replace('.', ',')}`;
@@ -602,20 +554,22 @@ function atualizarTabelaTodas(){
     document.getElementById('totalPix').innerHTML=`PIX<br>R$ ${totalPix.toFixed(2).replace('.', ',')}`;
     document.getElementById('totalDinheiro').innerHTML=`DINHEIRO<br>R$ ${totalDin.toFixed(2).replace('.', ',')}`;
     document.getElementById('totalDebito').innerHTML=`DÉBITO<br>R$ ${totalDeb.toFixed(2).replace('.', ',')}`;
-    document.getElementById('totalCredito').innerHTML=`CRÉDITO<br>R$ ${totalCred.toFixed(2).replace('.', ',')}`;}
+    document.getElementById('totalCredito').innerHTML=`CRÉDITO<br>R$ ${totalCred.toFixed(2).replace('.', ',')}`;
+}
 
 
-/* -------------------------   Função Imprimir PDF (AJUSTADA)  ------------------------- */
+/* -------------------------   Função Imprimir PDF (CORRIGIDA)   ------------------------- */
 function imprimirPDF(filtroPagamento = null) {
-    // A função getDadosFiltrados JÁ APLICA os filtros de tela (data/unidade/técnico)
-    // E, se 'filtroPagamento' for fornecido (clique no card), aplica o filtro do card.
-    const dadosParaPDF = getDadosFiltrados(filtroPagamento, true, true); 
+    // 1. OBTÉM OS DADOS JÁ FILTRADOS PELA TELA
+    // Passamos o filtro de pagamento (se houver) e pedimos para aplicar os filtros de tela.
+    const dadosParaPDF = getDadosFiltrados(filtroPagamento, true);
 
     if (dadosParaPDF.length === 0) {
         alert('Nenhuma Ordem de Serviço encontrada para o(s) filtro(s) selecionado(s).');
         return;
     }
     
+    // 2. Configurações e Cálculos
     const doc = new window.jspdf.jsPDF();
     const headers = ["O.S", "DATA", "CLIENTE", "PLACA", "VALOR OS", "VALOR MO", "VALOR (TOTAL)", "PAGAMENTO", "TECNICO", "UNIDADE"];
     let totalGeral = 0;
@@ -626,12 +580,13 @@ function imprimirPDF(filtroPagamento = null) {
         const vOs = parseFloat(item.valor_os || 0);
         const vMo = parseFloat(item.valor_mo || 0);
         const vTotal = parseFloat(item.valor || (vOs + vMo));
-        
-        // Garante que todos os valores sejam somados para o rodapé
+
+        // Acumula os totais
         totalGeral += vTotal;
         totalOS += vOs;
         totalMO += vMo;
         
+        // Retorna a linha para o corpo da tabela do PDF
         return [
             item.os || '',
             item.data || '',
@@ -646,6 +601,7 @@ function imprimirPDF(filtroPagamento = null) {
         ];
     });
 
+    // 3. Monta o Rodapé de Totais
     const foot = [
         ['', '', '', '', 
          `Total OS: R$ ${totalOS.toFixed(2).replace('.', ',')}`, 
@@ -654,10 +610,10 @@ function imprimirPDF(filtroPagamento = null) {
          '', '', '']
     ];
 
-    // Lógica para nome do relatório
-    let tituloFiltro = filtroPagamento ? filtroPagamento.toUpperCase().replace('MÃODEOBRA', 'MÃO DE OBRA').replace('EM ABERTO', 'EM ABERTO') : 'GERAL';
-    const titulo = `VDI TACÓGRAFOS - RELATÓRIO ${tituloFiltro}`;
+    // 4. Monta o Título do Relatório
+    const titulo = filtroPagamento ? `VDI TACÓGRAFOS - RELATÓRIO ${filtroPagamento.toUpperCase().replace('MÃODEOBRA', 'MÃO DE OBRA')}` : 'VDI TACÓGRAFOS - RELATÓRIO GERAL';
     
+    // Captura os filtros de data e técnico para o cabeçalho do PDF
     const dataInicio = document.getElementById('dataInicio').value;
     const dataFim = document.getElementById('dataFim').value;
     const tecnico = document.getElementById('tecnicoFiltro').value || 'Todos';
@@ -669,6 +625,7 @@ function imprimirPDF(filtroPagamento = null) {
     ];
 
 
+    // 5. Gera o PDF com autotable
     doc.text(titulo, 105, 10, null, null, 'center');
     doc.setFontSize(10);
     doc.text(infoFiltro, 105, 15, null, null, 'center');
@@ -679,20 +636,20 @@ function imprimirPDF(filtroPagamento = null) {
         foot: foot,
         startY: 25,
         theme: 'striped',
-        headStyles: { fillColor: [74, 144, 226], halign: 'center' },
-        footStyles: { fillColor: [51, 51, 51], textColor: [255, 255, 255], fontStyle: 'bold', halign: 'center' },
+        headStyles: { fillColor: [74, 144, 226], halign: 'center' }, // Cor azul (4a90e2)
+        footStyles: { fillColor: [51, 51, 51], textColor: [255, 255, 255], fontStyle: 'bold', halign: 'center' }, // Cor escura
         styles: { fontSize: 8 },
         columnStyles: {
-            4: { halign: 'right' }, // Valor OS
-            5: { halign: 'right' }, // Valor MO
-            6: { halign: 'right', fontStyle: 'bold' } // Valor Total
+            'VALOR OS': { halign: 'right' },
+            'VALOR MO': { halign: 'right' },
+            'VALOR (TOTAL)': { halign: 'right', fontStyle: 'bold' }
         }
     });
 
     doc.save(`${titulo.replace(/ /g,'_')}.pdf`);
 }
 
-/* Funções de filtro e busca (inalteradas) */
+/* Funções de filtro e busca (inalteradas, funcionam chamando atualizarTabelaTodas) */
 function limparFiltros(){
     document.getElementById('unidade').value = '';
     document.getElementById('tecnicoFiltro').value = '';
@@ -704,7 +661,7 @@ function limparFiltros(){
 function filtrar(){ atualizarTabelaTodas(); }
 function buscar(){ atualizarTabelaTodas(); }
 
-/* limpar todos os dados (inalterada) */
+/* limpar todos os dados (seu original) */
 async function limparDados(){
     if(!confirm('Deseja limpar TODOS os dados NA NUVEM?')) return;
     document.getElementById('loadingOverlay').style.display = 'flex';
@@ -721,7 +678,7 @@ async function limparDados(){
     }
 }
 
-/* -------------------------   Export / Import Excel (inalteradas)   ------------------------- */
+/* -------------------------   Export Excel (Com Valor MO)   ------------------------- */
 function exportExcel(){
     const items = osData.map(it => ({
         'O S': it.os || '',
@@ -741,6 +698,7 @@ function exportExcel(){
     XLSX.writeFile(wb, 'OS_FrenteCaixa_Export.xlsx');
 }
 
+/* -------------------------   Import Excel (Com Valor MO)   ------------------------- */
 function importExcel(){ document.getElementById('inputExcel').click(); }
 function lerExcel(event){
     const files = event.target.files;
@@ -863,6 +821,7 @@ async function salvarImportacao(data){
     let successCount = 0;
     let failCount = 0;
 
+    // Use Batch writes para ser mais eficiente
     const batch = db.batch();
     const batchSize = 500;
     
@@ -873,11 +832,12 @@ async function salvarImportacao(data){
         if((i + 1) % batchSize === 0 || i === data.length - 1){
             try {
                 await batch.commit();
-                successCount += ((i + 1) % batchSize === 0) ? batchSize : (data.length % batchSize); 
+                successCount += ((i + 1) % batchSize === 0) ? batchSize : ((i + 1) % batchSize) || (data.length % batchSize);
             } catch(e) {
                 console.error("Erro no batch:", e);
-                failCount += ((i + 1) % batchSize === 0) ? batchSize : (data.length % batchSize);
+                failCount += ((i + 1) % batchSize === 0) ? batchSize : ((i + 1) % batchSize) || (data.length % batchSize);
             }
+            // Inicia novo batch
             if(i !== data.length - 1){
                 batch = db.batch();
             }
@@ -887,12 +847,6 @@ async function salvarImportacao(data){
     document.getElementById('loadingOverlay').style.display = 'none';
     alert(`Importação concluída. Sucesso: ${successCount}. Falhas: ${failCount}.`);
 }
-
-/* -------------------------   Garante que a verificação de Auth inicie apenas após o DOM carregar   ------------------------- */
-document.addEventListener('DOMContentLoaded', () => {
-    setTimeout(checkAuthState, 500); 
-});
-
 </script>
 </body>
 </html>
